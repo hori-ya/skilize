@@ -1,0 +1,26 @@
+# 環境変数（機密情報）
+.env
+.env.local
+.env.*.local
+
+# Java / Spring Boot
+target/
+*.jar
+*.war
+
+# React
+node_modules/
+dist/
+build/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+docker/*/data/
