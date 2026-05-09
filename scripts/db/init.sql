@@ -207,8 +207,9 @@ CREATE TRIGGER trg_ad_seminars_updated_at
 -- -----------------------------------------------------------------------------
 CREATE TABLE users (
     id                  SERIAL       NOT NULL,
+    user_id             VARCHAR(50)  NOT NULL,  -- ログインID（変更不可）
     name                VARCHAR(100) NOT NULL,
-    email               VARCHAR(255) NOT NULL,
+    email               VARCHAR(255),           -- 任意。NULL 許容
     password_hash       VARCHAR(255) NOT NULL,
     role                VARCHAR(10)  NOT NULL,
     tl_user_id          INTEGER,     -- FK → users(id)。TL または ADMIN ロールのユーザーを指定
@@ -218,14 +219,16 @@ CREATE TABLE users (
     updated_at          TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_users PRIMARY KEY (id),
-    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT uq_users_user_id UNIQUE (user_id),
     CONSTRAINT fk_users_tl FOREIGN KEY (tl_user_id) REFERENCES users(id),
     CONSTRAINT chk_users_role CHECK (role IN ('GENERAL', 'TL', 'ADMIN'))
 );
 
 COMMENT ON TABLE  users IS 'ユーザー';
+COMMENT ON COLUMN users.user_id IS 'ログインID（一意・変更不可）';
+COMMENT ON COLUMN users.email IS 'メールアドレス（任意）';
 COMMENT ON COLUMN users.tl_user_id IS 'TLユーザーへの自己参照FK（TL または ADMIN ロールを指定）';
-COMMENT ON COLUMN users.password_hash IS 'BCryptハッシュ';
+COMMENT ON COLUMN users.password_hash IS 'BCryptハッシュ（コストファクター: 12）';
 
 CREATE INDEX idx_users_tl_user_id ON users(tl_user_id);
 CREATE INDEX idx_users_role       ON users(role);
@@ -431,3 +434,16 @@ INSERT INTO skill_levels (level_value, description) VALUES
     (3, '指導があれば実務で使える'),
     (4, '独力で実務に適用できる'),
     (5, '他者に指導・展開できる');
+
+-- 初期管理者アカウント
+-- user_id: admin / 初期パスワード: admin（BCrypt cost=12）
+-- 初回ログイン時にパスワード変更が強制される（is_initial_password = true）
+INSERT INTO users (user_id, name, password_hash, role, is_initial_password, is_active)
+VALUES (
+    'admin',
+    '管理者',
+    '$2b$12$6zPU82VzWT9rZ7jLF.3yp.qm815BLk3o6j47RjxRu1ZN7CQBPo0Li',
+    'ADMIN',
+    TRUE,
+    TRUE
+);

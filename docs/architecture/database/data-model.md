@@ -68,9 +68,10 @@ ADSeminar（ADマスタ）
 ```
 User（ユーザー）
   ├─ id
+  ├─ user_id（ログインID。一意・変更不可）
   ├─ name
-  ├─ email（unique）
-  ├─ password_hash
+  ├─ email（nullable：任意。一意性強制なし）
+  ├─ password_hash（初期値はuser_idと同一をBCryptでハッシュ化）
   ├─ role（GENERAL / TL / ADMIN）
   ├─ tl_user_id → User（nullable：TLユーザーへの自己参照FK）
   ├─ is_initial_password（初回ログイン時パスワード変更強制フラグ）
@@ -139,6 +140,7 @@ InventoryGoal（目標設定）
 | `seminar_details` | `ad_seminar_id` | フリーセミナー（`seminar_name` を使用） |
 | `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
 | `users` | `tl_user_id` | TL未設定ユーザー |
+| `users` | `email` | メールアドレス未登録ユーザー（任意項目） |
 
 ---
 

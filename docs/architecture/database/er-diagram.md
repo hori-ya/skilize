@@ -102,8 +102,9 @@ erDiagram
 
   users {
     int      id                  PK
+    varchar  user_id             UK "ログインID"
     varchar  name
-    varchar  email               UK
+    varchar  email               "nullable: 任意"
     varchar  password_hash
     varchar  role                "GENERAL / TL / ADMIN"
     int      tl_user_id          FK "nullable: TLへの自己参照"
@@ -219,6 +220,7 @@ erDiagram
 | `seminar_details` | `ad_seminar_id` | フリーセミナー（`seminar_name` を使用） |
 | `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
 | `users` | `tl_user_id` | TL未設定ユーザー |
+| `users` | `email` | メールアドレス未登録ユーザー（任意項目） |
 
 ### 年月の保存方法
 

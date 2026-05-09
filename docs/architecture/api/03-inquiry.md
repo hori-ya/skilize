@@ -9,7 +9,7 @@
 | メソッド | パス | 概要 | 権限 |
 |---------|------|------|------|
 | GET | /api/users/me/inventories | 自分の棚卸一覧（全年度） | 全員 |
-| GET | /api/users/{userId}/inventories | 指定ユーザーの棚卸一覧 | TL / ADMIN |
+| GET | /api/users/{id}/inventories | 指定ユーザーの棚卸一覧 | TL / ADMIN |
 | GET | /api/inventories/{id}/detail | 棚卸の全明細を取得 | 全員（※） |
 | GET | /api/users/me/team-members | 自チームのメンバー一覧 | TL / ADMIN |
 | GET | /api/users | 全ユーザー一覧（検索） | ADMIN |
@@ -47,7 +47,7 @@
 
 ---
 
-## GET /api/users/{userId}/inventories
+## GET /api/users/{id}/inventories
 
 指定ユーザーの棚卸一覧を全年度分返す（SCR-007 / SCR-008 からメンバー詳細へ遷移する際に使用）。
 
@@ -57,7 +57,7 @@
 
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
-| `userId` | int | ユーザー ID |
+| `id` | int | ユーザーの内部ID（`users.id`）。ログインIDの `user_id` とは別 |
 
 **Response 200**: `GET /api/users/me/inventories` と同形式
 
@@ -202,6 +202,7 @@ TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員が
 [
   {
     "id": 1,
+    "userId": "tanaka.taro",
     "name": "田中 太郎",
     "email": "tanaka@example.com",
     "role": "GENERAL",
@@ -214,8 +215,9 @@ TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員が
   },
   {
     "id": 3,
+    "userId": "sato.jiro",
     "name": "佐藤 次郎",
-    "email": "sato@example.com",
+    "email": null,
     "role": "GENERAL",
     "isActive": true,
     "currentInventory": null
@@ -252,6 +254,7 @@ TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員が
   "items": [
     {
       "id": 1,
+      "userId": "tanaka.taro",
       "name": "田中 太郎",
       "email": "tanaka@example.com",
       "role": "GENERAL",

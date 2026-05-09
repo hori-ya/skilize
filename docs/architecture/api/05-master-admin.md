@@ -355,7 +355,7 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 
 ## POST /api/users
 
-ユーザーを新規追加する。初期パスワードはサーバーが自動生成し、レスポンスに一度だけ返す。
+ユーザーを新規追加する。初期パスワードはユーザーIDと同じ値が設定される。
 
 **権限**: ADMIN
 
@@ -363,6 +363,7 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 
 ```json
 {
+  "userId": "tanaka.taro",
   "name": "田中 太郎",
   "email": "tanaka@example.com",
   "role": "GENERAL",
@@ -370,6 +371,7 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 }
 ```
 
+> `email` は任意項目。省略または `null` の場合は未登録扱い。  
 > `tlUserId` は TL または ADMIN ロールのユーザー ID。未設定の場合は `null`。
 
 **Response 201**
@@ -377,22 +379,22 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 ```json
 {
   "id": 1,
+  "userId": "tanaka.taro",
   "name": "田中 太郎",
   "email": "tanaka@example.com",
   "role": "GENERAL",
   "tlUser": { "id": 5, "name": "山田 花子" },
   "isActive": true,
-  "isInitialPassword": true,
-  "initialPassword": "ABCD-1234"
+  "isInitialPassword": true
 }
 ```
 
-> `initialPassword` はこのレスポンスでのみ返す。以降は参照不可。
+> 初期パスワードは `userId` と同一。管理者がユーザーに口頭等で通知する。
 
 **Response 409**
 
 ```json
-{ "code": "CONFLICT", "message": "このメールアドレスはすでに使用されています" }
+{ "code": "CONFLICT", "message": "このユーザーIDはすでに使用されています" }
 ```
 
 ---
@@ -414,11 +416,15 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 }
 ```
 
+> `email` は任意項目。省略または `null` の場合は未登録扱い。  
+> `userId` はユーザー更新で変更不可。
+
 **Response 200**
 
 ```json
 {
   "id": 1,
+  "userId": "tanaka.taro",
   "name": "田中 太郎",
   "email": "tanaka@example.com",
   "role": "TL",

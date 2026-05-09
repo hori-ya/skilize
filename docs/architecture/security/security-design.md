@@ -22,8 +22,8 @@
 ### 2.1 認証フロー
 
 ```
-① クライアント  →  POST /api/auth/login { email, password }
-② バックエンド  →  DB から users を検索 → BCrypt でパスワード照合
+① クライアント  →  POST /api/auth/login { userId, password }
+② バックエンド  →  DB から users を user_id で検索 → BCrypt でパスワード照合
 ③ バックエンド  →  JWT を生成してレスポンスで返す
 ④ クライアント  →  JWT を localStorage / sessionStorage に保存
 ⑤ クライアント  →  以降のリクエストに Authorization: Bearer <token> を付与
@@ -108,7 +108,7 @@ REST API はステートレスのためサーバー側でトークンを破棄�
 | エンドポイント | GENERAL | TL | ADMIN |
 |---------------|:-------:|:--:|:-----:|
 | GET /api/users/me/inventories | ○ | ○ | ○ |
-| GET /api/users/{userId}/inventories | — | 自チームのみ ※1 | ○ |
+| GET /api/users/{id}/inventories | — | 自チームのみ ※1 | ○ |
 | GET /api/inventories/{id}/detail | 自分のみ | 自チームのみ ※1 | ○ |
 | GET /api/users/me/team-members | — | ○ | ○ |
 | GET /api/users | — | — | ○ |
@@ -321,17 +321,43 @@ public PasswordEncoder passwordEncoder() {
 }
 ```
 
-### 5.2 初期パスワード生成
+### 5.2 初期パスワード
 
-管理者がユーザーを作成した際にサーバー側でランダム生成する。
+管理者がユーザーを作成した際、初期パスワードは **ユーザーIDと同一** の値を設定する。
 
 | 項目 | 仕様 |
 |------|------|
-| 文字種 | 大文字英字・小文字英字・数字・記号（`!@#$%^&*`）|
-| 長さ | 12文字 |
-| 形式 | `XXXX-XXXX-XXXX`（ハイフン区切りで可読性を確保）|
+| 初期値 | ユーザーID（`user_id`）と同じ文字列 |
 | 保存 | BCrypt でハッシュ化してDBに保存 |
-| 表示 | 平文は登録完了レスポンスに **一度だけ** 返す。以後参照不可 |
+| 通知 | 管理者が口頭または別途の手段でユーザーに通知する |
+
+> **注意**: 初期パスワード＝ユーザーIDはセキュリティ上の脆弱性があるため、ユーザーは初回ログイン時に必ずパスワードを変更すること（InitialPasswordFilter により強制）。
+
+### 5.3 初期管理者アカウント（adminアカウント）
+
+システム初期セットアップ時に、`init.sql` にて管理者アカウントを自動登録する。
+
+| 項目 | 値 |
+|------|-----|
+| ユーザーID | `admin` |
+| 氏名 | `管理者` |
+| ロール | `ADMIN` |
+| 初期パスワード | `admin`（ユーザーIDと同一） |
+| `is_initial_password` | `true`（初回ログイン時にパスワード変更を強制）|
+
+```sql
+INSERT INTO users (user_id, name, password_hash, role, is_initial_password, is_active)
+VALUES (
+  'admin',
+  '管理者',
+  '$2b$12$6zPU82VzWT9rZ7jLF.3yp.qm815BLk3o6j47RjxRu1ZN7CQBPo0Li',  -- 'admin' をBCrypt(cost=12)でハッシュ化した値
+  'ADMIN',
+  true,
+  true
+);
+```
+
+> パスワードハッシュは `init.sql` と同一の値を使用する（`$2b$` は BCrypt の最新バリアント。Spring Security は `$2a$` / `$2b$` 両方を受け付ける）。
 
 ### 5.3 パスワード変更強制
 
@@ -378,7 +404,7 @@ Spring Security のデフォルトで以下のヘッダーが付与される。�
 
 ### 7.3 ログイン失敗時の挙動
 
-- 認証失敗は常に同一のエラーメッセージ（`AUTH_FAILED`）を返し、メールアドレスの存在有無を漏らさない
+- 認証失敗は常に同一のエラーメッセージ（`AUTH_FAILED`）を返し、ユーザーIDの存在有無を漏らさない
 - アカウントロック機能は現時点では実装しない（TBD）
 
 ### 7.4 SQL インジェクション対策
@@ -396,7 +422,6 @@ Spring Security のデフォルトで以下のヘッダーが付与される。�
 | データ | 方針 |
 |--------|------|
 | `password_hash` | API レスポンスに含めない |
-| `initialPassword`（初期パスワード平文）| 登録完了レスポンス以外に含めない |
 | JWT 署名キー | 環境変数のみ。ログ出力禁止 |
 
 ### 7.7 未実装・TBD

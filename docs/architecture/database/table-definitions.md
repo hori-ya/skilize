@@ -211,28 +211,30 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 | # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
 |---|---------|---------|:--------:|-----------|------|
 | 1 | id | `SERIAL` | ○ | — | PK |
-| 2 | name | `VARCHAR(100)` | ○ | — | 氏名 |
-| 3 | email | `VARCHAR(255)` | ○ | — | メールアドレス（ログイン ID） |
-| 4 | password_hash | `VARCHAR(255)` | ○ | — | パスワードハッシュ（BCrypt） |
-| 5 | role | `VARCHAR(10)` | ○ | — | ロール（`GENERAL` / `TL` / `ADMIN`） |
-| 6 | tl_user_id | `INTEGER` | — | `NULL` | TLユーザーID（FK → users.id 自己参照） |
-| 7 | is_initial_password | `BOOLEAN` | ○ | `TRUE` | 初回ログイン時パスワード変更強制フラグ |
-| 8 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ（論理削除） |
-| 9 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
-| 10 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+| 2 | user_id | `VARCHAR(50)` | ○ | — | ユーザーID（ログインID・英数字・記号使用可） |
+| 3 | name | `VARCHAR(100)` | ○ | — | 氏名 |
+| 4 | email | `VARCHAR(255)` | — | `NULL` | メールアドレス（任意） |
+| 5 | password_hash | `VARCHAR(255)` | ○ | — | パスワードハッシュ（BCrypt） |
+| 6 | role | `VARCHAR(10)` | ○ | — | ロール（`GENERAL` / `TL` / `ADMIN`） |
+| 7 | tl_user_id | `INTEGER` | — | `NULL` | TLユーザーID（FK → users.id 自己参照） |
+| 8 | is_initial_password | `BOOLEAN` | ○ | `TRUE` | 初回ログイン時パスワード変更強制フラグ |
+| 9 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ（論理削除） |
+| 10 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 11 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
 
 ### 制約・インデックス
 
 | 種別 | 対象 | 内容 |
 |------|------|------|
 | PK | id | — |
-| UNIQUE | email | ログイン ID の重複禁止 |
+| UNIQUE | user_id | ログインIDの重複禁止 |
 | FK | tl_user_id | `users(id)` / NULL 許容 / 自己参照 |
 | CHECK | role | `IN ('GENERAL', 'TL', 'ADMIN')` |
 | IDX | tl_user_id | チームメンバー検索用 |
 | IDX | role | TL / ADMIN 絞り込み用（TL選択プルダウン等） |
 
-> `tl_user_id` は TL または ADMIN ロールのユーザーを指定する（アプリ側で制御）。
+> `tl_user_id` は TL または ADMIN ロールのユーザーを指定する（アプリ側で制御）。  
+> `email` は任意項目のため NULL を許容する。登録されている場合でも一意性は強制しない。
 
 ---
 

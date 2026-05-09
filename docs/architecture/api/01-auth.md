@@ -17,7 +17,7 @@
 
 ## POST /api/auth/login
 
-メールアドレスとパスワードで認証し JWT を返す。
+ユーザーIDとパスワードで認証し JWT を返す。
 
 **権限**: 不要
 
@@ -25,7 +25,7 @@
 
 ```json
 {
-  "email": "tanaka@example.com",
+  "userId": "tanaka.taro",
   "password": "s3cr3tP@ss"
 }
 ```
@@ -54,7 +54,7 @@
 **Response 401**
 
 ```json
-{ "code": "AUTH_FAILED", "message": "メールアドレスまたはパスワードが違います" }
+{ "code": "AUTH_FAILED", "message": "ユーザーIDまたはパスワードが違います" }
 ```
 
 **Response 403**
@@ -125,6 +125,7 @@ JWT をサーバー側でブラックリスト登録する（実装上はステ�
 ```json
 {
   "id": 1,
+  "userId": "tanaka.taro",
   "name": "田中 太郎",
   "email": "tanaka@example.com",
   "role": "GENERAL",
@@ -136,3 +137,5 @@ JWT をサーバー側でブラックリスト登録する（実装上はステ�
   "isActive": true
 }
 ```
+
+> `email` は登録されていない場合 `null`。
