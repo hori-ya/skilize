@@ -9,30 +9,30 @@
 | メソッド | パス | 概要 | 権限 |
 |---------|------|------|------|
 | GET | /api/ad-seminars | ADマスタ一覧 | 全員 |
-| POST | /api/ad-seminars | ADマスタ追加 | ADMIN |
-| PUT | /api/ad-seminars/{id} | ADマスタ更新 | ADMIN |
-| DELETE | /api/ad-seminars/{id} | ADマスタ無効化 | ADMIN |
-| PATCH | /api/ad-seminars/{id}/restore | ADマスタ復活 | ADMIN |
+| POST | /api/ad-seminars | ADマスタ追加 | TL / ADMIN |
+| PUT | /api/ad-seminars/{id} | ADマスタ更新 | TL / ADMIN |
+| DELETE | /api/ad-seminars/{id} | ADマスタ無効化 | TL / ADMIN |
+| PATCH | /api/ad-seminars/{id}/restore | ADマスタ復活 | TL / ADMIN |
 | GET | /api/it-skill-categories | ITスキル分類ツリー | TL / ADMIN |
-| POST | /api/it-skill-categories | ITスキル分類追加 | ADMIN |
-| PUT | /api/it-skill-categories/{id} | ITスキル分類更新 | ADMIN |
-| DELETE | /api/it-skill-categories/{id} | ITスキル分類削除 | ADMIN |
+| POST | /api/it-skill-categories | ITスキル分類追加 | TL / ADMIN |
+| PUT | /api/it-skill-categories/{id} | ITスキル分類更新 | TL / ADMIN |
+| DELETE | /api/it-skill-categories/{id} | ITスキル分類削除 | TL / ADMIN |
 | GET | /api/qualification-categories | 資格分類一覧 | TL / ADMIN |
-| POST | /api/qualification-categories | 資格分類追加 | ADMIN |
-| PUT | /api/qualification-categories/{id} | 資格分類更新 | ADMIN |
-| DELETE | /api/qualification-categories/{id} | 資格分類削除 | ADMIN |
+| POST | /api/qualification-categories | 資格分類追加 | TL / ADMIN |
+| PUT | /api/qualification-categories/{id} | 資格分類更新 | TL / ADMIN |
+| DELETE | /api/qualification-categories/{id} | 資格分類削除 | TL / ADMIN |
 | GET | /api/ad-seminar-categories | ADセミナー分類一覧 | TL / ADMIN |
-| POST | /api/ad-seminar-categories | ADセミナー分類追加 | ADMIN |
-| PUT | /api/ad-seminar-categories/{id} | ADセミナー分類更新 | ADMIN |
-| DELETE | /api/ad-seminar-categories/{id} | ADセミナー分類削除 | ADMIN |
+| POST | /api/ad-seminar-categories | ADセミナー分類追加 | TL / ADMIN |
+| PUT | /api/ad-seminar-categories/{id} | ADセミナー分類更新 | TL / ADMIN |
+| DELETE | /api/ad-seminar-categories/{id} | ADセミナー分類削除 | TL / ADMIN |
 | GET | /api/seminar-categories | セミナー分類一覧 | TL / ADMIN |
-| POST | /api/seminar-categories | セミナー分類追加 | ADMIN |
-| PUT | /api/seminar-categories/{id} | セミナー分類更新 | ADMIN |
-| DELETE | /api/seminar-categories/{id} | セミナー分類削除 | ADMIN |
+| POST | /api/seminar-categories | セミナー分類追加 | TL / ADMIN |
+| PUT | /api/seminar-categories/{id} | セミナー分類更新 | TL / ADMIN |
+| DELETE | /api/seminar-categories/{id} | セミナー分類削除 | TL / ADMIN |
 | GET | /api/skill-levels | レベルマスタ一覧 | 全員 |
-| POST | /api/skill-levels | レベルマスタ追加 | ADMIN |
-| PUT | /api/skill-levels/{id} | レベルマスタ更新 | ADMIN |
-| DELETE | /api/skill-levels/{id} | レベルマスタ削除 | ADMIN |
+| POST | /api/skill-levels | レベルマスタ追加 | TL / ADMIN |
+| PUT | /api/skill-levels/{id} | レベルマスタ更新 | TL / ADMIN |
+| DELETE | /api/skill-levels/{id} | レベルマスタ削除 | TL / ADMIN |
 | GET | /api/users | ユーザー一覧 | ADMIN |
 | POST | /api/users | ユーザー追加 | ADMIN |
 | PUT | /api/users/{id} | ユーザー更新 | ADMIN |
@@ -93,7 +93,7 @@
 
 AD マスタを新規追加する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**
 
@@ -129,7 +129,7 @@ AD マスタを新規追加する。
 
 AD マスタを更新する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**: `POST /api/ad-seminars` と同形式
 
@@ -141,7 +141,7 @@ AD マスタを更新する。
 
 AD マスタを論理削除する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 204**: No Content
 
@@ -151,7 +151,7 @@ AD マスタを論理削除する。
 
 論理削除済みの AD マスタを有効に戻す。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 200**
 
@@ -189,7 +189,7 @@ AD マスタを論理削除する。
 
 資格分類を新規追加する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**
 
@@ -215,7 +215,7 @@ AD マスタを論理削除する。
 
 資格分類を更新する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**: `POST /api/qualification-categories` と同形式
 
@@ -227,7 +227,7 @@ AD マスタを論理削除する。
 
 資格分類を削除する。配下に有効な資格が存在する場合はエラー。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 204**: No Content
 
@@ -272,7 +272,7 @@ ADセミナー分類一覧を返す。
 
 ADセミナー分類を新規追加する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**
 
@@ -298,7 +298,7 @@ ADセミナー分類を新規追加する。
 
 ADセミナー分類を更新する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**: `POST /api/ad-seminar-categories` と同形式
 
@@ -310,7 +310,7 @@ ADセミナー分類を更新する。
 
 ADセミナー分類を削除する。配下に有効なADマスタが存在する場合はエラー。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 204**: No Content
 
@@ -355,7 +355,7 @@ ADセミナー分類を削除する。配下に有効なADマスタが存在す�
 
 セミナー分類を新規追加する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**
 
@@ -381,7 +381,7 @@ ADセミナー分類を削除する。配下に有効なADマスタが存在す�
 
 セミナー分類を更新する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**: `POST /api/seminar-categories` と同形式
 
@@ -393,7 +393,7 @@ ADセミナー分類を削除する。配下に有効なADマスタが存在す�
 
 セミナー分類を削除する。この分類を参照する棚卸明細が存在する場合は `seminar_category_id` を NULL に更新してから削除。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 204**: No Content
 
@@ -456,7 +456,7 @@ ITスキル分類をツリー形式で返す。分類1→2→3 の階層構造�
 
 ITスキル分類を追加する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**
 
@@ -490,7 +490,7 @@ ITスキル分類を追加する。
 
 ITスキル分類を更新する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**: `POST /api/it-skill-categories` と同形式
 
@@ -502,7 +502,7 @@ ITスキル分類を更新する。
 
 ITスキル分類を削除する。配下（子分類含む）に有効なスキルが存在する場合はエラー。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 204**: No Content
 
@@ -552,7 +552,7 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 
 レベルマスタを追加する。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**
 
@@ -582,7 +582,7 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 
 レベルマスタを更新する。既存の棚卸データに保存済みの数値は変更されない。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Request Body**: `POST /api/skill-levels` と同形式
 
@@ -594,7 +594,7 @@ ITスキル分類を削除する。配下（子分類含む）に有効なスキ
 
 レベルマスタを削除する（物理削除）。棚卸データに参照されている場合は削除不可。
 
-**権限**: ADMIN
+**権限**: TL / ADMIN
 
 **Response 204**: No Content
 

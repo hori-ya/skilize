@@ -23,9 +23,8 @@
 | GET | /api/qualifications/custom-unregistered | 未昇格カスタム資格一覧 | TL / ADMIN |
 | POST | /api/qualifications/promote | カスタム資格をマスタ昇格 | TL / ADMIN |
 
-> ITスキル分類（`/api/it-skill-categories`）の参照（GET）は TL / ADMIN が可能。  
-> 資格分類（`/api/qualification-categories`）の参照（GET）は TL / ADMIN が可能。  
-> 各分類の CRUD は ADMIN 専用（→ 05-master-admin.md）。
+> ADマスタ・ITスキル分類・資格分類・各セミナー分類・レベルマスタの管理（CRUD）も TL / ADMIN が可能（→ 05-master-admin.md）。  
+> ユーザー管理・年度マスタ管理のみ ADMIN 専用。
 
 ---
 
