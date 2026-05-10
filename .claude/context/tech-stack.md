@@ -20,7 +20,7 @@
 
 | 項目 | 内容 |
 |------|------|
-| フレームワーク | Spring Boot 3 |
+| フレームワーク | Spring Boot 4 |
 | 言語 | Java 21 |
 | ビルドツール | Gradle |
 | 認証・認可 | Spring Security（JWT） |

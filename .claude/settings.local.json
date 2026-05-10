@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"import bcrypt; pw = b'admin'; h = bcrypt.hashpw\\(pw, bcrypt.gensalt\\(rounds=12\\)\\); print\\(h.decode\\(\\)\\)\")",
+      "Bash(node -e \"const bcrypt = require\\('bcrypt'\\); bcrypt.hash\\('admin', 12\\).then\\(h => console.log\\(h\\)\\);\")",
+      "PowerShell(New-Item *)",
+      "Bash(docker compose restart *)",
+      "Bash(docker compose *)",
+      "Bash(curl *)"
+    ]
+  }
+}
