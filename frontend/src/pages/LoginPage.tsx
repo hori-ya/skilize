@@ -47,7 +47,7 @@ export default function LoginPage() {
       <div className="auth-card">
         <div className="auth-logo">
           <h1 className="auth-title">Skilize</h1>
-          <p className="auth-subtitle">ITスキル棚卸管理システム</p>
+          <p className="auth-subtitle">スキル棚卸管理システム</p>
         </div>
         <form onSubmit={handleSubmit} noValidate>
           {error && (

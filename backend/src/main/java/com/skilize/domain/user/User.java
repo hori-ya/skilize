@@ -13,6 +13,7 @@ import java.util.List;
 @Entity
 @Table(name = "users")
 @Getter
+@lombok.NoArgsConstructor
 public class User implements UserDetails {
 
     @Id
@@ -49,9 +50,36 @@ public class User implements UserDetails {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    public static User create(String userId, String name, String email, Role role,
+                               Integer tlUserId, String passwordHash) {
+        User u = new User();
+        u.userId = userId;
+        u.name = name;
+        u.email = email;
+        u.passwordHash = passwordHash;
+        u.role = role;
+        u.tlUserId = tlUserId;
+        u.initialPassword = true;
+        u.active = true;
+        return u;
+    }
+
+    public void update(String name, String email, Role role, Integer tlUserId, boolean active) {
+        this.name = name;
+        this.email = email;
+        this.role = role;
+        this.tlUserId = tlUserId;
+        this.active = active;
+    }
+
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.initialPassword = false;
+    }
+
+    public void resetPassword(String passwordHash) {
+        this.passwordHash = passwordHash;
+        this.initialPassword = true;
     }
 
     @Override

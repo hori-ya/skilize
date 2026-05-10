@@ -516,7 +516,7 @@ INSERT INTO fiscal_year_settings (id, fiscal_year_start_month)
 VALUES (1, 4)
 ON CONFLICT (id) DO NOTHING;
 
--- レベルマスタ（デフォルト定義）
+-- レベルマスタ
 INSERT INTO skill_levels (level_value, description) VALUES
     (1, '知識なし／未経験'),
     (2, '概念を理解している'),
@@ -524,15 +524,428 @@ INSERT INTO skill_levels (level_value, description) VALUES
     (4, '独力で実務に適用できる'),
     (5, '他者に指導・展開できる');
 
--- 初期管理者アカウント
--- user_id: admin / 初期パスワード: admin（BCrypt cost=12）
--- 初回ログイン時にパスワード変更が強制される（is_initial_password = true）
+-- 年度マスタ（テスト用 2025年度）
+INSERT INTO fiscal_years (name, start_date, end_date, input_start_date, input_end_date, is_active)
+VALUES ('2025年度', '2025-04-01', '2026-03-31', '2025-04-01', '2025-06-30', TRUE);
+
+-- =============================================================================
+-- ITスキル分類（Lv1 / Lv2）
+-- =============================================================================
+INSERT INTO it_skill_categories (parent_id, level, name, sort_order) VALUES
+    (NULL, 1, 'プログラミング', 1),
+    (NULL, 1, 'インフラ',       2),
+    (NULL, 1, 'アプリケーション', 3),
+    (NULL, 1, 'マネジメント',   4);
+
+INSERT INTO it_skill_categories (parent_id, level, name, sort_order) VALUES
+    ((SELECT id FROM it_skill_categories WHERE name = 'プログラミング' AND level = 1),   2, 'Java',              1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'プログラミング' AND level = 1),   2, 'Python',            2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'プログラミング' AND level = 1),   2, 'C#',               3),
+    ((SELECT id FROM it_skill_categories WHERE name = 'インフラ' AND level = 1),         2, 'OS / サーバー',     1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'インフラ' AND level = 1),         2, 'ネットワーク',      2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'インフラ' AND level = 1),         2, 'クラウド',          3),
+    ((SELECT id FROM it_skill_categories WHERE name = 'アプリケーション' AND level = 1), 2, 'フロントエンド',    1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'アプリケーション' AND level = 1), 2, 'バックエンド',      2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'アプリケーション' AND level = 1), 2, 'データベース',      3),
+    ((SELECT id FROM it_skill_categories WHERE name = 'マネジメント' AND level = 1),     2, 'プロジェクト管理',  1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'マネジメント' AND level = 1),     2, 'プロセス改善',      2);
+
+-- =============================================================================
+-- ITスキル
+-- =============================================================================
+INSERT INTO it_skills (category_id, name, sort_order) VALUES
+    ((SELECT id FROM it_skill_categories WHERE name = 'Java'),              'Java SE',              1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'Java'),              'Spring Boot',          2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'Python'),            'Python基礎',           1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'C#'),               'C# / .NET',            1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'OS / サーバー'),    'Linux',                 1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'OS / サーバー'),    'Windows Server',        2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'ネットワーク'),     'TCP/IP・ネットワーク基礎', 1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'ネットワーク'),     'ルーター / スイッチ設定', 2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'クラウド'),         'AWS',                   1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'クラウド'),         'Azure',                 2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'フロントエンド'),   'HTML / CSS',            1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'フロントエンド'),   'JavaScript',            2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'フロントエンド'),   'React',                 3),
+    ((SELECT id FROM it_skill_categories WHERE name = 'バックエンド'),     'REST API設計',          1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'データベース'),     'SQL基礎',               1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'データベース'),     'PostgreSQL',            2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'プロジェクト管理'), 'WBS / スケジュール管理', 1),
+    ((SELECT id FROM it_skill_categories WHERE name = 'プロジェクト管理'), 'リスク管理',            2),
+    ((SELECT id FROM it_skill_categories WHERE name = 'プロセス改善'),    'アジャイル / スクラム',  1);
+
+-- =============================================================================
+-- 資格分類・資格
+-- =============================================================================
+INSERT INTO qualification_categories (name, sort_order) VALUES
+    ('国家資格（IT系）', 1),
+    ('ベンダー資格',     2);
+
+INSERT INTO qualifications (category_id, name, sort_order) VALUES
+    ((SELECT id FROM qualification_categories WHERE name = '国家資格（IT系）'), '基本情報技術者（FE）',                           1),
+    ((SELECT id FROM qualification_categories WHERE name = '国家資格（IT系）'), '応用情報技術者（AP）',                           2),
+    ((SELECT id FROM qualification_categories WHERE name = '国家資格（IT系）'), '情報処理安全確保支援士（SC）',                    3),
+    ((SELECT id FROM qualification_categories WHERE name = '国家資格（IT系）'), 'データベーススペシャリスト（DB）',                4),
+    ((SELECT id FROM qualification_categories WHERE name = 'ベンダー資格'),     'AWS認定ソリューションアーキテクト - アソシエイト', 1),
+    ((SELECT id FROM qualification_categories WHERE name = 'ベンダー資格'),     'Oracle Java SE 認定',                            2),
+    ((SELECT id FROM qualification_categories WHERE name = 'ベンダー資格'),     'Microsoft Azure Administrator（AZ-104）',         3);
+
+-- =============================================================================
+-- ADセミナー分類・ADセミナー
+-- =============================================================================
+INSERT INTO ad_seminar_categories (name, sort_order) VALUES
+    ('技術研修',             1),
+    ('ビジネス研修',         2),
+    ('コンプライアンス研修', 3);
+
+INSERT INTO ad_seminars (category_id, name, sort_order) VALUES
+    ((SELECT id FROM ad_seminar_categories WHERE name = '技術研修'),            'クラウド入門',         1),
+    ((SELECT id FROM ad_seminar_categories WHERE name = '技術研修'),            'セキュリティ基礎',     2),
+    ((SELECT id FROM ad_seminar_categories WHERE name = '技術研修'),            'Java中級',             3),
+    ((SELECT id FROM ad_seminar_categories WHERE name = 'ビジネス研修'),        'ビジネスマナー研修',   1),
+    ((SELECT id FROM ad_seminar_categories WHERE name = 'ビジネス研修'),        'プロジェクト管理基礎', 2),
+    ((SELECT id FROM ad_seminar_categories WHERE name = 'コンプライアンス研修'), '情報セキュリティ教育', 1),
+    ((SELECT id FROM ad_seminar_categories WHERE name = 'コンプライアンス研修'), '個人情報保護研修',     2);
+
+-- =============================================================================
+-- 社外セミナー分類
+-- =============================================================================
+INSERT INTO seminar_categories (name, sort_order) VALUES
+    ('技術',   1),
+    ('ビジネス', 2),
+    ('その他', 3);
+
+-- =============================================================================
+-- ユーザー
+-- 初期パスワード = ユーザーID（BCrypt cost=12）
+-- =============================================================================
+
+-- admin / 初期PW: admin → ログイン後に変更不要（is_initial_password=FALSE）
 INSERT INTO users (user_id, name, password_hash, role, is_initial_password, is_active)
 VALUES (
     'admin',
     '管理者',
     '$2b$12$6zPU82VzWT9rZ7jLF.3yp.qm815BLk3o6j47RjxRu1ZN7CQBPo0Li',
     'ADMIN',
-    TRUE,
+    FALSE,
     TRUE
 );
+
+-- tl01 / 初期PW: tl01
+INSERT INTO users (user_id, name, password_hash, role, is_initial_password, is_active)
+VALUES ('tl01', 'テストTL', '$2a$12$EePvdSwevAErJKjplTw7nOQUbNuclA0YAzG5DLm7.zLWsw51jJxXW', 'TL', TRUE, TRUE);
+
+-- user01, user02 / 初期PW: 各ユーザーID
+INSERT INTO users (user_id, name, password_hash, role, tl_user_id, is_initial_password, is_active) VALUES
+    ('user01', 'テストユーザー01', '$2a$12$5eDTZtPIqIRxeGm7bOBcZ.D2lFBxREG.PM9LDzJuM3ipvL.CSfThm', 'GENERAL', (SELECT id FROM users WHERE user_id = 'tl01'), TRUE, TRUE),
+    ('user02', 'テストユーザー02', '$2a$12$dLqToObRmzZ1J/PsK.08x.Xq6ttTLieZNFHqJw411mF/6nS1vGl/S', 'GENERAL', (SELECT id FROM users WHERE user_id = 'tl01'), TRUE, TRUE);
+
+-- =============================================================================
+-- テストデータ：前年度（2024年度）棚卸データ
+-- =============================================================================
+
+INSERT INTO fiscal_years (name, start_date, end_date, input_start_date, input_end_date, is_active)
+VALUES ('2024年度', '2024-04-01', '2025-03-31', '2024-04-01', '2024-06-30', FALSE);
+
+-- ─── user01 / 2024年度（COMPLETED） ─────────────────────────────────────────
+
+INSERT INTO inventories (user_id, fiscal_year_id, status, submitted_at, goal_review_completed_at, goal_completed_at)
+VALUES (
+    (SELECT id FROM users WHERE user_id = 'user01'),
+    (SELECT id FROM fiscal_years WHERE name = '2024年度'),
+    'COMPLETED',
+    '2024-05-08 10:00:00+09',
+    '2024-05-09 11:00:00+09',
+    '2024-05-10 15:00:00+09'
+);
+
+-- ITスキル明細（全スキル）
+INSERT INTO it_skill_details (inventory_id, it_skill_id, skill_level_id, remarks)
+SELECT
+    (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+     WHERE u.user_id = 'user01'
+       AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+    s.id,
+    (SELECT id FROM skill_levels WHERE level_value = v.lv),
+    v.rem
+FROM (VALUES
+    ('Java SE',                   4, 'Spring Bootでの実務経験あり'),
+    ('Spring Boot',               4, 'REST API開発経験あり'),
+    ('Python基礎',                2, '研修で学習済み'),
+    ('C# / .NET',                 1, NULL),
+    ('Linux',                     3, 'Ubuntuサーバー運用経験あり'),
+    ('Windows Server',            2, '基本的な設定は可能'),
+    ('TCP/IP・ネットワーク基礎',  3, NULL),
+    ('ルーター / スイッチ設定',   1, NULL),
+    ('AWS',                       3, 'EC2・RDS・S3の基本操作'),
+    ('Azure',                     1, NULL),
+    ('HTML / CSS',                3, NULL),
+    ('JavaScript',                3, 'ES6以降の基礎知識あり'),
+    ('React',                     3, '実装経験あり、さらなる習熟が必要'),
+    ('REST API設計',              4, 'Spring Bootでの実装経験多数'),
+    ('SQL基礎',                   4, 'JOIN・サブクエリなど複雑なクエリも可'),
+    ('PostgreSQL',                3, 'インデックス設計・チューニング経験あり'),
+    ('WBS / スケジュール管理',    2, '小規模案件のみ'),
+    ('リスク管理',                2, NULL),
+    ('アジャイル / スクラム',     2, 'スクラム開発経験あり')
+) AS v(skill_name, lv, rem)
+JOIN it_skills s ON s.name = v.skill_name;
+
+-- 資格明細
+INSERT INTO qualification_details (inventory_id, qualification_id, acquired_year_month, remarks)
+VALUES
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        (SELECT id FROM qualifications WHERE name = '基本情報技術者（FE）'),
+        '2020-06-01', '在学中に取得'
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        (SELECT id FROM qualifications WHERE name = 'AWS認定ソリューションアーキテクト - アソシエイト'),
+        '2023-08-01', 'SAA-C03で合格'
+    );
+
+-- セミナー明細
+INSERT INTO seminar_details (inventory_id, ad_seminar_id, seminar_name, seminar_category_id, attended_year_month, remarks)
+VALUES
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        (SELECT id FROM ad_seminars WHERE name = 'クラウド入門'),
+        NULL, NULL, '2024-04-01', NULL
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        (SELECT id FROM ad_seminars WHERE name = 'セキュリティ基礎'),
+        NULL, NULL, '2024-05-01', NULL
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        NULL, 'Python勉強会',
+        (SELECT id FROM seminar_categories WHERE name = '技術'),
+        '2024-03-01', '社内有志勉強会'
+    );
+
+-- 目標（2025年度の SCR-019 振り返りで参照される）
+INSERT INTO inventory_goals (inventory_id, goal_category, it_skill_id, qualification_id, ad_seminar_id, custom_name, target_period, reason)
+VALUES
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'IT_SKILL',
+        (SELECT id FROM it_skills WHERE name = 'React'),
+        NULL, NULL, NULL,
+        '2025-03-01',
+        'フロントエンド開発の主担当になるため、React をより深く習得したい'
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'QUALIFICATION',
+        NULL,
+        (SELECT id FROM qualifications WHERE name = '応用情報技術者（AP）'),
+        NULL, NULL,
+        '2025-10-01',
+        'キャリアアップのために秋期試験での取得を目指す'
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'AD',
+        NULL, NULL,
+        (SELECT id FROM ad_seminars WHERE name = 'Java中級'),
+        NULL,
+        '2025-02-01',
+        'Java のスキルをさらに向上させ、チーム内で指導できるレベルを目指す'
+    );
+
+-- ─── user02 / 2024年度（COMPLETED） ─────────────────────────────────────────
+
+INSERT INTO inventories (user_id, fiscal_year_id, status, submitted_at, goal_review_completed_at, goal_completed_at)
+VALUES (
+    (SELECT id FROM users WHERE user_id = 'user02'),
+    (SELECT id FROM fiscal_years WHERE name = '2024年度'),
+    'COMPLETED',
+    '2024-05-12 14:00:00+09',
+    '2024-05-13 10:00:00+09',
+    '2024-05-14 16:00:00+09'
+);
+
+INSERT INTO it_skill_details (inventory_id, it_skill_id, skill_level_id, remarks)
+SELECT
+    (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+     WHERE u.user_id = 'user02'
+       AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+    s.id,
+    (SELECT id FROM skill_levels WHERE level_value = v.lv),
+    v.rem
+FROM (VALUES
+    ('Java SE',                   3, NULL),
+    ('Spring Boot',               2, NULL),
+    ('Python基礎',                3, 'データ分析業務で使用'),
+    ('C# / .NET',                 2, NULL),
+    ('Linux',                     2, NULL),
+    ('Windows Server',            3, '運用担当として経験あり'),
+    ('TCP/IP・ネットワーク基礎',  2, NULL),
+    ('ルーター / スイッチ設定',   1, NULL),
+    ('AWS',                       2, NULL),
+    ('Azure',                     3, 'Azure AD・App Service を業務で利用'),
+    ('HTML / CSS',                2, NULL),
+    ('JavaScript',                2, NULL),
+    ('React',                     1, NULL),
+    ('REST API設計',              2, NULL),
+    ('SQL基礎',                   3, NULL),
+    ('PostgreSQL',                2, NULL),
+    ('WBS / スケジュール管理',    3, 'サブリーダーとして経験あり'),
+    ('リスク管理',                2, NULL),
+    ('アジャイル / スクラム',     1, NULL)
+) AS v(skill_name, lv, rem)
+JOIN it_skills s ON s.name = v.skill_name;
+
+INSERT INTO qualification_details (inventory_id, qualification_id, acquired_year_month, remarks)
+VALUES (
+    (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+     WHERE u.user_id = 'user02'
+       AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+    (SELECT id FROM qualifications WHERE name = '基本情報技術者（FE）'),
+    '2022-05-01', NULL
+);
+
+INSERT INTO seminar_details (inventory_id, ad_seminar_id, seminar_name, seminar_category_id, attended_year_month, remarks)
+VALUES (
+    (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+     WHERE u.user_id = 'user02'
+       AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+    (SELECT id FROM ad_seminars WHERE name = 'プロジェクト管理基礎'),
+    NULL, NULL, '2024-04-01', NULL
+);
+
+INSERT INTO inventory_goals (inventory_id, goal_category, it_skill_id, qualification_id, ad_seminar_id, custom_name, target_period, reason)
+VALUES
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user02'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'IT_SKILL',
+        (SELECT id FROM it_skills WHERE name = 'AWS'),
+        NULL, NULL, NULL,
+        '2025-03-01',
+        'クラウド移行プロジェクトに備え、AWS の実践スキルを高める'
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'user02'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'QUALIFICATION',
+        NULL,
+        (SELECT id FROM qualifications WHERE name = '応用情報技術者（AP）'),
+        NULL, NULL,
+        '2025-10-01',
+        '昇格要件として取得を目指す'
+    );
+
+-- ─── tl01 / 2024年度（COMPLETED） ────────────────────────────────────────────
+
+INSERT INTO inventories (user_id, fiscal_year_id, status, submitted_at, goal_review_completed_at, goal_completed_at)
+VALUES (
+    (SELECT id FROM users WHERE user_id = 'tl01'),
+    (SELECT id FROM fiscal_years WHERE name = '2024年度'),
+    'COMPLETED',
+    '2024-05-07 09:00:00+09',
+    '2024-05-07 10:00:00+09',
+    '2024-05-08 09:30:00+09'
+);
+
+INSERT INTO it_skill_details (inventory_id, it_skill_id, skill_level_id, remarks)
+SELECT
+    (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+     WHERE u.user_id = 'tl01'
+       AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+    s.id,
+    (SELECT id FROM skill_levels WHERE level_value = v.lv),
+    v.rem
+FROM (VALUES
+    ('Java SE',                   5, 'チーム内で技術指導を担当'),
+    ('Spring Boot',               5, 'アーキテクチャ設計・コードレビュー担当'),
+    ('Python基礎',                3, NULL),
+    ('C# / .NET',                 2, NULL),
+    ('Linux',                     4, 'サーバー設計・構築経験あり'),
+    ('Windows Server',            3, NULL),
+    ('TCP/IP・ネットワーク基礎',  4, NULL),
+    ('ルーター / スイッチ設定',   2, NULL),
+    ('AWS',                       4, 'インフラ設計・コスト最適化経験あり'),
+    ('Azure',                     2, NULL),
+    ('HTML / CSS',                3, NULL),
+    ('JavaScript',                4, NULL),
+    ('React',                     4, 'フロントエンド設計担当'),
+    ('REST API設計',              5, 'API設計ガイドライン策定済み'),
+    ('SQL基礎',                   5, NULL),
+    ('PostgreSQL',                4, 'パフォーマンスチューニング経験あり'),
+    ('WBS / スケジュール管理',    4, 'チームリーダーとして複数案件を管理'),
+    ('リスク管理',                4, NULL),
+    ('アジャイル / スクラム',     4, 'スクラムマスター経験あり')
+) AS v(skill_name, lv, rem)
+JOIN it_skills s ON s.name = v.skill_name;
+
+INSERT INTO qualification_details (inventory_id, qualification_id, acquired_year_month, remarks)
+VALUES (
+    (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+     WHERE u.user_id = 'tl01'
+       AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+    (SELECT id FROM qualifications WHERE name = '応用情報技術者（AP）'),
+    '2018-11-01', NULL
+);
+
+INSERT INTO seminar_details (inventory_id, ad_seminar_id, seminar_name, seminar_category_id, attended_year_month, remarks)
+VALUES
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'tl01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        (SELECT id FROM ad_seminars WHERE name = 'Java中級'),
+        NULL, NULL, '2024-04-01', 'メンバーへの展開目的で受講'
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'tl01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        NULL, 'AWSコスト最適化勉強会',
+        (SELECT id FROM seminar_categories WHERE name = '技術'),
+        '2024-02-01', 'コスト削減施策の一環'
+    );
+
+INSERT INTO inventory_goals (inventory_id, goal_category, it_skill_id, qualification_id, ad_seminar_id, custom_name, target_period, reason)
+VALUES
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'tl01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'QUALIFICATION',
+        NULL,
+        (SELECT id FROM qualifications WHERE name = '情報処理安全確保支援士（SC）'),
+        NULL, NULL,
+        '2025-10-01',
+        'セキュリティ要件の高い案件に備えて取得する'
+    ),
+    (
+        (SELECT i.id FROM inventories i JOIN users u ON i.user_id = u.id
+         WHERE u.user_id = 'tl01'
+           AND i.fiscal_year_id = (SELECT id FROM fiscal_years WHERE name = '2024年度')),
+        'IT_SKILL',
+        (SELECT id FROM it_skills WHERE name = 'アジャイル / スクラム'),
+        NULL, NULL, NULL,
+        '2025-03-01',
+        'チーム全体のスクラム導入を推進するため、実践知識を深める'
+    );

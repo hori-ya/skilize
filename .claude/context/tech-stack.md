@@ -21,7 +21,7 @@
 | 項目 | 内容 |
 |------|------|
 | フレームワーク | Spring Boot 4 |
-| 言語 | Java 21 |
+| 言語 | Java 22 |
 | ビルドツール | Gradle |
 | 認証・認可 | Spring Security（JWT） |
 | ORM | Spring Data JPA / Hibernate |
