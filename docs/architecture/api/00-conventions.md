@@ -78,6 +78,8 @@
 | `VALIDATION_ERROR` | 400 | 入力バリデーション失敗 |
 | `GOAL_INCOMPLETE` | 422 | 目標設定件数不足（完了操作ブロック） |
 | `CATEGORY_HAS_SKILLS` | 422 | 分類削除不可（配下に有効スキルあり） |
+| `CATEGORY_HAS_QUALIFICATIONS` | 422 | 分類削除不可（配下に有効な資格あり） |
+| `CATEGORY_HAS_AD_SEMINARS` | 422 | 分類削除不可（配下に有効なADあり） |
 | `INVENTORY_STATUS_INVALID` | 422 | 操作に対してステータスが不正 |
 
 ---

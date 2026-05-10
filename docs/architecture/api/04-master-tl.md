@@ -24,7 +24,8 @@
 | POST | /api/qualifications/promote | カスタム資格をマスタ昇格 | TL / ADMIN |
 
 > ITスキル分類（`/api/it-skill-categories`）の参照（GET）は TL / ADMIN が可能。  
-> 分類の CRUD は ADMIN 専用（→ 05-master-admin.md）。
+> 資格分類（`/api/qualification-categories`）の参照（GET）は TL / ADMIN が可能。  
+> 各分類の CRUD は ADMIN 専用（→ 05-master-admin.md）。
 
 ---
 
@@ -245,6 +246,7 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
 | `isActive` | boolean | 有効 / 無効フィルタ（省略で有効のみ） |
+| `categoryId` | int | 資格分類でフィルタ（任意） |
 
 **Response 200**
 
@@ -253,6 +255,8 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
   {
     "id": 1,
     "name": "基本情報技術者試験",
+    "categoryId": 1,
+    "categoryName": "IT資格",
     "description": "IPA 国家資格",
     "sortOrder": 10,
     "isActive": true
@@ -260,12 +264,16 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
   {
     "id": 2,
     "name": "応用情報技術者試験",
+    "categoryId": 1,
+    "categoryName": "IT資格",
     "description": "IPA 国家資格",
     "sortOrder": 20,
     "isActive": true
   }
 ]
 ```
+
+> `categoryId` / `categoryName` は未分類の場合 `null`。
 
 ---
 
@@ -280,11 +288,14 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 ```json
 {
   "name": "AWS Solutions Architect Professional",
+  "categoryId": 2,
   "description": "AWS 上級認定資格",
   "sortOrder": 35,
   "isActive": true
 }
 ```
+
+> `categoryId` は任意。省略または `null` で未分類。
 
 **Response 201**
 
@@ -292,6 +303,8 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 {
   "id": 10,
   "name": "AWS Solutions Architect Professional",
+  "categoryId": 2,
+  "categoryName": "クラウド資格",
   "description": "AWS 上級認定資格",
   "sortOrder": 35,
   "isActive": true
@@ -377,10 +390,13 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 {
   "customQualificationName": "LPIC-1",
   "name": "LPIC-1",
+  "categoryId": 3,
   "description": "Linux Professional Institute 認定資格 レベル1",
   "sortOrder": 50
 }
 ```
+
+> `categoryId` は任意。省略または `null` で未分類。
 
 **Response 201**
 
@@ -388,6 +404,8 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 {
   "id": 11,
   "name": "LPIC-1",
+  "categoryId": 3,
+  "categoryName": "ベンダー資格",
   "description": "Linux Professional Institute 認定資格 レベル1",
   "sortOrder": 50,
   "isActive": true,

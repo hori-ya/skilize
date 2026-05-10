@@ -16,15 +16,18 @@
 | 2 | `fiscal_years` | 年度マスタ | 棚卸の対象年度 |
 | 3 | `skill_levels` | レベルマスタ | スキル採点レベルの定義 |
 | 4 | `it_skill_categories` | ITスキル分類マスタ | ITスキルの階層分類（最大3階層・自己参照） |
-| 5 | `it_skills` | ITスキルマスタ | ITスキルの一覧 |
-| 6 | `qualifications` | 参考資格マスタ | 参考資格の一覧 |
-| 7 | `ad_seminars` | ADマスタ | AD（スキルアップ活動区分）の一覧 |
-| 8 | `users` | ユーザー | システムユーザー（TLへの自己参照FK） |
-| 9 | `inventories` | 棚卸ヘッダー | ユーザー×年度の棚卸（ITスキル・資格・セミナー共通ヘッダー） |
-| 10 | `it_skill_details` | ITスキル棚卸明細 | ITスキルの採点・備考 |
-| 11 | `qualification_details` | 資格棚卸明細 | 資格の取得年月・備考 |
-| 12 | `seminar_details` | セミナー棚卸明細 | セミナーの受講年月・備考 |
-| 13 | `inventory_goals` | 目標設定 | 翌年度の目標（ITスキル / 資格 / AD） |
+| 5 | `qualification_categories` | 資格分類マスタ | 資格の分類（フラット1階層） |
+| 6 | `ad_seminar_categories` | ADセミナー分類マスタ | ADセミナーの分類（フラット1階層） |
+| 7 | `seminar_categories` | セミナー分類マスタ | セミナー（AD以外）の分類（フラット1階層） |
+| 8 | `it_skills` | ITスキルマスタ | ITスキルの一覧 |
+| 9 | `qualifications` | 参考資格マスタ | 参考資格の一覧 |
+| 10 | `ad_seminars` | ADマスタ | AD（スキルアップ活動区分）の一覧 |
+| 11 | `users` | ユーザー | システムユーザー（TLへの自己参照FK） |
+| 12 | `inventories` | 棚卸ヘッダー | ユーザー×年度の棚卸（ITスキル・資格・セミナー共通ヘッダー） |
+| 13 | `it_skill_details` | ITスキル棚卸明細 | ITスキルの採点・備考 |
+| 14 | `qualification_details` | 資格棚卸明細 | 資格の取得年月・備考 |
+| 15 | `seminar_details` | セミナー棚卸明細 | セミナーの受講年月・備考 |
+| 16 | `inventory_goals` | 目標設定 | 翌年度の目標（ITスキル / 資格 / AD） |
 
 ---
 
@@ -133,7 +136,79 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 
 ---
 
-## 5. it_skills（ITスキルマスタ）
+## 5. qualification_categories（資格分類マスタ）
+
+資格の分類をフラット（1階層）で管理する。
+
+### カラム定義
+
+| # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
+|---|---------|---------|:--------:|-----------|------|
+| 1 | id | `SERIAL` | ○ | — | PK |
+| 2 | name | `VARCHAR(100)` | ○ | — | 分類名 |
+| 3 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
+| 4 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ |
+| 5 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 6 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+
+### 制約・インデックス
+
+| 種別 | 対象 | 内容 |
+|------|------|------|
+| PK | id | — |
+| UNIQUE | name | 分類名の重複禁止 |
+
+---
+
+## 6. ad_seminar_categories（ADセミナー分類マスタ）
+
+ADセミナーの分類をフラット（1階層）で管理する。
+
+### カラム定義
+
+| # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
+|---|---------|---------|:--------:|-----------|------|
+| 1 | id | `SERIAL` | ○ | — | PK |
+| 2 | name | `VARCHAR(100)` | ○ | — | 分類名 |
+| 3 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
+| 4 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ |
+| 5 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 6 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+
+### 制約・インデックス
+
+| 種別 | 対象 | 内容 |
+|------|------|------|
+| PK | id | — |
+| UNIQUE | name | 分類名の重複禁止 |
+
+---
+
+## 7. seminar_categories（セミナー分類マスタ）
+
+セミナー（AD以外）の分類をフラット（1階層）で管理する。
+
+### カラム定義
+
+| # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
+|---|---------|---------|:--------:|-----------|------|
+| 1 | id | `SERIAL` | ○ | — | PK |
+| 2 | name | `VARCHAR(100)` | ○ | — | 分類名 |
+| 3 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
+| 4 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ |
+| 5 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 6 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+
+### 制約・インデックス
+
+| 種別 | 対象 | 内容 |
+|------|------|------|
+| PK | id | — |
+| UNIQUE | name | 分類名の重複禁止 |
+
+---
+
+## 8. it_skills（ITスキルマスタ）
 
 ### カラム定義
 
@@ -159,52 +234,58 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 
 ---
 
-## 6. qualifications（参考資格マスタ）
+## 9. qualifications（参考資格マスタ）
 
 ### カラム定義
 
 | # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
 |---|---------|---------|:--------:|-----------|------|
 | 1 | id | `SERIAL` | ○ | — | PK |
-| 2 | name | `VARCHAR(200)` | ○ | — | 資格名 |
-| 3 | description | `TEXT` | — | `NULL` | 説明 |
-| 4 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
-| 5 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ（論理削除） |
-| 6 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
-| 7 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+| 2 | category_id | `INTEGER` | — | `NULL` | 資格分類ID（FK → qualification_categories.id。NULL は未分類） |
+| 3 | name | `VARCHAR(200)` | ○ | — | 資格名 |
+| 4 | description | `TEXT` | — | `NULL` | 説明 |
+| 5 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
+| 6 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ（論理削除） |
+| 7 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 8 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
 
 ### 制約・インデックス
 
 | 種別 | 対象 | 内容 |
 |------|------|------|
 | PK | id | — |
+| FK | category_id | `qualification_categories(id)` / NULL 許容 |
+| IDX | category_id | 分類絞り込み用 |
 | IDX | is_active | 有効資格取得用 |
 
 ---
 
-## 7. ad_seminars（ADマスタ）
+## 10. ad_seminars（ADマスタ）
 
 ### カラム定義
 
 | # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
 |---|---------|---------|:--------:|-----------|------|
 | 1 | id | `SERIAL` | ○ | — | PK |
-| 2 | name | `VARCHAR(200)` | ○ | — | AD名 |
-| 3 | description | `TEXT` | — | `NULL` | 説明 |
-| 4 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
-| 5 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ（論理削除） |
-| 6 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
-| 7 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+| 2 | category_id | `INTEGER` | — | `NULL` | ADセミナー分類ID（FK → ad_seminar_categories.id。NULL は未分類） |
+| 3 | name | `VARCHAR(200)` | ○ | — | AD名 |
+| 4 | description | `TEXT` | — | `NULL` | 説明 |
+| 5 | sort_order | `INTEGER` | ○ | `0` | 表示順 |
+| 6 | is_active | `BOOLEAN` | ○ | `TRUE` | 有効フラグ（論理削除） |
+| 7 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 8 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
 
 ### 制約・インデックス
 
 | 種別 | 対象 | 内容 |
 |------|------|------|
 | PK | id | — |
+| FK | category_id | `ad_seminar_categories(id)` / NULL 許容 |
+| IDX | category_id | 分類絞り込み用 |
 
 ---
 
-## 8. users（ユーザー）
+## 11. users（ユーザー）
 
 ### カラム定義
 
@@ -238,7 +319,7 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 
 ---
 
-## 9. inventories（棚卸ヘッダー）
+## 12. inventories（棚卸ヘッダー）
 
 ユーザーと年度の組み合わせで 1 レコード。ITスキル・資格・セミナーの各明細の親となる。
 
@@ -251,9 +332,10 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 | 3 | fiscal_year_id | `INTEGER` | ○ | — | 年度ID（FK → fiscal_years.id） |
 | 4 | status | `VARCHAR(20)` | ○ | `'DRAFT'` | ステータス（`DRAFT` / `PENDING_GOAL` / `COMPLETED`） |
 | 5 | submitted_at | `TIMESTAMPTZ` | — | `NULL` | 棚卸提出日時 |
-| 6 | goal_completed_at | `TIMESTAMPTZ` | — | `NULL` | 目標設定完了日時 |
-| 7 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
-| 8 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+| 6 | goal_review_completed_at | `TIMESTAMPTZ` | — | `NULL` | 前回目標振り返り完了日時（NULL かつ前年度目標あり → ログイン時に SCR-019 へ誘導） |
+| 7 | goal_completed_at | `TIMESTAMPTZ` | — | `NULL` | 目標設定完了日時 |
+| 8 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 9 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
 
 ### 制約・インデックス
 
@@ -270,7 +352,7 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 
 ---
 
-## 10. it_skill_details（ITスキル棚卸明細）
+## 13. it_skill_details（ITスキル棚卸明細）
 
 `it_skill_id` と `custom_skill_name` のどちらか一方が必ず設定される。
 
@@ -301,7 +383,7 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 
 ---
 
-## 11. qualification_details（資格棚卸明細）
+## 14. qualification_details（資格棚卸明細）
 
 `qualification_id` と `custom_qualification_name` のどちらか一方が必ず設定される。
 
@@ -331,9 +413,9 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 
 ---
 
-## 12. seminar_details（セミナー棚卸明細）
+## 15. seminar_details（セミナー棚卸明細）
 
-`ad_seminar_id` と `seminar_name` のどちらか一方が必ず設定される。
+`ad_seminar_id` と `seminar_name` のどちらか一方が必ず設定される。`seminar_category_id` はセミナー（AD以外、`seminar_name` 使用時）にのみ設定する。
 
 ### カラム定義
 
@@ -341,12 +423,13 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 |---|---------|---------|:--------:|-----------|------|
 | 1 | id | `SERIAL` | ○ | — | PK |
 | 2 | inventory_id | `INTEGER` | ○ | — | 棚卸ヘッダーID（FK → inventories.id） |
-| 3 | ad_seminar_id | `INTEGER` | — | `NULL` | ADセミナーID（FK → ad_seminars.id。NULL はフリーセミナー） |
-| 4 | seminar_name | `VARCHAR(200)` | — | `NULL` | セミナー名（フリーセミナーで使用） |
-| 5 | attended_year_month | `DATE` | — | `NULL` | 受講年月（月初日で保存。未受講は NULL） |
-| 6 | remarks | `TEXT` | — | `NULL` | 備考（受講理由・振り返り） |
-| 7 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
-| 8 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+| 3 | ad_seminar_id | `INTEGER` | — | `NULL` | ADセミナーID（FK → ad_seminars.id。NULL はAD以外のセミナー） |
+| 4 | seminar_name | `VARCHAR(200)` | — | `NULL` | セミナー名（AD以外のセミナーで使用） |
+| 5 | seminar_category_id | `INTEGER` | — | `NULL` | セミナー分類ID（FK → seminar_categories.id。AD以外のセミナー時のみ使用） |
+| 6 | attended_year_month | `DATE` | — | `NULL` | 受講年月（月初日で保存。未受講は NULL） |
+| 7 | remarks | `TEXT` | — | `NULL` | 備考（受講理由・振り返り） |
+| 8 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 9 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
 
 ### 制約・インデックス
 
@@ -355,12 +438,13 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 | PK | id | — |
 | FK | inventory_id | `inventories(id)` |
 | FK | ad_seminar_id | `ad_seminars(id)` / NULL 許容 |
+| FK | seminar_category_id | `seminar_categories(id)` / NULL 許容 |
 | CHECK | — | `ad_seminar_id IS NOT NULL OR seminar_name IS NOT NULL` |
 | IDX | inventory_id | 明細一括取得用 |
 
 ---
 
-## 13. inventory_goals（目標設定）
+## 16. inventory_goals（目標設定）
 
 目標カテゴリ (`goal_category`) に応じて参照先 FK が変わる。カスタム目標は `custom_name` を使用。
 
@@ -377,8 +461,10 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 | 7 | custom_name | `VARCHAR(200)` | — | `NULL` | カスタムスキル・資格目標の自由テキスト |
 | 8 | target_period | `DATE` | ○ | — | 達成・予定時期（月初日で保存） |
 | 9 | reason | `TEXT` | — | `NULL` | 理由 |
-| 10 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
-| 11 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
+| 10 | achievement_status | `VARCHAR(20)` | — | `NULL` | 達成状況（翌年度の振り返り時に記録。`ACHIEVED` / `PARTIAL` / `NOT_ACHIEVED`） |
+| 11 | review_note | `TEXT` | — | `NULL` | 振り返りコメント（翌年度の振り返り時に記録） |
+| 12 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 13 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 更新日時（自動更新） |
 
 ### 制約・インデックス
 
@@ -391,6 +477,7 @@ ITスキルの階層分類（最大3階層）を自己参照で管理する。`p
 | FK | ad_seminar_id | `ad_seminars(id)` / NULL 許容 |
 | CHECK | goal_category | `IN ('IT_SKILL', 'QUALIFICATION', 'AD')` |
 | CHECK | — | `it_skill_id IS NOT NULL OR qualification_id IS NOT NULL OR ad_seminar_id IS NOT NULL OR custom_name IS NOT NULL` |
+| CHECK | achievement_status | `IN ('ACHIEVED', 'PARTIAL', 'NOT_ACHIEVED')` / NULL 許容 |
 | IDX | inventory_id | 目標一覧取得用 |
 
 ### goal_category と FK の対応

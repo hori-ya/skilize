@@ -48,17 +48,37 @@ ITSkill（ITスキルマスタ）
   ├─ sort_order
   └─ is_active
 
+QualificationCategory（資格分類マスタ。フラット1階層）
+  ├─ id
+  ├─ name
+  ├─ sort_order
+  └─ is_active
+
 Qualification（参考資格マスタ）
   ├─ id
+  ├─ category_id → QualificationCategory（nullable：NULL は未分類）
   ├─ name
   ├─ description
   ├─ sort_order
   └─ is_active
 
-ADSeminar（ADマスタ）
+ADSeminarCategory（ADセミナー分類マスタ。フラット1階層）
   ├─ id
   ├─ name
+  ├─ sort_order
+  └─ is_active
+
+ADSeminar（ADマスタ）
+  ├─ id
+  ├─ category_id → ADSeminarCategory（nullable：NULL は未分類）
+  ├─ name
   ├─ description
+  ├─ sort_order
+  └─ is_active
+
+SeminarCategory（セミナー分類マスタ。フラット1階層。AD以外のセミナーに適用）
+  ├─ id
+  ├─ name
   ├─ sort_order
   └─ is_active
 ```
@@ -87,6 +107,7 @@ Inventory（棚卸ヘッダー。ITスキル・資格・セミナー共通）
   ├─ fiscal_year_id → FiscalYear
   ├─ status（DRAFT / PENDING_GOAL / COMPLETED）
   ├─ submitted_at（棚卸提出日時）
+  ├─ goal_review_completed_at（前回目標振り返り完了日時。nullable。NULLかつ前年度目標ありの場合、ログイン時にSCR-019へ誘導）
   └─ goal_completed_at（目標設定完了日時）
 
 ITSkillDetail（ITスキル棚卸明細）
@@ -108,8 +129,9 @@ QualificationDetail（資格棚卸明細）
 SeminarDetail（セミナー棚卸明細）
   ├─ id
   ├─ inventory_id → Inventory
-  ├─ ad_seminar_id → ADSeminar（nullable：NULLはフリーセミナー）
+  ├─ ad_seminar_id → ADSeminar（nullable：NULLはAD以外のセミナー）
   ├─ seminar_name（ad_seminar_id=NULLの場合に使用）
+  ├─ seminar_category_id → SeminarCategory（nullable：AD以外のセミナー時のみ。ADセミナーの分類はad_seminars.category_idで管理）
   ├─ attended_year_month（受講年月。nullable）
   └─ remarks（備考：受講理由・振り返り）
 ```
@@ -126,7 +148,9 @@ InventoryGoal（目標設定）
   ├─ ad_seminar_id → ADSeminar（nullable：goal_category=ADの場合）
   ├─ custom_name（カスタムスキル・資格を目標とする場合の自由テキスト）
   ├─ target_period（達成・予定時期：年月）
-  └─ reason（理由）
+  ├─ reason（理由）
+  ├─ achievement_status（達成状況。翌年度の振り返り時に記録。ACHIEVED / PARTIAL / NOT_ACHIEVED。nullable）
+  └─ review_note（振り返りコメント。翌年度の振り返り時に記録。nullable）
 ```
 
 ---
@@ -135,9 +159,12 @@ InventoryGoal（目標設定）
 
 | テーブル | カラム | NULLの意味 |
 |----------|--------|-----------|
+| `qualifications` | `category_id` | 未分類 |
+| `ad_seminars` | `category_id` | 未分類 |
 | `it_skill_details` | `it_skill_id` | カスタムスキル（`custom_skill_name` を使用） |
 | `qualification_details` | `qualification_id` | カスタム資格（`custom_qualification_name` を使用） |
-| `seminar_details` | `ad_seminar_id` | フリーセミナー（`seminar_name` を使用） |
+| `seminar_details` | `ad_seminar_id` | AD以外のセミナー（`seminar_name` を使用） |
+| `seminar_details` | `seminar_category_id` | ADセミナーの場合（ADの分類は `ad_seminars.category_id` で管理）、または未分類のセミナー |
 | `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
 | `users` | `tl_user_id` | TL未設定ユーザー |
 | `users` | `email` | メールアドレス未登録ユーザー（任意項目） |

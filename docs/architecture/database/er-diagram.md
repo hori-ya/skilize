@@ -69,11 +69,19 @@ erDiagram
   }
 
   %% -------------------------
-  %% 資格マスタ
+  %% 資格関連マスタ
   %% -------------------------
+
+  qualification_categories {
+    int      id         PK
+    varchar  name
+    int      sort_order
+    boolean  is_active
+  }
 
   qualifications {
     int      id          PK
+    int      category_id FK "nullable: NULL は未分類"
     varchar  name
     text     description "nullable"
     int      sort_order
@@ -83,17 +91,36 @@ erDiagram
   }
 
   %% -------------------------
-  %% ADセミナーマスタ
+  %% ADセミナー関連マスタ
   %% -------------------------
+
+  ad_seminar_categories {
+    int      id         PK
+    varchar  name
+    int      sort_order
+    boolean  is_active
+  }
 
   ad_seminars {
     int      id          PK
+    int      category_id FK "nullable: NULL は未分類"
     varchar  name
     text     description "nullable"
     int      sort_order
     boolean  is_active
     timestamp created_at
     timestamp updated_at
+  }
+
+  %% -------------------------
+  %% セミナー分類マスタ
+  %% -------------------------
+
+  seminar_categories {
+    int      id         PK
+    varchar  name
+    int      sort_order
+    boolean  is_active
   }
 
   %% -------------------------
@@ -119,12 +146,13 @@ erDiagram
   %% -------------------------
 
   inventories {
-    int      id                 PK
-    int      user_id            FK
-    int      fiscal_year_id     FK
-    varchar  status             "DRAFT / PENDING_GOAL / COMPLETED"
-    timestamp submitted_at      "nullable"
-    timestamp goal_completed_at "nullable"
+    int      id                          PK
+    int      user_id                     FK
+    int      fiscal_year_id              FK
+    varchar  status                      "DRAFT / PENDING_GOAL / COMPLETED"
+    timestamp submitted_at               "nullable"
+    timestamp goal_review_completed_at   "nullable: 前回目標振り返り完了日時"
+    timestamp goal_completed_at          "nullable"
     timestamp created_at
     timestamp updated_at
   }
@@ -158,8 +186,9 @@ erDiagram
   seminar_details {
     int      id                   PK
     int      inventory_id         FK
-    int      ad_seminar_id        FK "nullable: NULLはフリーセミナー"
-    varchar  seminar_name         "nullable: フリーセミナー時に使用"
+    int      ad_seminar_id        FK "nullable: NULLはAD以外のセミナー"
+    varchar  seminar_name         "nullable: AD以外のセミナー時に使用"
+    int      seminar_category_id  FK "nullable: AD以外のセミナー時のみ使用"
     date     attended_year_month  "nullable: 月初日で保存"
     text     remarks              "受講理由・振り返り nullable"
     timestamp created_at
@@ -171,15 +200,17 @@ erDiagram
   %% -------------------------
 
   inventory_goals {
-    int      id               PK
-    int      inventory_id     FK
-    varchar  goal_category    "IT_SKILL / QUALIFICATION / AD"
-    int      it_skill_id      FK "nullable"
-    int      qualification_id FK "nullable"
-    int      ad_seminar_id    FK "nullable"
-    varchar  custom_name      "カスタムスキル・資格目標時の自由テキスト nullable"
-    date     target_period    "達成・予定時期: 月初日で保存"
-    text     reason           "理由 nullable"
+    int      id                 PK
+    int      inventory_id       FK
+    varchar  goal_category       "IT_SKILL / QUALIFICATION / AD"
+    int      it_skill_id         FK "nullable"
+    int      qualification_id    FK "nullable"
+    int      ad_seminar_id       FK "nullable"
+    varchar  custom_name         "カスタムスキル・資格目標時の自由テキスト nullable"
+    date     target_period       "達成・予定時期: 月初日で保存"
+    text     reason              "理由 nullable"
+    varchar  achievement_status  "ACHIEVED/PARTIAL/NOT_ACHIEVED nullable: 翌年度振り返り時に記録"
+    text     review_note         "振り返りコメント nullable: 翌年度振り返り時に記録"
     timestamp created_at
     timestamp updated_at
   }
@@ -188,23 +219,26 @@ erDiagram
   %% リレーション
   %% -------------------------
 
-  fiscal_year_settings  ||--o{  users                 : "updated_by"
-  fiscal_years          ||--o{  inventories            : "has"
-  it_skill_categories   ||--o{  it_skill_categories   : "parent(self-ref)"
-  it_skill_categories   ||--o{  it_skills             : "classifies"
-  users                 |o--o{  users                 : "tl_of(self-ref)"
-  users                 ||--o{  inventories           : "owns"
-  inventories           ||--o{  it_skill_details      : "contains"
-  inventories           ||--o{  qualification_details : "contains"
-  inventories           ||--o{  seminar_details       : "contains"
-  inventories           ||--o{  inventory_goals       : "has"
-  skill_levels          ||--o{  it_skill_details      : "scored_by"
-  it_skills             |o--o{  it_skill_details      : "referenced_by"
-  it_skills             |o--o{  inventory_goals       : "targeted_by"
-  qualifications        |o--o{  qualification_details : "referenced_by"
-  qualifications        |o--o{  inventory_goals       : "targeted_by"
-  ad_seminars           |o--o{  seminar_details       : "referenced_by"
-  ad_seminars           |o--o{  inventory_goals       : "targeted_by"
+  fiscal_year_settings      ||--o{  users                  : "updated_by"
+  fiscal_years              ||--o{  inventories             : "has"
+  it_skill_categories       ||--o{  it_skill_categories     : "parent(self-ref)"
+  it_skill_categories       ||--o{  it_skills               : "classifies"
+  qualification_categories  ||--o{  qualifications          : "classifies"
+  ad_seminar_categories     ||--o{  ad_seminars             : "classifies"
+  seminar_categories        |o--o{  seminar_details         : "classifies"
+  users                     |o--o{  users                   : "tl_of(self-ref)"
+  users                     ||--o{  inventories             : "owns"
+  inventories               ||--o{  it_skill_details        : "contains"
+  inventories               ||--o{  qualification_details   : "contains"
+  inventories               ||--o{  seminar_details         : "contains"
+  inventories               ||--o{  inventory_goals         : "has"
+  skill_levels              ||--o{  it_skill_details        : "scored_by"
+  it_skills                 |o--o{  it_skill_details        : "referenced_by"
+  it_skills                 |o--o{  inventory_goals         : "targeted_by"
+  qualifications            |o--o{  qualification_details   : "referenced_by"
+  qualifications            |o--o{  inventory_goals         : "targeted_by"
+  ad_seminars               |o--o{  seminar_details         : "referenced_by"
+  ad_seminars               |o--o{  inventory_goals         : "targeted_by"
 ```
 
 ---
@@ -215,9 +249,12 @@ erDiagram
 
 | テーブル | カラム | NULLの意味 |
 |----------|--------|-----------|
+| `qualifications` | `category_id` | 未分類 |
+| `ad_seminars` | `category_id` | 未分類 |
 | `it_skill_details` | `it_skill_id` | カスタムスキル（`custom_skill_name` を使用） |
 | `qualification_details` | `qualification_id` | カスタム資格（`custom_qualification_name` を使用） |
-| `seminar_details` | `ad_seminar_id` | フリーセミナー（`seminar_name` を使用） |
+| `seminar_details` | `ad_seminar_id` | AD以外のセミナー（`seminar_name` を使用） |
+| `seminar_details` | `seminar_category_id` | ADセミナーの場合（ADの分類は `ad_seminars.category_id` で管理）、または未分類セミナー |
 | `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
 | `users` | `tl_user_id` | TL未設定ユーザー |
 | `users` | `email` | メールアドレス未登録ユーザー（任意項目） |

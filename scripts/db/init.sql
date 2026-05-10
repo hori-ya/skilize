@@ -16,15 +16,18 @@ DROP TABLE IF EXISTS ad_seminars            CASCADE;
 DROP TABLE IF EXISTS qualifications         CASCADE;
 DROP TABLE IF EXISTS it_skills              CASCADE;
 DROP TABLE IF EXISTS it_skill_categories    CASCADE;
+DROP TABLE IF EXISTS seminar_categories     CASCADE;
+DROP TABLE IF EXISTS ad_seminar_categories  CASCADE;
+DROP TABLE IF EXISTS qualification_categories CASCADE;
 DROP TABLE IF EXISTS skill_levels           CASCADE;
 DROP TABLE IF EXISTS fiscal_years           CASCADE;
 DROP TABLE IF EXISTS fiscal_year_settings   CASCADE;
 
 DROP FUNCTION IF EXISTS update_updated_at();
 
--- -----------------------------------------------------------------------------
+-- =============================================================================
 -- 共通トリガー関数: updated_at 自動更新
--- -----------------------------------------------------------------------------
+-- =============================================================================
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -132,7 +135,70 @@ CREATE TRIGGER trg_it_skill_categories_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 5. it_skills（ITスキルマスタ）
+-- 5. qualification_categories（資格分類マスタ / フラット1階層）
+-- -----------------------------------------------------------------------------
+CREATE TABLE qualification_categories (
+    id         SERIAL       NOT NULL,
+    name       VARCHAR(100) NOT NULL,
+    sort_order INTEGER      NOT NULL DEFAULT 0,
+    is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_qualification_categories PRIMARY KEY (id),
+    CONSTRAINT uq_qualification_categories_name UNIQUE (name)
+);
+
+COMMENT ON TABLE qualification_categories IS '資格分類マスタ（フラット1階層）';
+
+CREATE TRIGGER trg_qualification_categories_updated_at
+    BEFORE UPDATE ON qualification_categories
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- 6. ad_seminar_categories（ADセミナー分類マスタ / フラット1階層）
+-- -----------------------------------------------------------------------------
+CREATE TABLE ad_seminar_categories (
+    id         SERIAL       NOT NULL,
+    name       VARCHAR(100) NOT NULL,
+    sort_order INTEGER      NOT NULL DEFAULT 0,
+    is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_ad_seminar_categories PRIMARY KEY (id),
+    CONSTRAINT uq_ad_seminar_categories_name UNIQUE (name)
+);
+
+COMMENT ON TABLE ad_seminar_categories IS 'ADセミナー分類マスタ（フラット1階層）';
+
+CREATE TRIGGER trg_ad_seminar_categories_updated_at
+    BEFORE UPDATE ON ad_seminar_categories
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- 7. seminar_categories（セミナー分類マスタ / フラット1階層 / AD以外のセミナー用）
+-- -----------------------------------------------------------------------------
+CREATE TABLE seminar_categories (
+    id         SERIAL       NOT NULL,
+    name       VARCHAR(100) NOT NULL,
+    sort_order INTEGER      NOT NULL DEFAULT 0,
+    is_active  BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_seminar_categories PRIMARY KEY (id),
+    CONSTRAINT uq_seminar_categories_name UNIQUE (name)
+);
+
+COMMENT ON TABLE seminar_categories IS 'セミナー分類マスタ（フラット1階層。AD以外のセミナーに適用）';
+
+CREATE TRIGGER trg_seminar_categories_updated_at
+    BEFORE UPDATE ON seminar_categories
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- -----------------------------------------------------------------------------
+-- 8. it_skills（ITスキルマスタ）
 -- -----------------------------------------------------------------------------
 CREATE TABLE it_skills (
     id          SERIAL       NOT NULL,
@@ -151,7 +217,7 @@ CREATE TABLE it_skills (
 
 COMMENT ON TABLE it_skills IS 'ITスキルマスタ';
 
-CREATE INDEX idx_it_skills_category ON it_skills(category_id);
+CREATE INDEX idx_it_skills_category  ON it_skills(category_id);
 CREATE INDEX idx_it_skills_is_active ON it_skills(is_active);
 
 CREATE TRIGGER trg_it_skills_updated_at
@@ -159,10 +225,11 @@ CREATE TRIGGER trg_it_skills_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 6. qualifications（参考資格マスタ）
+-- 9. qualifications（参考資格マスタ）
 -- -----------------------------------------------------------------------------
 CREATE TABLE qualifications (
     id          SERIAL       NOT NULL,
+    category_id INTEGER,     -- FK → qualification_categories(id)。NULL は未分類
     name        VARCHAR(200) NOT NULL,
     description TEXT,
     sort_order  INTEGER      NOT NULL DEFAULT 0,
@@ -170,11 +237,15 @@ CREATE TABLE qualifications (
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT pk_qualifications PRIMARY KEY (id)
+    CONSTRAINT pk_qualifications PRIMARY KEY (id),
+    CONSTRAINT fk_qualifications_category
+        FOREIGN KEY (category_id) REFERENCES qualification_categories(id)
 );
 
-COMMENT ON TABLE qualifications IS '参考資格マスタ';
+COMMENT ON TABLE  qualifications IS '参考資格マスタ';
+COMMENT ON COLUMN qualifications.category_id IS 'NULL は未分類';
 
+CREATE INDEX idx_qualifications_category  ON qualifications(category_id);
 CREATE INDEX idx_qualifications_is_active ON qualifications(is_active);
 
 CREATE TRIGGER trg_qualifications_updated_at
@@ -182,10 +253,11 @@ CREATE TRIGGER trg_qualifications_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 7. ad_seminars（ADマスタ）
+-- 10. ad_seminars（ADマスタ）
 -- -----------------------------------------------------------------------------
 CREATE TABLE ad_seminars (
     id          SERIAL       NOT NULL,
+    category_id INTEGER,     -- FK → ad_seminar_categories(id)。NULL は未分類
     name        VARCHAR(200) NOT NULL,
     description TEXT,
     sort_order  INTEGER      NOT NULL DEFAULT 0,
@@ -193,17 +265,22 @@ CREATE TABLE ad_seminars (
     created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-    CONSTRAINT pk_ad_seminars PRIMARY KEY (id)
+    CONSTRAINT pk_ad_seminars PRIMARY KEY (id),
+    CONSTRAINT fk_ad_seminars_category
+        FOREIGN KEY (category_id) REFERENCES ad_seminar_categories(id)
 );
 
-COMMENT ON TABLE ad_seminars IS 'ADマスタ（スキルアップ活動区分）';
+COMMENT ON TABLE  ad_seminars IS 'ADマスタ';
+COMMENT ON COLUMN ad_seminars.category_id IS 'NULL は未分類';
+
+CREATE INDEX idx_ad_seminars_category ON ad_seminars(category_id);
 
 CREATE TRIGGER trg_ad_seminars_updated_at
     BEFORE UPDATE ON ad_seminars
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 8. users（ユーザー / TLへの自己参照FK）
+-- 11. users（ユーザー / TLへの自己参照FK）
 -- -----------------------------------------------------------------------------
 CREATE TABLE users (
     id                  SERIAL       NOT NULL,
@@ -243,17 +320,18 @@ ALTER TABLE fiscal_year_settings
         FOREIGN KEY (updated_by) REFERENCES users(id);
 
 -- -----------------------------------------------------------------------------
--- 9. inventories（棚卸ヘッダー）
+-- 12. inventories（棚卸ヘッダー）
 -- -----------------------------------------------------------------------------
 CREATE TABLE inventories (
-    id                SERIAL      NOT NULL,
-    user_id           INTEGER     NOT NULL,
-    fiscal_year_id    INTEGER     NOT NULL,
-    status            VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
-    submitted_at      TIMESTAMPTZ,
-    goal_completed_at TIMESTAMPTZ,
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at        TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                        SERIAL      NOT NULL,
+    user_id                   INTEGER     NOT NULL,
+    fiscal_year_id            INTEGER     NOT NULL,
+    status                    VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    submitted_at              TIMESTAMPTZ,
+    goal_review_completed_at  TIMESTAMPTZ,  -- 前回目標振り返り完了日時（NULL かつ前年度目標あり → ログイン時に SCR-019 へ誘導）
+    goal_completed_at         TIMESTAMPTZ,
+    created_at                TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_inventories PRIMARY KEY (id),
     CONSTRAINT uq_inventories_user_year UNIQUE (user_id, fiscal_year_id),
@@ -265,7 +343,8 @@ CREATE TABLE inventories (
         CHECK (status IN ('DRAFT', 'PENDING_GOAL', 'COMPLETED'))
 );
 
-COMMENT ON TABLE inventories IS '棚卸ヘッダー（ユーザー×年度で1件）';
+COMMENT ON TABLE  inventories IS '棚卸ヘッダー（ユーザー×年度で1件）';
+COMMENT ON COLUMN inventories.goal_review_completed_at IS '前回目標振り返り完了日時。NULL かつ前年度目標あり → ログイン時に SCR-019 へ誘導';
 
 CREATE INDEX idx_inventories_user_id        ON inventories(user_id);
 CREATE INDEX idx_inventories_fiscal_year_id ON inventories(fiscal_year_id);
@@ -276,7 +355,7 @@ CREATE TRIGGER trg_inventories_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 10. it_skill_details（ITスキル棚卸明細）
+-- 13. it_skill_details（ITスキル棚卸明細）
 -- -----------------------------------------------------------------------------
 CREATE TABLE it_skill_details (
     id                SERIAL       NOT NULL,
@@ -310,7 +389,7 @@ CREATE TRIGGER trg_it_skill_details_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 11. qualification_details（資格棚卸明細）
+-- 14. qualification_details（資格棚卸明細）
 -- -----------------------------------------------------------------------------
 CREATE TABLE qualification_details (
     id                        SERIAL       NOT NULL,
@@ -342,13 +421,14 @@ CREATE TRIGGER trg_qualification_details_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 12. seminar_details（セミナー棚卸明細）
+-- 15. seminar_details（セミナー棚卸明細）
 -- -----------------------------------------------------------------------------
 CREATE TABLE seminar_details (
     id                   SERIAL       NOT NULL,
     inventory_id         INTEGER      NOT NULL,
-    ad_seminar_id        INTEGER,     -- NULL はフリーセミナー
+    ad_seminar_id        INTEGER,     -- NULL はAD以外のセミナー
     seminar_name         VARCHAR(200),
+    seminar_category_id  INTEGER,     -- FK → seminar_categories(id)。AD以外のセミナー時のみ使用
     attended_year_month  DATE,        -- 月初日で保存。未受講は NULL
     remarks              TEXT,
     created_at           TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -359,12 +439,15 @@ CREATE TABLE seminar_details (
         FOREIGN KEY (inventory_id) REFERENCES inventories(id),
     CONSTRAINT fk_seminar_details_ad_seminar
         FOREIGN KEY (ad_seminar_id) REFERENCES ad_seminars(id),
+    CONSTRAINT fk_seminar_details_seminar_category
+        FOREIGN KEY (seminar_category_id) REFERENCES seminar_categories(id),
     CONSTRAINT chk_seminar_details_ref
         CHECK (ad_seminar_id IS NOT NULL OR seminar_name IS NOT NULL)
 );
 
 COMMENT ON TABLE  seminar_details IS 'セミナー棚卸明細';
-COMMENT ON COLUMN seminar_details.ad_seminar_id IS 'NULL はフリーセミナー（seminar_name を使用）';
+COMMENT ON COLUMN seminar_details.ad_seminar_id IS 'NULL はAD以外のセミナー（seminar_name を使用）';
+COMMENT ON COLUMN seminar_details.seminar_category_id IS 'AD以外のセミナー時のみ設定。ADセミナーの分類は ad_seminars.category_id で管理';
 
 CREATE INDEX idx_seminar_details_inventory ON seminar_details(inventory_id);
 
@@ -373,20 +456,22 @@ CREATE TRIGGER trg_seminar_details_updated_at
     FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 
 -- -----------------------------------------------------------------------------
--- 13. inventory_goals（目標設定）
+-- 16. inventory_goals（目標設定）
 -- -----------------------------------------------------------------------------
 CREATE TABLE inventory_goals (
-    id               SERIAL       NOT NULL,
-    inventory_id     INTEGER      NOT NULL,
-    goal_category    VARCHAR(20)  NOT NULL,
-    it_skill_id      INTEGER,
-    qualification_id INTEGER,
-    ad_seminar_id    INTEGER,
-    custom_name      VARCHAR(200),
-    target_period    DATE         NOT NULL,  -- 月初日で保存
-    reason           TEXT,
-    created_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                 SERIAL       NOT NULL,
+    inventory_id       INTEGER      NOT NULL,
+    goal_category      VARCHAR(20)  NOT NULL,
+    it_skill_id        INTEGER,
+    qualification_id   INTEGER,
+    ad_seminar_id      INTEGER,
+    custom_name        VARCHAR(200),
+    target_period      DATE         NOT NULL,  -- 月初日で保存
+    reason             TEXT,
+    achievement_status VARCHAR(20),  -- 翌年度の振り返り時に記録。NULL は未振り返り
+    review_note        TEXT,         -- 翌年度の振り返りコメント
+    created_at         TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at         TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT pk_inventory_goals PRIMARY KEY (id),
     CONSTRAINT fk_inventory_goals_inventory
@@ -405,12 +490,16 @@ CREATE TABLE inventory_goals (
             qualification_id IS NOT NULL OR
             ad_seminar_id    IS NOT NULL OR
             custom_name      IS NOT NULL
-        )
+        ),
+    CONSTRAINT chk_inventory_goals_achievement_status
+        CHECK (achievement_status IN ('ACHIEVED', 'PARTIAL', 'NOT_ACHIEVED'))
 );
 
 COMMENT ON TABLE  inventory_goals IS '目標設定';
 COMMENT ON COLUMN inventory_goals.goal_category IS 'IT_SKILL / QUALIFICATION / AD';
 COMMENT ON COLUMN inventory_goals.target_period IS '月初日で保存（例: 2026-03-01）';
+COMMENT ON COLUMN inventory_goals.achievement_status IS '達成状況。翌年度の振り返り時に記録（ACHIEVED / PARTIAL / NOT_ACHIEVED）。NULL は未振り返り';
+COMMENT ON COLUMN inventory_goals.review_note IS '振り返りコメント。翌年度の振り返り時に記録';
 
 CREATE INDEX idx_inventory_goals_inventory ON inventory_goals(inventory_id);
 

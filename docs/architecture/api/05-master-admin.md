@@ -1,6 +1,6 @@
 # 管理者マスタ API
 
-**対象画面**: SCR-011（ADマスタ）、SCR-012（ITスキル分類マスタ）、SCR-013（レベルマスタ）、SCR-014（ユーザー管理）、SCR-015（年度マスタ）
+**対象画面**: SCR-011（ADマスタ）、SCR-012（ITスキル分類マスタ）、SCR-013（レベルマスタ）、SCR-014（ユーザー管理）、SCR-015（年度マスタ）、SCR-016（資格分類マスタ）、SCR-017（ADセミナー分類マスタ）、SCR-018（セミナー分類マスタ）
 
 ---
 
@@ -17,6 +17,18 @@
 | POST | /api/it-skill-categories | ITスキル分類追加 | ADMIN |
 | PUT | /api/it-skill-categories/{id} | ITスキル分類更新 | ADMIN |
 | DELETE | /api/it-skill-categories/{id} | ITスキル分類削除 | ADMIN |
+| GET | /api/qualification-categories | 資格分類一覧 | TL / ADMIN |
+| POST | /api/qualification-categories | 資格分類追加 | ADMIN |
+| PUT | /api/qualification-categories/{id} | 資格分類更新 | ADMIN |
+| DELETE | /api/qualification-categories/{id} | 資格分類削除 | ADMIN |
+| GET | /api/ad-seminar-categories | ADセミナー分類一覧 | TL / ADMIN |
+| POST | /api/ad-seminar-categories | ADセミナー分類追加 | ADMIN |
+| PUT | /api/ad-seminar-categories/{id} | ADセミナー分類更新 | ADMIN |
+| DELETE | /api/ad-seminar-categories/{id} | ADセミナー分類削除 | ADMIN |
+| GET | /api/seminar-categories | セミナー分類一覧 | TL / ADMIN |
+| POST | /api/seminar-categories | セミナー分類追加 | ADMIN |
+| PUT | /api/seminar-categories/{id} | セミナー分類更新 | ADMIN |
+| DELETE | /api/seminar-categories/{id} | セミナー分類削除 | ADMIN |
 | GET | /api/skill-levels | レベルマスタ一覧 | 全員 |
 | POST | /api/skill-levels | レベルマスタ追加 | ADMIN |
 | PUT | /api/skill-levels/{id} | レベルマスタ更新 | ADMIN |
@@ -46,6 +58,7 @@
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
 | `isActive` | boolean | 省略で有効のみ |
+| `categoryId` | int | ADセミナー分類でフィルタ（任意） |
 
 **Response 200**
 
@@ -54,6 +67,8 @@
   {
     "id": 1,
     "name": "マネジメント基礎",
+    "categoryId": 1,
+    "categoryName": "マネジメント",
     "description": "PM 基礎スキル習得",
     "sortOrder": 10,
     "isActive": true
@@ -61,12 +76,16 @@
   {
     "id": 2,
     "name": "クラウドアーキテクチャ研修",
+    "categoryId": 2,
+    "categoryName": "技術研修",
     "description": "AWS / Azure / GCP",
     "sortOrder": 20,
     "isActive": true
   }
 ]
 ```
+
+> `categoryId` / `categoryName` は未分類の場合 `null`。
 
 ---
 
@@ -81,11 +100,14 @@ AD マスタを新規追加する。
 ```json
 {
   "name": "セキュリティ基礎",
+  "categoryId": 2,
   "description": "情報セキュリティ研修",
   "sortOrder": 30,
   "isActive": true
 }
 ```
+
+> `categoryId` は任意。省略または `null` で未分類。
 
 **Response 201**
 
@@ -93,6 +115,8 @@ AD マスタを新規追加する。
 {
   "id": 3,
   "name": "セキュリティ基礎",
+  "categoryId": 2,
+  "categoryName": "技術研修",
   "description": "情報セキュリティ研修",
   "sortOrder": 30,
   "isActive": true
@@ -134,6 +158,244 @@ AD マスタを論理削除する。
 ```json
 { "id": 1, "isActive": true }
 ```
+
+---
+
+## GET /api/qualification-categories
+
+資格分類一覧を返す。
+
+**権限**: TL / ADMIN
+
+**Query Parameters**
+
+| パラメータ | 型 | 説明 |
+|-----------|-----|------|
+| `isActive` | boolean | 省略で有効のみ |
+
+**Response 200**
+
+```json
+[
+  { "id": 1, "name": "IT資格", "sortOrder": 10, "isActive": true },
+  { "id": 2, "name": "クラウド資格", "sortOrder": 20, "isActive": true },
+  { "id": 3, "name": "ベンダー資格", "sortOrder": 30, "isActive": true }
+]
+```
+
+---
+
+## POST /api/qualification-categories
+
+資格分類を新規追加する。
+
+**権限**: ADMIN
+
+**Request Body**
+
+```json
+{ "name": "語学資格", "sortOrder": 40 }
+```
+
+**Response 201**
+
+```json
+{ "id": 4, "name": "語学資格", "sortOrder": 40, "isActive": true }
+```
+
+**Response 409**
+
+```json
+{ "code": "CONFLICT", "message": "同名の資格分類がすでに存在します" }
+```
+
+---
+
+## PUT /api/qualification-categories/{id}
+
+資格分類を更新する。
+
+**権限**: ADMIN
+
+**Request Body**: `POST /api/qualification-categories` と同形式
+
+**Response 200**: `POST` の Response 201 と同形式
+
+---
+
+## DELETE /api/qualification-categories/{id}
+
+資格分類を削除する。配下に有効な資格が存在する場合はエラー。
+
+**権限**: ADMIN
+
+**Response 204**: No Content
+
+**Response 422**
+
+```json
+{
+  "code": "CATEGORY_HAS_QUALIFICATIONS",
+  "message": "「IT資格」配下に有効な資格が存在するため削除できません",
+  "affectedQualifications": [
+    { "id": 1, "name": "基本情報技術者試験" }
+  ]
+}
+```
+
+---
+
+## GET /api/ad-seminar-categories
+
+ADセミナー分類一覧を返す。
+
+**権限**: TL / ADMIN
+
+**Query Parameters**
+
+| パラメータ | 型 | 説明 |
+|-----------|-----|------|
+| `isActive` | boolean | 省略で有効のみ |
+
+**Response 200**
+
+```json
+[
+  { "id": 1, "name": "マネジメント", "sortOrder": 10, "isActive": true },
+  { "id": 2, "name": "技術研修", "sortOrder": 20, "isActive": true }
+]
+```
+
+---
+
+## POST /api/ad-seminar-categories
+
+ADセミナー分類を新規追加する。
+
+**権限**: ADMIN
+
+**Request Body**
+
+```json
+{ "name": "ビジネススキル", "sortOrder": 30 }
+```
+
+**Response 201**
+
+```json
+{ "id": 3, "name": "ビジネススキル", "sortOrder": 30, "isActive": true }
+```
+
+**Response 409**
+
+```json
+{ "code": "CONFLICT", "message": "同名のADセミナー分類がすでに存在します" }
+```
+
+---
+
+## PUT /api/ad-seminar-categories/{id}
+
+ADセミナー分類を更新する。
+
+**権限**: ADMIN
+
+**Request Body**: `POST /api/ad-seminar-categories` と同形式
+
+**Response 200**: `POST` の Response 201 と同形式
+
+---
+
+## DELETE /api/ad-seminar-categories/{id}
+
+ADセミナー分類を削除する。配下に有効なADマスタが存在する場合はエラー。
+
+**権限**: ADMIN
+
+**Response 204**: No Content
+
+**Response 422**
+
+```json
+{
+  "code": "CATEGORY_HAS_AD_SEMINARS",
+  "message": "「技術研修」配下に有効なADが存在するため削除できません",
+  "affectedAdSeminars": [
+    { "id": 2, "name": "クラウドアーキテクチャ研修" }
+  ]
+}
+```
+
+---
+
+## GET /api/seminar-categories
+
+セミナー分類一覧を返す。
+
+**権限**: TL / ADMIN
+
+**Query Parameters**
+
+| パラメータ | 型 | 説明 |
+|-----------|-----|------|
+| `isActive` | boolean | 省略で有効のみ |
+
+**Response 200**
+
+```json
+[
+  { "id": 1, "name": "外部セミナー", "sortOrder": 10, "isActive": true },
+  { "id": 2, "name": "オンライン学習", "sortOrder": 20, "isActive": true }
+]
+```
+
+---
+
+## POST /api/seminar-categories
+
+セミナー分類を新規追加する。
+
+**権限**: ADMIN
+
+**Request Body**
+
+```json
+{ "name": "社内勉強会", "sortOrder": 30 }
+```
+
+**Response 201**
+
+```json
+{ "id": 3, "name": "社内勉強会", "sortOrder": 30, "isActive": true }
+```
+
+**Response 409**
+
+```json
+{ "code": "CONFLICT", "message": "同名のセミナー分類がすでに存在します" }
+```
+
+---
+
+## PUT /api/seminar-categories/{id}
+
+セミナー分類を更新する。
+
+**権限**: ADMIN
+
+**Request Body**: `POST /api/seminar-categories` と同形式
+
+**Response 200**: `POST` の Response 201 と同形式
+
+---
+
+## DELETE /api/seminar-categories/{id}
+
+セミナー分類を削除する。この分類を参照する棚卸明細が存在する場合は `seminar_category_id` を NULL に更新してから削除。
+
+**権限**: ADMIN
+
+**Response 204**: No Content
 
 ---
 

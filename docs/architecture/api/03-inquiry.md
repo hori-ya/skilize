@@ -136,7 +136,11 @@
       "id": 30,
       "adSeminarId": 1,
       "adSeminarName": "マネジメント基礎",
+      "adSeminarCategoryId": 1,
+      "adSeminarCategoryName": "マネジメント",
       "seminarName": null,
+      "seminarCategoryId": null,
+      "seminarCategoryName": null,
       "attendedYearMonth": "2025-06-01",
       "remarks": "チームで参加",
       "isAd": true

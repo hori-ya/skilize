@@ -1,6 +1,6 @@
 # 棚卸・目標設定 API
 
-**対象画面**: SCR-002（ダッシュボード）、SCR-003（棚卸入力）、SCR-004（前年度比較）、SCR-005（目標設定）
+**対象画面**: SCR-002（ダッシュボード）、SCR-003（棚卸入力）、SCR-004（前年度比較）、SCR-019（前回目標の振り返り）、SCR-005（目標設定）
 
 ---
 
@@ -18,6 +18,9 @@
 | POST | /api/inventories/{id}/submit | 棚卸を提出する | 全員（※） |
 | GET | /api/inventories/{id}/comparison | 前年度比較データ取得 | 全員（※） |
 | PATCH | /api/inventories/{id}/it-skill-details/{detailId} | IT スキル明細の備考更新 | 全員（※） |
+| GET | /api/inventories/{id}/goal-review | 前回目標の振り返りデータ取得 | 全員（※） |
+| PUT | /api/inventories/{id}/goal-review | 前回目標の振り返り 一括保存 | 全員（※） |
+| POST | /api/inventories/{id}/goal-review/complete | 前回目標の振り返りを完了する | 全員（※） |
 | GET | /api/inventories/{id}/goals | 目標一覧取得 | 全員（※） |
 | PUT | /api/inventories/{id}/goals | 目標 一括保存 | 全員（※） |
 | POST | /api/inventories/{id}/goals/complete | 目標設定を完了する | 全員（※） |
@@ -285,6 +288,7 @@ ITスキル明細を一括で保存（upsert）する。送信した内容で全
       "id": 30,
       "adSeminarId": 1,
       "seminarName": null,
+      "seminarCategoryId": null,
       "attendedYearMonth": "2025-06-01",
       "remarks": "チームで参加"
     },
@@ -292,12 +296,15 @@ ITスキル明細を一括で保存（upsert）する。送信した内容で全
       "id": null,
       "adSeminarId": null,
       "seminarName": "社外セミナー AWS re:Invent",
+      "seminarCategoryId": 1,
       "attendedYearMonth": "2025-11-01",
       "remarks": ""
     }
   ]
 }
 ```
+
+> `seminarCategoryId` はセミナー（`adSeminarId: null`、AD以外）時のみ有効。ADセミナー時は無視される。
 
 **Response 200**
 
@@ -308,7 +315,11 @@ ITスキル明細を一括で保存（upsert）する。送信した内容で全
       "id": 30,
       "adSeminarId": 1,
       "adSeminarName": "マネジメント基礎",
+      "adSeminarCategoryId": 1,
+      "adSeminarCategoryName": "マネジメント",
       "seminarName": null,
+      "seminarCategoryId": null,
+      "seminarCategoryName": null,
       "attendedYearMonth": "2025-06-01",
       "remarks": "チームで参加"
     },
@@ -316,13 +327,19 @@ ITスキル明細を一括で保存（upsert）する。送信した内容で全
       "id": 203,
       "adSeminarId": null,
       "adSeminarName": null,
+      "adSeminarCategoryId": null,
+      "adSeminarCategoryName": null,
       "seminarName": "社外セミナー AWS re:Invent",
+      "seminarCategoryId": 1,
+      "seminarCategoryName": "外部セミナー",
       "attendedYearMonth": "2025-11-01",
       "remarks": ""
     }
   ]
 }
 ```
+
+> ADセミナーの場合、`adSeminarCategoryId` / `adSeminarCategoryName` はマスタから自動取得。
 
 ---
 
@@ -419,6 +436,110 @@ SCR-004 比較画面からの備考追記に使用する。備考フィールド
 {
   "id": 100,
   "remarks": "前年度より業務量が増えたため自信がついた"
+}
+```
+
+---
+
+## GET /api/inventories/{id}/goal-review
+
+SCR-019 前回目標の振り返り画面で使用。現在の棚卸（`id`）に対応するユーザーの前年度の目標一覧を、振り返り入力値とともに返す。
+
+**権限**: 全員（自分の棚卸のみ）
+
+**Response 200**
+
+```json
+{
+  "prevFiscalYear": "FY2024",
+  "hasPrevGoals": true,
+  "items": [
+    {
+      "prevGoalId": 1,
+      "goalCategory": "IT_SKILL",
+      "goalName": "Java",
+      "targetPeriod": "2025-03-01",
+      "reason": "Spring Boot の深い理解を目指す",
+      "achievementStatus": "ACHIEVED",
+      "reviewNote": "業務でSpring Bootを担当し目標達成できた"
+    },
+    {
+      "prevGoalId": 2,
+      "goalCategory": "QUALIFICATION",
+      "goalName": "LPIC-1",
+      "targetPeriod": "2024-12-01",
+      "reason": "",
+      "achievementStatus": "NOT_ACHIEVED",
+      "reviewNote": "試験日程が合わず受験できなかった"
+    },
+    {
+      "prevGoalId": 3,
+      "goalCategory": "AD",
+      "goalName": "マネジメント基礎",
+      "targetPeriod": "2025-02-01",
+      "reason": "チームリーダーを目指すため",
+      "achievementStatus": null,
+      "reviewNote": null
+    }
+  ]
+}
+```
+
+> `hasPrevGoals: false` の場合（初回棚卸など）は `items` が空配列。フロントエンドはこの場合 SCR-019 をスキップして SCR-005 へ遷移する。  
+> `achievementStatus` / `reviewNote` は未記入の場合 `null`。
+
+---
+
+## PUT /api/inventories/{id}/goal-review
+
+前回目標の達成状況・振り返りコメントを一括保存する。前年度の `inventory_goals` レコードを更新する。
+
+**権限**: 全員（自分の棚卸のみ）
+
+**Request Body**
+
+```json
+{
+  "items": [
+    {
+      "prevGoalId": 1,
+      "achievementStatus": "ACHIEVED",
+      "reviewNote": "業務でSpring Bootを担当し目標達成できた"
+    },
+    {
+      "prevGoalId": 2,
+      "achievementStatus": "NOT_ACHIEVED",
+      "reviewNote": "試験日程が合わず受験できなかった"
+    },
+    {
+      "prevGoalId": 3,
+      "achievementStatus": null,
+      "reviewNote": null
+    }
+  ]
+}
+```
+
+> `achievementStatus` / `reviewNote` はともに任意。省略または `null` で未入力扱い（振り返りはすべて任意）。
+
+**Response 200**: `GET /api/inventories/{id}/goal-review` と同形式
+
+---
+
+## POST /api/inventories/{id}/goal-review/complete
+
+前回目標の振り返りを完了する。`inventories.goal_review_completed_at` に現在日時を設定する。振り返り内容の入力は任意のため、空のまま完了することも可能。
+
+**権限**: 全員（自分の棚卸のみ）
+
+**Request Body**: なし
+
+**Response 200**
+
+```json
+{
+  "id": 10,
+  "goalReviewCompletedAt": "2026-04-15T10:30:00Z"
 }
 ```
 
