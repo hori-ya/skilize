@@ -26,4 +26,4 @@ build/
 Thumbs.db
 
 # Docker
-docker/*/data/
+infra/docker/*/data/

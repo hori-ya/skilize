@@ -1,0 +1,22 @@
+name: skilize
+
+services:
+  backend:
+    build:
+      context: ../../apps/backend
+      dockerfile: ../../infra/docker/backend/Dockerfile.prod
+    restart: always
+    env_file:
+      - ../../.env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+
+  nginx:
+    build:
+      context: ../..
+      dockerfile: infra/docker/frontend/Dockerfile.prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
