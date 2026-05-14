@@ -71,7 +71,96 @@ Backend（Spring Security で検証・認可）
 
 ---
 
-## 5. 関連ドキュメント
+## 5. フロントエンドアーキテクチャ
+
+フロントエンドは **feature by feature** 構成を採用する。
+
+```
+apps/frontend/src/
+├── app/
+│   ├── providers/AuthProvider.tsx    ← React Context（認証状態）+ useAuth hook
+│   └── layouts/NavBar.tsx            ← グローバルナビゲーションバー
+├── shared/
+│   ├── api/
+│   │   ├── client.ts                 ← Axios インスタンス（JWT インターセプター）
+│   │   └── masterApi.ts              ← マスタデータ API（fiscal-years, skills 等）
+│   ├── types/
+│   │   └── master.ts                 ← マスタデータ型定義
+│   └── ui/
+│       ├── PrivateRoute.tsx          ← 認証ガード
+│       ├── AdminRoute.tsx            ← ADMIN ロールガード
+│       ├── TlAdminRoute.tsx          ← TL/ADMIN ロールガード
+│       └── ScrollToTopButton.tsx     ← スクロールトップボタン
+└── features/
+    ├── auth/
+    │   ├── api/authApi.ts            ← 認証 API（login / changePassword / getMe）
+    │   ├── types/index.ts            ← Role / AuthUser / UserAdmin / TlUser
+    │   └── pages/                    ← LoginPage / ChangePasswordPage
+    ├── inventory/
+    │   ├── api/inventoryApi.ts       ← 棚卸 API
+    │   ├── types/index.ts            ← 棚卸関連型（InventorySummary, GoalItem 等）
+    │   └── pages/                    ← DashboardPage / InventoryPage / ComparisonPage
+    │                                    GoalReviewPage / GoalPage / InventoryHistoryPage
+    ├── team/
+    │   ├── api/userApi.ts            ← ユーザー管理 API
+    │   ├── types/index.ts            ← TeamMember（FiscalYearRef, InventoryStatus を参照）
+    │   └── pages/                    ← TeamMemberListPage / MemberDetailPage / AllUserListPage
+    └── master/
+        └── pages/                    ← FiscalYearMasterPage / SkillLevelMasterPage
+                                         ItSkillMasterPage / QualificationMasterPage
+                                         AdSeminarMasterPage / UserMasterPage
+```
+
+**依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）  
+**feature 間参照**: `features/team/types` → `features/inventory/types` のみ許容（cross-feature 型参照）
+
+---
+
+## 6. バックエンドアーキテクチャ
+
+バックエンドは **package by feature** 構成を採用し、feature 内部を 4 レイヤーに分離する。
+
+```
+apps/backend/src/main/java/com/skilize/
+├── shared/
+│   ├── domain/exception/           ← 共通例外（AuthException, GoalIncompleteException）
+│   ├── infrastructure/             ← SecurityConfig・JwtUtil・JWT/初期PWフィルター
+│   └── presentation/               ← GlobalExceptionHandler・ErrorResponse DTO
+├── auth/
+│   ├── presentation/               ← AuthController + Request/Response DTO
+│   └── application/                ← AuthService（@Transactional）
+├── user/
+│   ├── presentation/               ← UserController + Request/Response DTO
+│   ├── domain/                     ← User, Role, UserRepository
+│   └── infrastructure/             ← UserDetailsServiceImpl
+├── inventory/
+│   ├── presentation/               ← InventoryController + Request/Response DTO
+│   ├── application/                ← InventoryService（@Transactional）
+│   └── domain/                     ← エンティティ・Repository・列挙型
+├── master/
+│   ├── presentation/               ← MasterController + Request/Response DTO
+│   └── domain/                     ← マスタエンティティ・Repository
+├── fiscalyear/
+│   ├── presentation/               ← FiscalYearController + Request/Response DTO
+│   └── domain/                     ← FiscalYear, FiscalYearSettings, Repository
+└── dashboard/
+    └── presentation/               ← DashboardController + Response DTO
+```
+
+**依存方向**（厳守）:
+```
+presentation → application → domain
+infrastructure → domain / application
+```
+
+- `@Transactional` は `application` レイヤーのみ配置（Controller での業務トランザクション禁止）
+- コンストラクタ注入のみ（`@Autowired` フィールドインジェクション禁止）
+- Entity を API へ直接返さない（Request/Response DTO を分離）
+- feature 間の直接依存禁止（`shared` を介して連携）
+
+---
+
+## 7. 関連ドキュメント
 
 | ドキュメント | パス |
 |------------|------|
@@ -80,3 +169,5 @@ Backend（Spring Security で検証・認可）
 | データモデル（概念） | [docs/architecture/database/data-model.md](./database/data-model.md) |
 | ER図 | [docs/architecture/database/er-diagram.md](./database/er-diagram.md) |
 | 技術スタック詳細 | [.claude/context/tech-stack.md](../../.claude/context/tech-stack.md) |
+| バックエンドアーキテクチャルール | [.claude/context/backend-architecture.md](../../.claude/context/backend-architecture.md) |
+| フロントエンドアーキテクチャルール | [.claude/context/frontend-architecture.md](../../.claude/context/frontend-architecture.md) |

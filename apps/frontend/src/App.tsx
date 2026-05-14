@@ -1,26 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './contexts/AuthContext';
-import PrivateRoute from './components/PrivateRoute';
-import AdminRoute from './components/AdminRoute';
-import LoginPage from './pages/LoginPage';
-import ChangePasswordPage from './pages/ChangePasswordPage';
-import DashboardPage from './pages/DashboardPage';
-import InventoryPage from './pages/InventoryPage';
-import ComparisonPage from './pages/ComparisonPage';
-import GoalReviewPage from './pages/GoalReviewPage';
-import GoalPage from './pages/GoalPage';
-import InventoryHistoryPage from './pages/InventoryHistoryPage';
-import TeamMemberListPage from './pages/TeamMemberListPage';
-import MemberDetailPage from './pages/MemberDetailPage';
-import AllUserListPage from './pages/AllUserListPage';
-import TlAdminRoute from './components/TlAdminRoute';
-import ScrollToTopButton from './components/ScrollToTopButton';
-import FiscalYearMasterPage from './pages/master/FiscalYearMasterPage';
-import SkillLevelMasterPage from './pages/master/SkillLevelMasterPage';
-import ItSkillMasterPage from './pages/master/ItSkillMasterPage';
-import QualificationMasterPage from './pages/master/QualificationMasterPage';
-import AdSeminarMasterPage from './pages/master/AdSeminarMasterPage';
-import UserMasterPage from './pages/master/UserMasterPage';
+import { AuthProvider } from './app/providers/AuthProvider';
+import PrivateRoute from './shared/ui/PrivateRoute';
+import AdminRoute from './shared/ui/AdminRoute';
+import TlAdminRoute from './shared/ui/TlAdminRoute';
+import ScrollToTopButton from './shared/ui/ScrollToTopButton';
+import LoginPage from './features/auth/pages/LoginPage';
+import ChangePasswordPage from './features/auth/pages/ChangePasswordPage';
+import DashboardPage from './features/inventory/pages/DashboardPage';
+import InventoryPage from './features/inventory/pages/InventoryPage';
+import ComparisonPage from './features/inventory/pages/ComparisonPage';
+import GoalReviewPage from './features/inventory/pages/GoalReviewPage';
+import GoalPage from './features/inventory/pages/GoalPage';
+import InventoryHistoryPage from './features/inventory/pages/InventoryHistoryPage';
+import TeamMemberListPage from './features/team/pages/TeamMemberListPage';
+import MemberDetailPage from './features/team/pages/MemberDetailPage';
+import AllUserListPage from './features/team/pages/AllUserListPage';
+import FiscalYearMasterPage from './features/master/pages/FiscalYearMasterPage';
+import SkillLevelMasterPage from './features/master/pages/SkillLevelMasterPage';
+import ItSkillMasterPage from './features/master/pages/ItSkillMasterPage';
+import QualificationMasterPage from './features/master/pages/QualificationMasterPage';
+import AdSeminarMasterPage from './features/master/pages/AdSeminarMasterPage';
+import UserMasterPage from './features/master/pages/UserMasterPage';
 
 export default function App() {
   return (

@@ -51,6 +51,8 @@ backend:8080
 ```
 skilize/                          ← プロジェクトルート
 ├── .claude/context/              ← Claude 向けコンテキスト資料
+│   ├── backend-architecture.md  ← バックエンドアーキテクチャ詳細ルール（必読）
+│   └── frontend-architecture.md ← フロントエンドアーキテクチャ詳細ルール（必読）
 ├── .cursor/rules/                ← Cursor IDE 向けルール
 ├── docs/                         ← 設計・要件ドキュメント
 ├── scripts/db/init.sql           ← ローカル Docker DB 初期化スクリプト
@@ -72,6 +74,60 @@ skilize/                          ← プロジェクトルート
 
 ---
 
+## Backend Architecture (バックエンドアーキテクチャ)
+
+**パッケージ構成**: package by feature（機能単位）＋ feature 内レイヤー分離
+
+```
+com.skilize
+├── shared/
+│   ├── domain/exception/       ← 共通例外（AuthException, GoalIncompleteException）
+│   ├── infrastructure/         ← Security設定・JWT・フィルター
+│   └── presentation/           ← GlobalExceptionHandler・ErrorResponse DTO
+├── auth/
+│   ├── presentation/           ← AuthController + Request/Response DTO
+│   └── application/            ← AuthService（@Transactional）
+├── user/
+│   ├── presentation/           ← UserController + Request/Response DTO
+│   ├── domain/                 ← User, Role, UserRepository
+│   └── infrastructure/         ← UserDetailsServiceImpl
+├── inventory/
+│   ├── presentation/           ← InventoryController + Request/Response DTO
+│   ├── application/            ← InventoryService（@Transactional）
+│   └── domain/                 ← エンティティ・Repository・列挙型
+├── master/
+│   ├── presentation/           ← MasterController + Request/Response DTO
+│   └── domain/                 ← マスタエンティティ・Repository
+├── fiscalyear/
+│   ├── presentation/           ← FiscalYearController + Request/Response DTO
+│   └── domain/                 ← FiscalYear, FiscalYearSettings, Repository
+└── dashboard/
+    └── presentation/           ← DashboardController + Response DTO
+```
+
+**レイヤー責務**:
+- `presentation` — Controller・Request/Response DTO・バリデーション・HTTPハンドリング（ビジネスロジック禁止）
+- `application` — UseCase/ApplicationService・トランザクション境界・ワークフロー調整（SQL直接実装禁止）
+- `domain` — ビジネスルール・ドメインモデル・Repositoryインターフェース（Spring Framework依存禁止・SQL禁止）
+- `infrastructure` — JPA実装・Repositoryインターフェース実装・外部API・Security
+
+**依存方向**（厳守）:
+```
+presentation → application → domain
+infrastructure → domain / application
+```
+禁止: `domain → infrastructure`、`domain → presentation`、feature 間の直接依存
+
+**トランザクション**: `@Transactional` は `application` レイヤーのみ（Controller・Repository での業務トランザクション禁止）
+
+**DI**: コンストラクタ注入のみ（`@Autowired` フィールドインジェクション禁止）
+
+**共通化ルール**: `shared` は最小限。3回以上重複した場合のみ shared 化を検討。業務ロジックを shared に置かない。
+
+> バックエンド実装時は `.claude/context/backend-architecture.md` の詳細ルールも参照すること。
+
+---
+
 ## Coding Rules (コーディングルール)
 
 **Backend**
@@ -80,12 +136,22 @@ skilize/                          ← プロジェクトルート
 - エンティティに `@Setter` を付けず、ドメインメソッド（`changePassword` 等）でフィールド更新
 - 例外は `AuthException`（認証系）と Spring の標準例外を使い分ける
 - バリデーションは `jakarta.validation` アノテーション + `@Valid`
+- Entity を API へ直接返さない（必ず Request/Response DTO を分離）
 
 **Frontend**
 - React 関数コンポーネント + hooks のみ
 - `async/await` + Axios で API 呼び出し
-- グローバル状態は `AuthContext` のみ（外部状態管理ライブラリなし）
+- グローバル状態は `AuthContext`（`app/providers/AuthProvider.tsx`）のみ（外部状態管理ライブラリなし）
 - スタイルは `index.css` の BEM ライクなクラス名
+- **フォルダ構成**: feature by feature（`app/` / `shared/` / `features/` の3層）
+  - `app/` — アプリ全体の初期化（AuthProvider・NavBar）
+  - `shared/` — 複数 feature で使う共通資産（Axiosクライアント・マスタAPI・マスタ型・ルートガード）
+  - `features/{name}/` — 機能ごとの閉じた実装（api / types / pages）
+- **依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）
+- feature 間の型参照は許容する（例: `features/team/types` が `features/inventory/types` を参照）
+- 新機能は必ず対応する feature フォルダ内に追加する
+
+> フロントエンド実装時は `.claude/context/frontend-architecture.md` の詳細ルールも参照すること。
 
 ---
 
@@ -230,16 +296,32 @@ docker compose up db     # init.sql が再実行される
 
 | ディレクトリ | 責務 |
 |---|---|
-| `apps/backend/src/main/java/com/skilize/auth/` | ログイン・JWT 発行・パスワード変更のビジネスロジックとコントローラー |
-| `apps/backend/src/main/java/com/skilize/auth/filter/` | JWT 検証フィルター・初期パスワード強制変更フィルター |
-| `apps/backend/src/main/java/com/skilize/config/` | Spring Security 設定（フィルターチェーン・CORS・PasswordEncoder） |
-| `apps/backend/src/main/java/com/skilize/domain/` | JPA エンティティ・Spring Data リポジトリ（ビジネスロジックなし） |
-| `apps/backend/src/main/java/com/skilize/common/` | 共通例外・グローバル例外ハンドラー・エラーレスポンス DTO |
+| `apps/backend/src/main/java/com/skilize/shared/domain/exception/` | 共通例外（AuthException, GoalIncompleteException） |
+| `apps/backend/src/main/java/com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter |
+| `apps/backend/src/main/java/com/skilize/shared/presentation/` | GlobalExceptionHandler・ErrorResponse・ValidationErrorResponse |
+| `apps/backend/src/main/java/com/skilize/auth/presentation/` | AuthController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/auth/application/` | AuthService（ログイン・JWT 発行・パスワード変更ロジック） |
+| `apps/backend/src/main/java/com/skilize/user/presentation/` | UserController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/user/domain/` | User エンティティ・Role・UserRepository |
+| `apps/backend/src/main/java/com/skilize/user/infrastructure/` | UserDetailsServiceImpl（Spring Security 実装） |
+| `apps/backend/src/main/java/com/skilize/inventory/presentation/` | InventoryController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/inventory/application/` | InventoryService（棚卸ビジネスロジック） |
+| `apps/backend/src/main/java/com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
+| `apps/backend/src/main/java/com/skilize/master/presentation/` | MasterController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
+| `apps/backend/src/main/java/com/skilize/fiscalyear/presentation/` | FiscalYearController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
+| `apps/backend/src/main/java/com/skilize/dashboard/presentation/` | DashboardController・Response DTO |
 | `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
 | `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |
-| `apps/frontend/src/api/` | Axios クライアント設定・API 呼び出し関数 |
-| `apps/frontend/src/contexts/` | React Context（認証状態の全体共有） |
-| `apps/frontend/src/pages/` | 画面単位のコンポーネント |
-| `apps/frontend/src/components/` | 複数画面で再利用するコンポーネント（NavBar・ルートガード等） |
+| `apps/frontend/src/app/providers/` | AuthProvider（認証状態の全体共有）と useAuth hook |
+| `apps/frontend/src/app/layouts/` | NavBar（グローバルナビゲーション） |
+| `apps/frontend/src/shared/api/` | Axios クライアント・マスタデータ API（複数 feature で共有） |
+| `apps/frontend/src/shared/types/` | マスタデータ型定義（複数 feature で共有） |
+| `apps/frontend/src/shared/ui/` | ルートガード・ScrollToTopButton（複数 feature で共有） |
+| `apps/frontend/src/features/auth/` | ログイン・パスワード変更（API / 型 / ページ） |
+| `apps/frontend/src/features/inventory/` | 棚卸入力・比較・目標設定・ダッシュボード（API / 型 / ページ） |
+| `apps/frontend/src/features/team/` | チーム照会・全ユーザー照会・ユーザー管理 API（API / 型 / ページ） |
+| `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー） |
 | `infra/docker/` | 各サービスの Dockerfile・nginx 設定 |
 | `infra/compose/` | Docker Compose ファイル（ローカル用・本番用） |

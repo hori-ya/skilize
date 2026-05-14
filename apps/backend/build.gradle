@@ -38,6 +38,10 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 }
 
+bootRun {
+	jvmArgs = ['-XX:TieredStopAtLevel=1']
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }

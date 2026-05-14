@@ -23,6 +23,7 @@ services:
     volumes:
       - ../../apps/backend:/app
       - gradle_cache:/root/.gradle
+      - backend_build:/app/build
     working_dir: /app
     command: gradle bootRun
     ports:
@@ -63,4 +64,5 @@ services:
 volumes:
   db_data:
   gradle_cache:
+  backend_build:
   node_modules:
