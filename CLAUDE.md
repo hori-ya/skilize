@@ -193,6 +193,10 @@ POST   /api/inventory/...
 GET    /api/master/...
 GET    /api/fiscal-years
 GET    /api/dashboard
+GET    /api/charts/radar
+GET    /api/charts/growth
+GET    /api/charts/heatmap
+GET    /api/charts/timeline
 ```
 
 ---
@@ -312,6 +316,8 @@ docker compose up db     # init.sql が再実行される
 | `apps/backend/src/main/java/com/skilize/fiscalyear/presentation/` | FiscalYearController・Request/Response DTO |
 | `apps/backend/src/main/java/com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
 | `apps/backend/src/main/java/com/skilize/dashboard/presentation/` | DashboardController・Response DTO |
+| `apps/backend/src/main/java/com/skilize/charts/presentation/` | ChartController・Response DTO（radar/growth/heatmap/timeline） |
+| `apps/backend/src/main/java/com/skilize/charts/application/` | ChartService（スキルバランス・成長推移・ヒートマップ・タイムライン集計） |
 | `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
 | `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |
 | `apps/frontend/src/app/providers/` | AuthProvider（認証状態の全体共有）と useAuth hook |
@@ -320,7 +326,7 @@ docker compose up db     # init.sql が再実行される
 | `apps/frontend/src/shared/types/` | マスタデータ型定義（複数 feature で共有） |
 | `apps/frontend/src/shared/ui/` | ルートガード・ScrollToTopButton（複数 feature で共有） |
 | `apps/frontend/src/features/auth/` | ログイン・パスワード変更（API / 型 / ページ） |
-| `apps/frontend/src/features/inventory/` | 棚卸入力・比較・目標設定・ダッシュボード（API / 型 / ページ） |
+| `apps/frontend/src/features/inventory/` | 棚卸入力・比較・目標設定・ダッシュボード・グラフ（API / 型 / コンポーネント / ページ） |
 | `apps/frontend/src/features/team/` | チーム照会・全ユーザー照会・ユーザー管理 API（API / 型 / ページ） |
 | `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー） |
 | `infra/docker/` | 各サービスの Dockerfile・nginx 設定 |

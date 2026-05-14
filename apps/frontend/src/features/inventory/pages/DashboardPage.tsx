@@ -1,22 +1,46 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../app/providers/AuthProvider';
 import { getDashboard, createInventory } from '../api/inventoryApi';
+import { getRadarChart, getGrowthChart, getHeatmapChart, getTimelineChart } from '../api/chartApi';
 import type { DashboardResponse } from '../types/index';
+import type { RadarResponse, GrowthResponse, HeatmapResponse, TimelineResponse } from '../types/charts';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconPlay, IconEdit, IconEye, IconHistory } from '../../../shared/ui/Icons';
+import RadarChartCard from '../components/RadarChartCard';
+import GrowthChartCard from '../components/GrowthChartCard';
+import HeatmapChartCard from '../components/HeatmapChartCard';
+import TimelineChartCard from '../components/TimelineChartCard';
+
+interface ChartsState {
+  radar: RadarResponse | null;
+  growth: GrowthResponse | null;
+  heatmap: HeatmapResponse | null;
+  timeline: TimelineResponse | null;
+}
 
 export default function DashboardPage() {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
+  const [charts, setCharts] = useState<ChartsState>({ radar: null, growth: null, heatmap: null, timeline: null });
   const [isLoading, setIsLoading] = useState(true);
+  const [chartsLoading, setChartsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     getDashboard()
-      .then((res) => setDashboard(res.data))
+      .then(res => setDashboard(res.data))
       .finally(() => setIsLoading(false));
+
+    Promise.all([getRadarChart(), getGrowthChart(), getHeatmapChart(), getTimelineChart()])
+      .then(([radarRes, growthRes, heatmapRes, timelineRes]) => {
+        setCharts({
+          radar: radarRes.data,
+          growth: growthRes.data,
+          heatmap: heatmapRes.data,
+          timeline: timelineRes.data,
+        });
+      })
+      .finally(() => setChartsLoading(false));
   }, []);
 
   const handleStartInventory = async () => {
@@ -26,7 +50,6 @@ export default function DashboardPage() {
       const res = await createInventory(dashboard.currentFiscalYear.id);
       navigate(`/inventory/${res.data.id}`);
     } catch {
-      // 既に存在する場合はダッシュボードを再取得
       const res = await getDashboard();
       setDashboard(res.data);
     } finally {
@@ -132,6 +155,24 @@ export default function DashboardPage() {
             過去の棚卸を確認する
           </button>
         </div>
+
+        {/* Charts section */}
+        <section className="chart-section">
+          <h2 className="chart-section__title">スキル可視化</h2>
+
+          {chartsLoading ? (
+            <div className="chart-loading">グラフを読み込み中...</div>
+          ) : (
+            <>
+              <div className="chart-grid">
+                {charts.radar && <RadarChartCard data={charts.radar} />}
+                {charts.growth && <GrowthChartCard data={charts.growth} />}
+              </div>
+              {charts.heatmap && <HeatmapChartCard data={charts.heatmap} />}
+              {charts.timeline && <TimelineChartCard events={charts.timeline.events} />}
+            </>
+          )}
+        </section>
       </main>
     </div>
   );

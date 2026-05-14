@@ -42,18 +42,41 @@ user
 # Full Project Structure
 
 ```text
-src/main/java/com/example/app
+src/main/java/com/skilize
 
 ├── shared
-│   ├── domain
-│   ├── infrastructure
-│   ├── presentation
-│   └── application
+│   ├── domain/exception/        ← AuthException, GoalIncompleteException
+│   ├── infrastructure/          ← SecurityConfig, JwtUtil, JwtAuthenticationFilter, InitialPasswordFilter
+│   └── presentation/            ← GlobalExceptionHandler, ErrorResponse, ValidationErrorResponse
+│
+├── auth
+│   ├── presentation/            ← AuthController + Request/Response DTO
+│   └── application/             ← AuthService (@Transactional)
 │
 ├── user
-├── order
-├── billing
-└── auth
+│   ├── presentation/            ← UserController + Request/Response DTO
+│   ├── domain/                  ← User, Role, UserRepository
+│   └── infrastructure/          ← UserDetailsServiceImpl
+│
+├── inventory
+│   ├── presentation/            ← InventoryController + Request/Response DTO
+│   ├── application/             ← InventoryService (@Transactional)
+│   └── domain/                  ← エンティティ・Repository・列挙型
+│
+├── master
+│   ├── presentation/            ← MasterController + Request/Response DTO
+│   └── domain/                  ← マスタエンティティ・Repository
+│
+├── fiscalyear
+│   ├── presentation/            ← FiscalYearController + Request/Response DTO
+│   └── domain/                  ← FiscalYear, FiscalYearSettings, Repository
+│
+├── dashboard
+│   └── presentation/            ← DashboardController + Response DTO
+│
+└── charts
+    ├── presentation/            ← ChartController + Response DTO（radar/growth/heatmap/timeline）
+    └── application/             ← ChartService (@Transactional readOnly)
 ```
 
 ---

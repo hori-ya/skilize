@@ -51,7 +51,7 @@
 |--------------|------|------|
 | Nginx | nginx:alpine | リバースプロキシ。`/api/*` をバックエンド、それ以外をフロントエンドへルーティング |
 | Frontend | React | SPA。画面描画・ユーザー操作の受付 |
-| Backend | Spring Boot 3 / Java 21 | REST API提供。ビジネスロジック・認証・認可 |
+| Backend | Spring Boot 4.0.6 / Java 22 | REST API提供。ビジネスロジック・認証・認可 |
 | Database | PostgreSQL 16.4（AWS RDS） | データ永続化 |
 
 ---
@@ -98,7 +98,11 @@ apps/frontend/src/
     │   └── pages/                    ← LoginPage / ChangePasswordPage
     ├── inventory/
     │   ├── api/inventoryApi.ts       ← 棚卸 API
+    │   ├── api/chartApi.ts           ← グラフ API（radar / growth / heatmap / timeline）
     │   ├── types/index.ts            ← 棚卸関連型（InventorySummary, GoalItem 等）
+    │   ├── types/charts.ts           ← グラフレスポンス型
+    │   ├── components/               ← RadarChartCard / GrowthChartCard
+    │   │                                HeatmapChartCard / TimelineChartCard
     │   └── pages/                    ← DashboardPage / InventoryPage / ComparisonPage
     │                                    GoalReviewPage / GoalPage / InventoryHistoryPage
     ├── team/
@@ -143,8 +147,11 @@ apps/backend/src/main/java/com/skilize/
 ├── fiscalyear/
 │   ├── presentation/               ← FiscalYearController + Request/Response DTO
 │   └── domain/                     ← FiscalYear, FiscalYearSettings, Repository
-└── dashboard/
-    └── presentation/               ← DashboardController + Response DTO
+├── dashboard/
+│   └── presentation/               ← DashboardController + Response DTO
+└── charts/
+    ├── presentation/               ← ChartController + Response DTO（4エンドポイント）
+    └── application/                ← ChartService（radar/growth/heatmap/timeline 集計）
 ```
 
 **依存方向**（厳守）:
