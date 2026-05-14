@@ -100,6 +100,11 @@ export default function NavBar() {
         <span className="navbar__user">
           {user?.name}（{roleLabel(user?.role ?? '')}）
         </span>
+        {user?.userId !== 'admin' && (
+          <button className="navbar__logout-btn" onClick={() => navigate('/settings/password')}>
+            パスワード変更
+          </button>
+        )}
         <button className="navbar__logout-btn" onClick={handleLogout}>ログアウト</button>
       </div>
     </nav>

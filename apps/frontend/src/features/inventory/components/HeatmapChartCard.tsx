@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { HeatmapCell, HeatmapResponse, HeatmapSkill } from '../types/charts';
 
 interface Props {
@@ -86,7 +87,7 @@ export default function HeatmapChartCard({ data }: Props) {
         </div>
       )}
 
-      {tooltip && (
+      {tooltip && createPortal(
         <div
           className="heatmap-tooltip"
           style={{ left: tooltip.x + 12, top: tooltip.y + 12 }}
@@ -101,12 +102,13 @@ export default function HeatmapChartCard({ data }: Props) {
               <li key={i} className="heatmap-tooltip__skill">
                 <span className="heatmap-tooltip__skill-name">{s.skillName}</span>
                 <span className={`heatmap-tooltip__skill-lv${s.levelValue === null ? ' heatmap-tooltip__skill-lv--none' : ''}`}>
-                  {s.levelValue !== null ? `Lv${s.levelValue}` : '—'}
+                  {s.levelValue !== null ? String(s.levelValue) : '—'}
                 </span>
               </li>
             ))}
           </ul>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

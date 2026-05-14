@@ -6,6 +6,7 @@ import TlAdminRoute from './shared/ui/TlAdminRoute';
 import ScrollToTopButton from './shared/ui/ScrollToTopButton';
 import LoginPage from './features/auth/pages/LoginPage';
 import ChangePasswordPage from './features/auth/pages/ChangePasswordPage';
+import MyPasswordPage from './features/auth/pages/MyPasswordPage';
 import DashboardPage from './features/inventory/pages/DashboardPage';
 import InventoryPage from './features/inventory/pages/InventoryPage';
 import ComparisonPage from './features/inventory/pages/ComparisonPage';
@@ -154,6 +155,14 @@ export default function App() {
               <AdminRoute>
                 <UserMasterPage />
               </AdminRoute>
+            }
+          />
+          <Route
+            path="/settings/password"
+            element={
+              <PrivateRoute>
+                <MyPasswordPage />
+              </PrivateRoute>
             }
           />
           <Route path="*" element={<Navigate to="/" replace />} />

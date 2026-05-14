@@ -38,6 +38,9 @@ public class AuthService {
 
     @Transactional
     public void changePassword(ChangePasswordRequest request, User currentUser) {
+        if ("admin".equals(currentUser.getUserId())) {
+            throw new AuthException("FORBIDDEN", "このアカウントはパスワードを変更できません");
+        }
         User user = userRepository.findById(currentUser.getId()).orElseThrow();
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new AuthException("AUTH_FAILED", "現在のパスワードが正しくありません");

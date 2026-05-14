@@ -217,6 +217,24 @@ body {
   color: var(--color-text);
 }
 
+/* ===== Password change page (with NavBar) ===== */
+.my-password-page__body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+.my-password-page__title {
+  font-size: 17px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 24px;
+  color: var(--color-text);
+  letter-spacing: -0.2px;
+}
+
 /* ===== Auth pages (login / change-password) ===== */
 .auth-page {
   min-height: 100vh;
@@ -295,6 +313,12 @@ body {
   background: var(--color-danger-bg);
   border: 1px solid var(--color-danger-border);
   color: var(--color-danger);
+}
+
+.alert-success {
+  background: #f0faf3;
+  border: 1px solid #a8d4b0;
+  color: #1a5c2a;
 }
 
 .alert-info {
