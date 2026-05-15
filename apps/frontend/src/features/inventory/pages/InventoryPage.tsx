@@ -77,6 +77,11 @@ export default function InventoryPage() {
   const [qualificationRows, setQualificationRows] = useState<QualificationRow[]>([]);
   const [seminarRows, setSeminarRows] = useState<SeminarRow[]>([]);
 
+  const [openQualCats, setOpenQualCats] = useState<Set<string>>(new Set());
+  const [openSemCats, setOpenSemCats] = useState<Set<string>>(new Set());
+  const [qualSearch, setQualSearch] = useState('');
+  const [semSearch, setSemSearch] = useState('');
+
   useEffect(() => {
     Promise.all([
       getInventory(inventoryId),
@@ -159,8 +164,13 @@ export default function InventoryPage() {
   }, [inventoryId]);
 
   const itSkillTree = useMemo(() => {
+    const sorted = [...itSkills].sort((a, b) =>
+      a.category1SortOrder - b.category1SortOrder ||
+      (a.category2Name ?? '').localeCompare(b.category2Name ?? '') ||
+      a.sortOrder - b.sortOrder
+    );
     const map = new Map<string, Map<string, ItSkill[]>>();
-    for (const skill of itSkills) {
+    for (const skill of sorted) {
       const cat1 = skill.category1Name || '未分類';
       const cat2 = skill.category2Name || '';
       if (!map.has(cat1)) map.set(cat1, new Map());
@@ -187,6 +197,28 @@ export default function InventoryPage() {
     acc[cat].push(a);
     return acc;
   }, {}), [adSeminars]);
+
+  const filteredQualsByCategory = useMemo(() => {
+    const term = qualSearch.trim().toLowerCase();
+    if (!term) return qualsByCategory;
+    const result: Record<string, Qualification[]> = {};
+    for (const [cat, quals] of Object.entries(qualsByCategory)) {
+      const filtered = quals.filter(q => q.name.toLowerCase().includes(term));
+      if (filtered.length > 0) result[cat] = filtered;
+    }
+    return result;
+  }, [qualsByCategory, qualSearch]);
+
+  const filteredAdsByCategory = useMemo(() => {
+    const term = semSearch.trim().toLowerCase();
+    if (!term) return adsByCategory;
+    const result: Record<string, AdSeminar[]> = {};
+    for (const [cat, ads] of Object.entries(adsByCategory)) {
+      const filtered = ads.filter(a => a.name.toLowerCase().includes(term));
+      if (filtered.length > 0) result[cat] = filtered;
+    }
+    return result;
+  }, [adsByCategory, semSearch]);
 
   const itSkillScoredCount = useMemo(() =>
     Object.values(itSkillEntries).filter(e => e.levelId !== null).length + customSkillRows.length,
@@ -403,6 +435,22 @@ export default function InventoryPage() {
     setSeminarRows(prev => prev.filter((_, i) => i !== idx));
   };
 
+  const toggleQualCat = (cat: string) => {
+    setOpenQualCats(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  };
+
+  const toggleSemCat = (cat: string) => {
+    setOpenSemCats(prev => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat); else next.add(cat);
+      return next;
+    });
+  };
+
   if (!inventory) return <div className="loading">読み込み中...</div>;
 
   return (
@@ -579,23 +627,40 @@ export default function InventoryPage() {
             <div className="skill-layout">
               <div className="skill-list-panel">
                 <h3>資格一覧から追加</h3>
-                {Object.entries(qualsByCategory).map(([cat, quals]) => (
-                  <div key={cat} className="skill-category-group">
-                    <h4 className="category-label">{cat}</h4>
-                    {quals.map(q => (
-                      <button
-                        key={q.id}
-                        className={`skill-add-btn${qualificationRows.some(r => r.qualificationId === q.id) ? ' added' : ''}`}
-                        onClick={() => addQualificationRow(q)}
-                      >
-                        + {q.name}
-                      </button>
-                    ))}
-                  </div>
-                ))}
-                <button className="btn btn-secondary custom-add-btn" onClick={addCustomQualRow}>
-                  + カスタム資格を追加
-                </button>
+                <input
+                  type="text"
+                  className="skill-search"
+                  placeholder="資格名で絞り込み"
+                  value={qualSearch}
+                  onChange={e => setQualSearch(e.target.value)}
+                />
+                <div className="skill-list-scroll">
+                  {Object.entries(filteredQualsByCategory).map(([cat, quals]) => {
+                    const isOpen = !!qualSearch.trim() || openQualCats.has(cat);
+                    return (
+                      <div key={cat} className="skill-category-group">
+                        <button className="category-toggle" onClick={() => toggleQualCat(cat)}>
+                          <span className="category-toggle-text">{cat}</span>
+                          <span className={`category-arrow${!isOpen ? ' collapsed' : ''}`}>▾</span>
+                        </button>
+                        {isOpen && quals.map(q => (
+                          <button
+                            key={q.id}
+                            className={`skill-add-btn${qualificationRows.some(r => r.qualificationId === q.id) ? ' added' : ''}`}
+                            onClick={() => addQualificationRow(q)}
+                          >
+                            + {q.name}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="skill-list-footer">
+                  <button className="btn btn-secondary custom-add-btn" onClick={addCustomQualRow}>
+                    + カスタム資格を追加
+                  </button>
+                </div>
               </div>
 
               <div className="skill-input-panel">
@@ -659,23 +724,40 @@ export default function InventoryPage() {
             <div className="skill-layout">
               <div className="skill-list-panel">
                 <h3>AD一覧から追加</h3>
-                {Object.entries(adsByCategory).map(([cat, ads]) => (
-                  <div key={cat} className="skill-category-group">
-                    <h4 className="category-label">{cat}</h4>
-                    {ads.map(ad => (
-                      <button
-                        key={ad.id}
-                        className={`skill-add-btn${seminarRows.some(r => r.adSeminarId === ad.id) ? ' added' : ''}`}
-                        onClick={() => addAdSeminarRow(ad)}
-                      >
-                        + {ad.name}
-                      </button>
-                    ))}
-                  </div>
-                ))}
-                <button className="btn btn-secondary custom-add-btn" onClick={addCustomSeminarRow}>
-                  + 他のセミナーを追加
-                </button>
+                <input
+                  type="text"
+                  className="skill-search"
+                  placeholder="セミナー名で絞り込み"
+                  value={semSearch}
+                  onChange={e => setSemSearch(e.target.value)}
+                />
+                <div className="skill-list-scroll">
+                  {Object.entries(filteredAdsByCategory).map(([cat, ads]) => {
+                    const isOpen = !!semSearch.trim() || openSemCats.has(cat);
+                    return (
+                      <div key={cat} className="skill-category-group">
+                        <button className="category-toggle" onClick={() => toggleSemCat(cat)}>
+                          <span className="category-toggle-text">{cat}</span>
+                          <span className={`category-arrow${!isOpen ? ' collapsed' : ''}`}>▾</span>
+                        </button>
+                        {isOpen && ads.map(ad => (
+                          <button
+                            key={ad.id}
+                            className={`skill-add-btn${seminarRows.some(r => r.adSeminarId === ad.id) ? ' added' : ''}`}
+                            onClick={() => addAdSeminarRow(ad)}
+                          >
+                            + {ad.name}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="skill-list-footer">
+                  <button className="btn btn-secondary custom-add-btn" onClick={addCustomSeminarRow}>
+                    + 他のセミナーを追加
+                  </button>
+                </div>
               </div>
 
               <div className="skill-input-panel">

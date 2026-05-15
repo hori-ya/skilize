@@ -129,7 +129,15 @@ export default function MemberDetailPage() {
     const groups = new Map<string, ItSkillDetailItem[]>();
     const customItems: ItSkillDetailItem[] = [];
 
-    for (const detail of itSkillDetails) {
+    const sortedDetails = [...itSkillDetails].sort((a, b) => {
+      const ma = skillMap.get(a.itSkillId ?? -1);
+      const mb = skillMap.get(b.itSkillId ?? -1);
+      return (ma?.category1SortOrder ?? 0) - (mb?.category1SortOrder ?? 0) ||
+        (ma?.category2Name ?? '').localeCompare(mb?.category2Name ?? '') ||
+        (ma?.sortOrder ?? 0) - (mb?.sortOrder ?? 0);
+    });
+
+    for (const detail of sortedDetails) {
       if (detail.itSkillId === null) {
         customItems.push(detail);
       } else {

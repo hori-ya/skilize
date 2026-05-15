@@ -262,6 +262,7 @@ public class MasterController {
     ) {}
 
     public record ItSkillDto(int id, String name, int categoryId, Integer category1Id, String category1Name,
+                              int category1SortOrder,
                               String category2Name, String category3Name,
                               String description, int sortOrder, boolean isActive) {
         static ItSkillDto from(ItSkill s, ItSkillCategory cat1) {
@@ -275,6 +276,7 @@ public class MasterController {
             return new ItSkillDto(s.getId(), s.getName(), cat.getId(),
                     cat1 != null ? cat1.getId() : null,
                     cat1 != null ? cat1.getName() : null,
+                    cat1 != null ? cat1.getSortOrder() : 0,
                     cat2, cat3, s.getDescription(), s.getSortOrder(), s.isActive());
         }
     }

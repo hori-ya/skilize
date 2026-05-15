@@ -42,6 +42,7 @@ export interface ItSkill {
   categoryId: number;
   category1Id: number | null;
   category1Name: string | null;
+  category1SortOrder: number;
   category2Name: string | null;
   category3Name: string | null;
   name: string;

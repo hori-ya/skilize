@@ -39,7 +39,15 @@ export default function ComparisonPage() {
     const map = new Map<string, Map<string, ComparisonItem[]>>();
     const customItems: ComparisonItem[] = [];
 
-    for (const item of comparison.items) {
+    const sortedItems = [...comparison.items].sort((a, b) => {
+      const ma = skillMap.get(a.itSkillId ?? -1);
+      const mb = skillMap.get(b.itSkillId ?? -1);
+      return (ma?.category1SortOrder ?? 0) - (mb?.category1SortOrder ?? 0) ||
+        (ma?.category2Name ?? '').localeCompare(mb?.category2Name ?? '') ||
+        (ma?.sortOrder ?? 0) - (mb?.sortOrder ?? 0);
+    });
+
+    for (const item of sortedItems) {
       if (item.itSkillId === null) {
         customItems.push(item);
         continue;
