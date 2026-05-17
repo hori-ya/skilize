@@ -186,7 +186,9 @@
 |---------|---------------------|
 | [01-auth.md](./01-auth.md) | `/api/auth/**` |
 | [02-inventory.md](./02-inventory.md) | `/api/inventory/**` |
-| [03-inquiry.md](./03-inquiry.md) | `/api/users/**`（照会） |
+| [03-inquiry.md](./03-inquiry.md) | `/api/users/**`（照会・ユーザー一覧） |
 | [04-master-tl.md](./04-master-tl.md) | マスタ参照（TL/GENERAL） |
 | [05-master-admin.md](./05-master-admin.md) | マスタ管理（ADMIN） |
 | [06-charts.md](./06-charts.md) | `/api/charts/**`（グラフ集計） |
+| [07-interview.md](./07-interview.md) | `/api/interviews/**`（面談メモ） |
+| [08-expectations.md](./08-expectations.md) | `/api/users/{userId}/expectations/**`（期待コメント） |

@@ -1,7 +1,8 @@
 # システム全体構成
 
-**バージョン**: 1.0.0  
-**作成日**: 2026-05-09
+**バージョン**: 1.1.0  
+**作成日**: 2026-05-09  
+**更新日**: 2026-05-17
 
 ---
 
@@ -106,17 +107,21 @@ apps/frontend/src/
     │   └── pages/                    ← DashboardPage / InventoryPage / ComparisonPage
     │                                    GoalReviewPage / GoalPage / InventoryHistoryPage
     ├── team/
-    │   ├── api/userApi.ts            ← ユーザー管理 API
-    │   ├── types/index.ts            ← TeamMember（FiscalYearRef, InventoryStatus を参照）
+    │   ├── api/userApi.ts            ← ユーザー管理 API・期待コメント API
+    │   ├── types/index.ts            ← TeamMember（FiscalYearRef, InventoryStatus を参照）・UserExpectation
     │   └── pages/                    ← TeamMemberListPage / MemberDetailPage / AllUserListPage
-    └── master/
-        └── pages/                    ← FiscalYearMasterPage / SkillLevelMasterPage
-                                         ItSkillMasterPage / QualificationMasterPage
-                                         AdSeminarMasterPage / UserMasterPage
+    ├── master/
+    │   └── pages/                    ← FiscalYearMasterPage / SkillLevelMasterPage
+    │                                    ItSkillMasterPage / QualificationMasterPage
+    │                                    AdSeminarMasterPage / UserMasterPage
+    └── interview/
+        ├── api/interviewApi.ts       ← 面談メモ API（getInterview / saveInterview / getPrevYearInterview）
+        └── types/index.ts            ← InterviewMemo / DetailNoteItem / DetailType 型
 ```
 
 **依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）  
-**feature 間参照**: `features/team/types` → `features/inventory/types` のみ許容（cross-feature 型参照）
+**feature 間参照**: `features/team/types` → `features/inventory/types` のみ許容（cross-feature 型参照）  
+**面談メモ UI**: `features/interview/` は API・型のみ。UI は `features/team/pages/MemberDetailPage.tsx` に直接実装
 
 ---
 
@@ -149,9 +154,17 @@ apps/backend/src/main/java/com/skilize/
 │   └── domain/                     ← FiscalYear, FiscalYearSettings, Repository
 ├── dashboard/
 │   └── presentation/               ← DashboardController + Response DTO
-└── charts/
-    ├── presentation/               ← ChartController + Response DTO（4エンドポイント）
-    └── application/                ← ChartService（radar/growth/heatmap/timeline 集計）
+├── charts/
+│   ├── presentation/               ← ChartController + Response DTO（4エンドポイント）
+│   └── application/                ← ChartService（radar/growth/heatmap/timeline 集計）
+├── interview/
+│   ├── presentation/               ← InterviewController + Request/Response DTO
+│   ├── application/                ← InterviewService（@Transactional）
+│   └── domain/                     ← InventoryInterview・InterviewDetailNote・DetailType・Repository
+└── expectation/
+    ├── presentation/               ← ExpectationController + Request/Response DTO
+    ├── application/                ← ExpectationService（@Transactional）
+    └── domain/                     ← UserExpectation・UserExpectationRepository
 ```
 
 **依存方向**（厳守）:

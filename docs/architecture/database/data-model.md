@@ -1,7 +1,8 @@
 # データモデル（概念設計）
 
-**バージョン**: 1.0.0  
-**作成日**: 2026-05-09
+**バージョン**: 1.2.0  
+**作成日**: 2026-05-09  
+**更新日**: 2026-05-17
 
 関連資料：[ER図](./er-diagram.md)
 
@@ -153,6 +154,43 @@ InventoryGoal（目標設定）
   └─ review_note（振り返りコメント。翌年度の振り返り時に記録。nullable）
 ```
 
+### 面談メモ
+
+```
+InventoryInterview（面談メモヘッダー）
+  ├─ id
+  ├─ inventory_id → Inventory（面談対象の棚卸）
+  ├─ interviewer_id → User（入力したTL/ADMIN。UNIQUEキーの一部：同一棚卸に対して入力者ごとに1件）
+  └─ general_note（全体備忘録。nullable）
+
+InterviewDetailNote（面談メモ明細）
+  ├─ id
+  ├─ interview_id → InventoryInterview
+  ├─ detail_type（IT_SKILL / QUALIFICATION / SEMINAR / GOAL）
+  ├─ detail_id（対象明細のID。detail_type に応じた各明細テーブルのPK）
+  └─ note（メモ内容）
+```
+
+> `InventoryInterview` の UNIQUE 制約は `(inventory_id, interviewer_id)` の複合。  
+> 同一棚卸に対して複数のTL/ADMINが独立した面談メモを記録できる。  
+> 各TL/ADMINは自分の `interviewer_id` に紐づくレコードのみ照会・編集可能。
+
+### 期待コメント
+
+```
+UserExpectation（ユーザーへの期待コメント）
+  ├─ user_id → User（PK兼FK。ユーザーごとに1レコード）
+  ├─ tl_expectation（TLが期待すること。nullable。担当TLのみ編集可）
+  ├─ company_expectation（会社が期待すること。nullable。ADMINのみ編集可）
+  ├─ tl_updated_at（TL期待コメントの最終更新日時。nullable）
+  └─ company_updated_at（会社期待コメントの最終更新日時。nullable）
+```
+
+> `user_expectations` はユーザーごとに最大1レコード。  
+> TL期待コメントはそのユーザーに割り当てられたTL（`users.tl_user_id`）のみ編集可能。  
+> 会社期待コメントはADMINのみ編集可能。  
+> TL・ADMINはどちらも両方のコメントを読み取り専用で参照できる。
+
 ---
 
 ## NULLを許容するFKの意味
@@ -168,6 +206,8 @@ InventoryGoal（目標設定）
 | `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
 | `users` | `tl_user_id` | TL未設定ユーザー |
 | `users` | `email` | メールアドレス未登録ユーザー（任意項目） |
+| `user_expectations` | `tl_expectation` | TLによる期待コメント未入力 |
+| `user_expectations` | `company_expectation` | 管理者による期待コメントが未入力 |
 
 ---
 

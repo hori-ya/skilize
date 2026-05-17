@@ -1,5 +1,10 @@
 import type { FiscalYearRef, InventoryStatus } from '../../inventory/types/index';
 
+export interface UserExpectation {
+  tlExpectation: string | null;
+  companyExpectation: string | null;
+}
+
 export interface TeamMember {
   id: number;
   userId: string;

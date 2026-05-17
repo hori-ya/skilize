@@ -2248,3 +2248,429 @@ body {
 .timeline-lane__line {
   display: none;
 }
+
+/* ── Interview Memo ── */
+
+.btn-outline-sm {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-outline-sm:hover { background: var(--color-bg); }
+.btn-outline-sm.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
+}
+
+/* 明細テーブルのメモ列 */
+.interview-note-th {
+  width: 180px;
+  min-width: 140px;
+  background-color: #fef9ec;
+}
+
+.interview-note-cell {
+  vertical-align: middle;
+  padding: 4px 6px;
+  background-color: #fef9ec;
+}
+
+.interview-note-textarea {
+  width: 100%;
+  min-width: 120px;
+  font-size: 12px;
+  padding: 3px 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  font-family: inherit;
+  box-sizing: border-box;
+  /* 高さ固定・改行は内部でスクロール。右下ドラッグで縦方向リサイズ可能 */
+  height: 28px;
+  resize: vertical;
+  overflow-y: auto;
+  line-height: 1.4;
+}
+
+.interview-note-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.interview-note-prev-inline {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+
+.interview-note-prev-readonly {
+  font-size: 12px;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+
+.interview-note-empty {
+  color: var(--color-text-muted);
+}
+
+/* フローティングパネル */
+.interview-float-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s;
+}
+
+.interview-float-btn:hover { background: var(--color-primary-dark, #2563eb); }
+.interview-float-btn--open { background: #64748b; }
+.interview-float-btn--open:hover { background: #475569; }
+
+.interview-float-panel {
+  position: fixed;
+  z-index: 99;
+  min-width: 240px;
+  min-height: 200px;
+  background: #fff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 8方向リサイズハンドル */
+.ifp-resize {
+  position: absolute;
+  z-index: 10;
+}
+.ifp-resize--n  { top: -4px;    left: 12px;   right: 12px;  height: 8px;  cursor: n-resize; }
+.ifp-resize--s  { bottom: -4px; left: 12px;   right: 12px;  height: 8px;  cursor: s-resize; }
+.ifp-resize--e  { top: 12px;    right: -4px;  bottom: 12px; width: 8px;   cursor: e-resize; }
+.ifp-resize--w  { top: 12px;    left: -4px;   bottom: 12px; width: 8px;   cursor: w-resize; }
+.ifp-resize--nw { top: -4px;    left: -4px;   width: 16px;  height: 16px; cursor: nw-resize; }
+.ifp-resize--ne { top: -4px;    right: -4px;  width: 16px;  height: 16px; cursor: ne-resize; }
+.ifp-resize--sw { bottom: -4px; left: -4px;   width: 16px;  height: 16px; cursor: sw-resize; }
+.ifp-resize--se { bottom: -4px; right: -4px;  width: 16px;  height: 16px; cursor: se-resize; }
+
+.interview-float-panel__header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  background: #fef9ec;
+  border-radius: 10px 10px 0 0;
+  cursor: move;
+  user-select: none;
+}
+
+.interview-float-panel__title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.interview-float-panel__close {
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--color-text-muted);
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.interview-float-panel__close:hover { color: var(--color-text); }
+
+.interview-float-panel__body {
+  flex: 1;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+/* 前年度備忘録セクション */
+.interview-float-prev-section {
+  flex-shrink: 0;
+  background: #f5f5f5;
+  border-radius: 6px;
+  padding: 6px 8px;
+  max-height: 90px;
+  overflow-y: auto;
+}
+
+.interview-float-prev-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.interview-float-prev-text {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: pre-wrap;
+  line-height: 1.4;
+}
+
+.interview-float-panel__textarea {
+  flex: 1;
+  width: 100%;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  resize: none;
+  box-sizing: border-box;
+  min-height: 0;
+}
+
+.interview-float-panel__textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.interview-float-panel__actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* 保存ボタン：他機能に合わせたデザインで高さを抑える */
+.interview-float-save-btn {
+  padding: 5px 16px !important;
+  font-size: 13px !important;
+  margin-top: 0 !important;
+  width: auto !important;
+  border-radius: 8px !important;
+}
+
+.interview-panel__readonly-text {
+  font-size: 13px;
+  white-space: pre-wrap;
+  color: var(--color-text);
+  margin: 0;
+  padding: 6px 8px;
+  background: var(--color-bg);
+  border-radius: 4px;
+  min-height: 60px;
+}
+
+.interview-panel__saved-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ===== 期待コメント ===== */
+.expectation-action-cell {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.expectation-toggle-btn {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.expectation-toggle-btn:hover {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.expectation-toggle-btn--open {
+  background: var(--color-accent);
+  color: #fff;
+}
+
+.expectation-expand-row {
+  background: #faf9f7;
+}
+
+.expectation-expand-cell {
+  padding: 12px 16px !important;
+  border-bottom: 2px solid var(--color-accent);
+}
+
+.expectation-loading {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  padding: 4px 0;
+}
+
+.expectation-panel {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+
+.expectation-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.expectation-section--readonly {
+  flex: 0 0 auto;
+  min-width: 200px;
+  max-width: 320px;
+  background: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.expectation-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  letter-spacing: 0.02em;
+}
+
+.expectation-section--readonly .expectation-label {
+  color: var(--color-info-text);
+}
+
+.expectation-textarea {
+  width: 100%;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  resize: vertical;
+  line-height: 1.5;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.expectation-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.expectation-readonly-text {
+  font-size: 13px;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.expectation-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.expectation-save-btn {
+  padding: 5px 16px !important;
+  font-size: 13px !important;
+  margin-top: 0 !important;
+  width: auto !important;
+}
+
+.expectation-saved-label {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── 期待タブ詳細（MemberDetailPage） ── */
+.expectation-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 720px;
+}
+
+.expectation-detail-section {
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.expectation-detail-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin: 0;
+}
+
+.expectation-detail-textarea {
+  width: 100%;
+  font-size: 14px;
+  font-family: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  resize: vertical;
+  line-height: 1.6;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.expectation-detail-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.expectation-detail-readonly {
+  font-size: 14px;
+  color: var(--color-text);
+  white-space: pre-wrap;
+  line-height: 1.6;
+  padding: 10px 12px;
+  background: var(--color-bg);
+  border-radius: 6px;
+  min-height: 60px;
+}
+
+.expectation-detail-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}

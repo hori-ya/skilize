@@ -115,6 +115,16 @@ REST API はステートレスのためサーバー側でトークンを破棄�
 
 > ※1 「自チーム」= `users.tl_user_id = 自分の ID` のユーザー
 
+#### 面談メモ
+
+| エンドポイント | GENERAL | TL | ADMIN |
+|---------------|:-------:|:--:|:-----:|
+| GET /api/interviews/inventory/{inventoryId} | — | 自分のメモのみ ※2 | 自分のメモのみ ※2 |
+| PUT /api/interviews/inventory/{inventoryId} | — | 自分のメモのみ ※2 | 自分のメモのみ ※2 |
+| GET /api/interviews/inventory/{inventoryId}/prev-year | — | 自分のメモのみ ※2 | 自分のメモのみ ※2 |
+
+> ※2 `interviewer_id = 自分の ID` のレコードのみ取得・更新可。他者のメモへのアクセスは 403 を返し、存在有無も開示しない。
+
 #### マスタ管理（TL / ADMIN）
 
 | エンドポイント | GENERAL | TL | ADMIN |
@@ -423,6 +433,7 @@ Spring Security のデフォルトで以下のヘッダーが付与される。�
 |--------|------|
 | `password_hash` | API レスポンスに含めない |
 | JWT 署名キー | 環境変数のみ。ログ出力禁止 |
+| 面談メモ（`interview_notes`） | `interviewer_id` が一致するユーザー以外には一切返さない。存在有無も含め非開示 |
 
 ### 7.7 未実装・TBD
 

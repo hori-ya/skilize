@@ -189,16 +189,11 @@
 ## GET /api/users/me/team-members
 
 自チームのメンバー一覧を返す（SCR-007）。  
-TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員が対象。
+TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員（有効ユーザーのみ）が対象。
 
 **権限**: TL / ADMIN
 
-**Query Parameters**
-
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `fiscalYearId` | int | 絞り込み用年度 ID（任意） |
-| `name` | string | 名前の部分一致（任意） |
+**Query Parameters**: なし（フィルタリングはフロントエンド側で実施）
 
 **Response 200**
 
@@ -210,6 +205,8 @@ TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員が
     "name": "田中 太郎",
     "email": "tanaka@example.com",
     "role": "GENERAL",
+    "tlUserId": 5,
+    "tlName": "山田 花子",
     "isActive": true,
     "currentInventory": {
       "id": 10,
@@ -223,56 +220,46 @@ TL の場合は `tl_user_id = 自分の ID` のユーザー、ADMIN は全員が
     "name": "佐藤 次郎",
     "email": null,
     "role": "GENERAL",
+    "tlUserId": null,
+    "tlName": null,
     "isActive": true,
     "currentInventory": null
   }
 ]
 ```
 
-> `currentInventory` は当年度（または `fiscalYearId` 指定年度）の棚卸。未作成の場合 `null`。
+> `currentInventory` はシステムの当年度（アクティブな `fiscal_years` レコード）の棚卸。未作成の場合 `null`。  
+> TL の場合は自分のチームメンバーのみ返す。ADMIN は全有効ユーザーを返す。
 
 ---
 
 ## GET /api/users
 
-全ユーザー一覧を検索・ページングで返す（SCR-008）。
+全ユーザー一覧を返す（SCR-008・ユーザー管理）。  
+ページネーションなしで全件返す。フィルタリングはフロントエンド側で実施。
 
 **権限**: ADMIN
 
-**Query Parameters**
-
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `name` | string | 名前の部分一致（任意） |
-| `role` | string | ロールでフィルタ: `GENERAL` / `TL` / `ADMIN`（任意） |
-| `tlUserId` | int | 指定した TL に紐づくユーザーのみ（任意） |
-| `isActive` | boolean | 有効 / 無効フィルタ（デフォルト: `true`） |
-| `fiscalYearId` | int | 棚卸ステータス表示用年度 ID（任意） |
-| `page` | int | ページ番号（デフォルト: 1） |
-| `pageSize` | int | 件数（デフォルト: 20） |
+**Query Parameters**: なし
 
 **Response 200**
 
 ```json
-{
-  "items": [
-    {
-      "id": 1,
-      "userId": "tanaka.taro",
-      "name": "田中 太郎",
-      "email": "tanaka@example.com",
-      "role": "GENERAL",
-      "tlUser": { "id": 5, "name": "山田 花子" },
-      "isActive": true,
-      "currentInventory": {
-        "id": 10,
-        "fiscalYear": { "id": 1, "name": "FY2025" },
-        "status": "COMPLETED"
-      }
-    }
-  ],
-  "total": 42,
-  "page": 1,
-  "pageSize": 20
-}
+[
+  {
+    "id": 1,
+    "userId": "tanaka.taro",
+    "name": "田中 太郎",
+    "email": "tanaka@example.com",
+    "role": "GENERAL",
+    "tlUserId": 5,
+    "tlName": "山田 花子",
+    "isInitialPassword": false,
+    "isActive": true,
+    "createdAt": "2025-04-01T09:00:00Z"
+  }
+]
 ```
+
+> ユーザーの作成・更新・パスワードリセットも同じ `/api/users` 系エンドポイントで提供する（詳細は [05-master-admin.md](./05-master-admin.md) 参照）。  
+> `tlUserId` は TL未設定の場合 `null`。`tlName` は `tlUserId` から解決した TL の表示名。

@@ -1,6 +1,6 @@
 import apiClient from '../../../shared/api/client';
 import type { UserAdmin } from '../../auth/types/index';
-import type { TeamMember } from '../types/index';
+import type { TeamMember, UserExpectation } from '../types/index';
 import type { InventorySummary } from '../../inventory/types/index';
 
 export const getUsers = () => apiClient.get<UserAdmin[]>('/users');
@@ -29,3 +29,12 @@ export const getTeamMembers = () =>
 
 export const getMemberInventories = (userId: number) =>
   apiClient.get<InventorySummary[]>(`/users/${userId}/inventories`);
+
+export const getExpectations = (userId: number) =>
+  apiClient.get<UserExpectation>(`/users/${userId}/expectations`);
+
+export const saveTlExpectation = (userId: number, expectation: string) =>
+  apiClient.put<UserExpectation>(`/users/${userId}/expectations/tl`, { expectation });
+
+export const saveCompanyExpectation = (userId: number, expectation: string) =>
+  apiClient.put<UserExpectation>(`/users/${userId}/expectations/company`, { expectation });

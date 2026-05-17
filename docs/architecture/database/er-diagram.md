@@ -1,7 +1,8 @@
 # ER図
 
-**バージョン**: 1.0.0  
-**作成日**: 2026-05-09
+**バージョン**: 1.2.0  
+**作成日**: 2026-05-09  
+**更新日**: 2026-05-17
 
 関連資料：[データモデル（概念設計）](./data-model.md)
 
@@ -216,6 +217,41 @@ erDiagram
   }
 
   %% -------------------------
+  %% 面談メモ
+  %% -------------------------
+
+  inventory_interviews {
+    int      id             PK
+    int      inventory_id   FK "UK(inventory_id, interviewer_id)"
+    int      interviewer_id FK "入力者TL/ADMIN"
+    text     general_note   "全体備忘録 nullable"
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% -------------------------
+  %% 期待コメント
+  %% -------------------------
+
+  user_expectations {
+    int  user_id             PK "FK → users"
+    text tl_expectation      "TLが期待すること nullable"
+    text company_expectation "会社が期待すること nullable"
+    timestamp tl_updated_at      "nullable"
+    timestamp company_updated_at "nullable"
+  }
+
+  interview_detail_notes {
+    int      id           PK
+    int      interview_id FK "UK(interview_id, detail_type, detail_id)"
+    varchar  detail_type  "IT_SKILL/QUALIFICATION/SEMINAR/GOAL"
+    int      detail_id    "対象明細のID(FK制約なし)"
+    text     note
+    timestamp created_at
+    timestamp updated_at
+  }
+
+  %% -------------------------
   %% リレーション
   %% -------------------------
 
@@ -239,11 +275,20 @@ erDiagram
   qualifications            |o--o{  inventory_goals         : "targeted_by"
   ad_seminars               |o--o{  seminar_details         : "referenced_by"
   ad_seminars               |o--o{  inventory_goals         : "targeted_by"
+  inventories               ||--o{  inventory_interviews    : "has"
+  users                     ||--o{  inventory_interviews    : "interviews"
+  inventory_interviews      ||--o{  interview_detail_notes  : "contains"
+  users                     ||--o|  user_expectations       : "has"
 ```
 
 ---
 
 ## 補足
+
+### 面談メモのアクセス制御
+
+`inventory_interviews.interviewer_id` が面談メモのオーナーを示す。  
+APIはリクエストユーザーの `interviewer_id` に一致するレコードのみ返す（TL/ADMINとも同様）。
 
 ### NULLを許容するFK
 
@@ -258,6 +303,8 @@ erDiagram
 | `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
 | `users` | `tl_user_id` | TL未設定ユーザー |
 | `users` | `email` | メールアドレス未登録ユーザー（任意項目） |
+| `user_expectations` | `tl_expectation` | TLによる期待コメント未入力 |
+| `user_expectations` | `company_expectation` | 管理者による期待コメント未入力 |
 
 ### 年月の保存方法
 

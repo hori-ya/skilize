@@ -597,3 +597,176 @@ VALUES
 -- =============================================================================
 INSERT INTO fiscal_years (name, start_date, end_date, input_start_date, input_end_date, is_active)
 VALUES ('2026年度', '2026-04-01', '2027-03-31', '2026-04-01', '2027-03-31', TRUE);
+
+-- =============================================================================
+-- 面談メモデータ（inventory_interviews + interview_detail_notes）
+-- tl01 が user01・user02 の 2024年度・2025年度分を記録
+-- =============================================================================
+
+-- ─── user01 / 2024年度 ───────────────────────────────────────────────────────
+WITH iw AS (
+    INSERT INTO inventory_interviews (inventory_id, interviewer_id, general_note)
+    VALUES (
+        (SELECT i.id FROM inventories i
+         JOIN users u ON i.user_id = u.id
+         JOIN fiscal_years fy ON i.fiscal_year_id = fy.id
+         WHERE u.user_id = 'user01' AND fy.name = '2024年度'),
+        (SELECT id FROM users WHERE user_id = 'tl01'),
+        '全体的に安定したパフォーマンスを発揮。SE へのキャリアアップを本人も強く希望しており、来年度は上流工程の業務を積極的に任せていく方針。コミュニケーション能力も高く、チームへの貢献度も大きい。'
+    )
+    RETURNING id
+)
+INSERT INTO interview_detail_notes (interview_id, detail_type, detail_id, note)
+SELECT iw.id, d.detail_type, d.detail_id, d.note FROM iw
+CROSS JOIN (
+    -- IT_SKILL / QUALIFICATION は年度跨ぎで一致するようマスタID（it_skills.id / qualifications.id）を使用
+    SELECT 'IT_SKILL'::VARCHAR(20) AS detail_type,
+           (SELECT id FROM it_skills WHERE name = 'PL/SQLを作成、改修することができる。') AS detail_id,
+           'Oracle 案件での活躍が光る。次年度はパフォーマンスチューニングにも挑戦させたい。'::TEXT AS note
+    UNION ALL
+    SELECT 'IT_SKILL',
+           (SELECT id FROM it_skills WHERE name = '特定のフレームワークを理解するように意識して実践している。'),
+           'Spring Boot の習熟が進んでいる。来年度は設計フェーズも担当させたい。'
+    UNION ALL
+    SELECT 'QUALIFICATION',
+           (SELECT id FROM qualifications WHERE name = 'AWS認定資格 Associate Solutions Architect'),
+           '自己学習で取得しており主体性が高い。クラウド案件への配置を検討中。'
+    UNION ALL
+    -- SEMINAR / GOAL は年度固有のIDを使用
+    SELECT 'SEMINAR',
+           (SELECT sd.id FROM seminar_details sd
+            JOIN inventories inv ON sd.inventory_id = inv.id
+            JOIN users u ON inv.user_id = u.id
+            JOIN fiscal_years fy ON inv.fiscal_year_id = fy.id
+            WHERE u.user_id = 'user01' AND fy.name = '2024年度'
+              AND sd.seminar_name = 'Python勉強会'),
+           '自発的な学習姿勢を評価。チームへの知識展開も期待したい。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM it_skills WHERE name = '基本設計書を作成することができる。'),
+           'SE ロールへの移行を支援する。OJT 担当を別途アサイン予定。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM qualifications WHERE name = '応用情報技術者試験'),
+           '秋期試験でのチャレンジを応援。学習計画のレビューを定期的に実施する。'
+) AS d(detail_type, detail_id, note);
+
+-- ─── user01 / 2025年度 ───────────────────────────────────────────────────────
+WITH iw AS (
+    INSERT INTO inventory_interviews (inventory_id, interviewer_id, general_note)
+    VALUES (
+        (SELECT i.id FROM inventories i
+         JOIN users u ON i.user_id = u.id
+         JOIN fiscal_years fy ON i.fiscal_year_id = fy.id
+         WHERE u.user_id = 'user01' AND fy.name = '2025年度'),
+        (SELECT id FROM users WHERE user_id = 'tl01'),
+        '前年度目標をほぼ達成し、SE ロールとして着実に成長している。基本設計書の作成も経験し自信がついてきた様子。来年度は要件定義にも挑戦してもらう。応用情報の取得もあわせて期待している。'
+    )
+    RETURNING id
+)
+INSERT INTO interview_detail_notes (interview_id, detail_type, detail_id, note)
+SELECT iw.id, d.detail_type, d.detail_id, d.note FROM iw
+CROSS JOIN (
+    SELECT 'IT_SKILL'::VARCHAR(20) AS detail_type,
+           (SELECT id FROM it_skills WHERE name = '基本設計書を作成することができる。') AS detail_id,
+           '初めての SE ロールでよく頑張った。まだ指導が必要な部分もあるが着実に成長している。'::TEXT AS note
+    UNION ALL
+    SELECT 'IT_SKILL',
+           (SELECT id FROM it_skills WHERE name = '特定のフレームワークを理解するように意識して実践している。'),
+           'React も加わりフルスタックに近いスキルセットになってきた。来年度も継続して欲しい。'
+    UNION ALL
+    SELECT 'QUALIFICATION',
+           (SELECT id FROM qualifications WHERE name = 'AWS認定資格 Associate Solutions Architect'),
+           '来年度は Professional レベルの取得も視野に入れてほしい。'
+    UNION ALL
+    SELECT 'SEMINAR',
+           (SELECT sd.id FROM seminar_details sd
+            JOIN inventories inv ON sd.inventory_id = inv.id
+            JOIN users u ON inv.user_id = u.id
+            JOIN fiscal_years fy ON inv.fiscal_year_id = fy.id
+            WHERE u.user_id = 'user01' AND fy.name = '2025年度'
+              AND sd.seminar_name = 'TypeScript 勉強会'),
+           '自主的な勉強会参加を評価。学んだ内容をチームへ積極的に共有してほしい。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM it_skills WHERE name = '要件定義書を作成することができる。'),
+           '来年度の重点目標として全力でサポートする。PM ロールへの足がかりにしてほしい。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM qualifications WHERE name = '応用情報技術者試験'),
+           '昇格要件でもあるため、計画的に学習を進めるよう後押しする。'
+) AS d(detail_type, detail_id, note);
+
+-- ─── user02 / 2024年度 ───────────────────────────────────────────────────────
+WITH iw AS (
+    INSERT INTO inventory_interviews (inventory_id, interviewer_id, general_note)
+    VALUES (
+        (SELECT i.id FROM inventories i
+         JOIN users u ON i.user_id = u.id
+         JOIN fiscal_years fy ON i.fiscal_year_id = fy.id
+         WHERE u.user_id = 'user02' AND fy.name = '2024年度'),
+        (SELECT id FROM users WHERE user_id = 'tl01'),
+        '真面目に取り組んでおり着実に成長が見られる。自分から発信する場面をもっと増やしていくとさらに活躍の場が広がる。基礎固めをしっかり進めながら、来年度はクラウドスキル習得に挑戦してもらう。'
+    )
+    RETURNING id
+)
+INSERT INTO interview_detail_notes (interview_id, detail_type, detail_id, note)
+SELECT iw.id, d.detail_type, d.detail_id, d.note FROM iw
+CROSS JOIN (
+    SELECT 'IT_SKILL'::VARCHAR(20) AS detail_type,
+           (SELECT id FROM it_skills WHERE name = '詳細設計書を読み、PGの作成、改修をすることができる。') AS detail_id,
+           '指示された作業をしっかりこなせている。自分から提案する姿勢も育てていきたい。'::TEXT AS note
+    UNION ALL
+    SELECT 'IT_SKILL',
+           (SELECT id FROM it_skills WHERE name = 'データベース（Oracle、PostgreSQL、SQL Serverなど）の設定をすることができる。'),
+           'DB 周りの基礎知識はある。来年度はクラウド DB への応用も期待したい。'
+    UNION ALL
+    SELECT 'QUALIFICATION',
+           (SELECT id FROM qualifications WHERE name = '基本情報技術者試験'),
+           '取得済み。次は応用情報へのステップアップを期待。計画的に準備を進めるよう支援する。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM it_skills WHERE name = 'クラウドサービス（AWS、Azure、GCPなど）の設定をすることができる。'),
+           '具体的な学習ロードマップを一緒に作成する予定。AWS 入門コースから始めるよう勧めた。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM qualifications WHERE name = '応用情報技術者試験'),
+           '昇格要件でもあるため、できるだけ早期の取得を目指してほしい。'
+) AS d(detail_type, detail_id, note);
+
+-- ─── user02 / 2025年度 ───────────────────────────────────────────────────────
+WITH iw AS (
+    INSERT INTO inventory_interviews (inventory_id, interviewer_id, general_note)
+    VALUES (
+        (SELECT i.id FROM inventories i
+         JOIN users u ON i.user_id = u.id
+         JOIN fiscal_years fy ON i.fiscal_year_id = fy.id
+         WHERE u.user_id = 'user02' AND fy.name = '2025年度'),
+        (SELECT id FROM users WHERE user_id = 'tl01'),
+        'AWS の基本設定ができるようになり前年度目標を達成。自ら発信する場面も増えてきた。来年度は応用情報の取得と DB スキルの強化を重点目標とする。着実な成長を引き続き支援していく。'
+    )
+    RETURNING id
+)
+INSERT INTO interview_detail_notes (interview_id, detail_type, detail_id, note)
+SELECT iw.id, d.detail_type, d.detail_id, d.note FROM iw
+CROSS JOIN (
+    SELECT 'IT_SKILL'::VARCHAR(20) AS detail_type,
+           (SELECT id FROM it_skills WHERE name = 'クラウドサービス（AWS、Azure、GCPなど）の設定をすることができる。') AS detail_id,
+           '前年度目標を達成。基本的な設定ができるようになった。次は AWS Certified を視野に入れてほしい。'::TEXT AS note
+    UNION ALL
+    SELECT 'IT_SKILL',
+           (SELECT id FROM it_skills WHERE name = '詳細設計書を読み、PGの作成、改修をすることができる。'),
+           '独力で担当できるまでに成長した。次は詳細設計書の作成側にも挑戦させたい。'
+    UNION ALL
+    SELECT 'QUALIFICATION',
+           (SELECT id FROM qualifications WHERE name = '基本情報技術者試験'),
+           '引き続き保有。応用情報への挑戦を後押しする。試験前に学習進捗を確認予定。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM qualifications WHERE name = '応用情報技術者試験'),
+           '秋期試験での取得を応援する。試験 2 か月前から週次で進捗確認を実施する。'
+    UNION ALL
+    SELECT 'GOAL',
+           (SELECT id FROM it_skills WHERE name = 'PL/SQLを作成、改修することができる。'),
+           'DB 周りのスキル強化を支援する。実務で触れる機会を積極的に作っていく。'
+) AS d(detail_type, detail_id, note);
