@@ -101,8 +101,18 @@ com.skilize
 ├── fiscalyear/
 │   ├── presentation/           ← FiscalYearController + Request/Response DTO
 │   └── domain/                 ← FiscalYear, FiscalYearSettings, Repository
-└── dashboard/
-    └── presentation/           ← DashboardController + Response DTO
+├── dashboard/
+│   └── presentation/           ← DashboardController + Response DTO
+├── charts/
+│   ├── presentation/           ← ChartController + Response DTO
+│   └── application/            ← ChartService（radar/growth/heatmap/timeline 集計）
+├── ai/
+│   ├── presentation/           ← AiAnalysisController + Response DTO
+│   ├── application/            ← AiAnalysisService（非同期AI分析トリガー・結果取得）
+│   └── domain/                 ← AiCareerAnalysis エンティティ・Repository・InventoryCompletedEventListener
+└── interview/
+    ├── presentation/           ← InterviewController + Request/Response DTO
+    └── application/            ← InterviewService（面談メモ保存）
 ```
 
 **レイヤー責務**:
@@ -180,23 +190,108 @@ infrastructure → domain / application
 主要エンドポイント:
 
 ```
+# 認証
 POST   /api/auth/login
 GET    /api/auth/me
 POST   /api/auth/change-password
 POST   /api/auth/logout
-GET    /api/users
-POST   /api/users
-PUT    /api/users/{id}
-DELETE /api/users/{id}
-GET    /api/inventory
-POST   /api/inventory/...
-GET    /api/master/...
-GET    /api/fiscal-years
+
+# ダッシュボード・グラフ
 GET    /api/dashboard
 GET    /api/charts/radar
 GET    /api/charts/growth
 GET    /api/charts/heatmap
 GET    /api/charts/timeline
+
+# 棚卸
+GET    /api/inventories/mine
+POST   /api/inventories
+GET    /api/inventories/{id}
+PUT    /api/inventories/{id}/it-skill-details
+PUT    /api/inventories/{id}/qualification-details
+PUT    /api/inventories/{id}/seminar-details
+PATCH  /api/inventories/{id}/it-skill-details/{detailId}
+POST   /api/inventories/{id}/submit
+GET    /api/inventories/{id}/comparison
+GET    /api/inventories/{id}/goal-review
+PUT    /api/inventories/{id}/goal-review
+POST   /api/inventories/{id}/goal-review/complete
+GET    /api/inventories/{id}/goals
+PUT    /api/inventories/{id}/goals
+POST   /api/inventories/{id}/goals/complete
+
+# AI分析
+GET    /api/users/me/ai-analyses
+GET    /api/users/{userId}/ai-analyses        (TL/ADMIN)
+
+# ユーザー管理（ADMIN）
+GET    /api/users
+POST   /api/users
+PUT    /api/users/{id}
+PATCH  /api/users/{id}/deactivate
+PATCH  /api/users/{id}/activate
+POST   /api/users/{id}/reset-password
+
+# チーム照会（TL/ADMIN）
+GET    /api/users/me/team-members
+GET    /api/users/{id}/inventories
+
+# 面談（TL/ADMIN）
+GET    /api/interviews/inventory/{inventoryId}
+PUT    /api/interviews/inventory/{inventoryId}
+GET    /api/interviews/inventory/{inventoryId}/prev-year
+
+# マスタ（TL/ADMIN）
+GET    /api/it-skills
+POST   /api/it-skills
+PUT    /api/it-skills/{id}
+DELETE /api/it-skills/{id}
+PATCH  /api/it-skills/{id}/restore
+GET    /api/it-skills/custom-unregistered
+POST   /api/it-skills/promote
+GET    /api/qualifications
+POST   /api/qualifications
+PUT    /api/qualifications/{id}
+DELETE /api/qualifications/{id}
+PATCH  /api/qualifications/{id}/restore
+GET    /api/qualifications/custom-unregistered
+POST   /api/qualifications/promote
+GET    /api/ad-seminars
+POST   /api/ad-seminars
+PUT    /api/ad-seminars/{id}
+DELETE /api/ad-seminars/{id}
+PATCH  /api/ad-seminars/{id}/restore
+GET    /api/it-skill-categories
+POST   /api/it-skill-categories
+PUT    /api/it-skill-categories/{id}
+DELETE /api/it-skill-categories/{id}
+GET    /api/qualification-categories
+POST   /api/qualification-categories
+PUT    /api/qualification-categories/{id}
+DELETE /api/qualification-categories/{id}
+GET    /api/ad-seminar-categories
+POST   /api/ad-seminar-categories
+PUT    /api/ad-seminar-categories/{id}
+DELETE /api/ad-seminar-categories/{id}
+GET    /api/seminar-categories
+POST   /api/seminar-categories
+PUT    /api/seminar-categories/{id}
+DELETE /api/seminar-categories/{id}
+GET    /api/skill-levels
+POST   /api/skill-levels
+PUT    /api/skill-levels/{id}
+DELETE /api/skill-levels/{id}
+
+# 年度（ADMIN）
+GET    /api/fiscal-years
+GET    /api/fiscal-years/current
+POST   /api/fiscal-years
+PUT    /api/fiscal-years/{id}
+GET    /api/fiscal-year-settings
+PUT    /api/fiscal-year-settings
+
+# ヘルスチェック
+GET    /api/health
 ```
 
 ---
@@ -318,23 +413,26 @@ docker compose up db     # init.sql が再実行される
 | `apps/backend/src/main/java/com/skilize/inventory/presentation/` | InventoryController・Request/Response DTO |
 | `apps/backend/src/main/java/com/skilize/inventory/application/` | InventoryService（棚卸ビジネスロジック） |
 | `apps/backend/src/main/java/com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
-| `apps/backend/src/main/java/com/skilize/master/presentation/` | MasterController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/master/presentation/` | MasterController・Request/Response DTO（ITスキル・資格・AD・分類・レベル） |
 | `apps/backend/src/main/java/com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
 | `apps/backend/src/main/java/com/skilize/fiscalyear/presentation/` | FiscalYearController・Request/Response DTO |
 | `apps/backend/src/main/java/com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
 | `apps/backend/src/main/java/com/skilize/dashboard/presentation/` | DashboardController・Response DTO |
 | `apps/backend/src/main/java/com/skilize/charts/presentation/` | ChartController・Response DTO（radar/growth/heatmap/timeline） |
 | `apps/backend/src/main/java/com/skilize/charts/application/` | ChartService（スキルバランス・成長推移・ヒートマップ・タイムライン集計） |
+| `apps/backend/src/main/java/com/skilize/ai/` | AiAnalysisController・AiAnalysisService・AiCareerAnalysis エンティティ・InventoryCompletedEventListener（棚卸提出時の非同期AI分析トリガー） |
+| `apps/backend/src/main/java/com/skilize/interview/` | InterviewController・面談メモ保存ロジック（TL/ADMIN が棚卸明細ごとのメモと全体備忘録を記録） |
 | `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
 | `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |
 | `apps/frontend/src/app/providers/` | AuthProvider（認証状態の全体共有）と useAuth hook |
 | `apps/frontend/src/app/layouts/` | NavBar（グローバルナビゲーション） |
 | `apps/frontend/src/shared/api/` | Axios クライアント・マスタデータ API（複数 feature で共有） |
 | `apps/frontend/src/shared/types/` | マスタデータ型定義（複数 feature で共有） |
-| `apps/frontend/src/shared/ui/` | ルートガード・ScrollToTopButton（複数 feature で共有） |
-| `apps/frontend/src/features/auth/` | ログイン・パスワード変更（API / 型 / ページ） |
-| `apps/frontend/src/features/inventory/` | 棚卸入力・比較・目標設定・ダッシュボード・グラフ（API / 型 / コンポーネント / ページ） |
-| `apps/frontend/src/features/team/` | チーム照会・全ユーザー照会・ユーザー管理 API（API / 型 / ページ） |
-| `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー） |
+| `apps/frontend/src/shared/ui/` | ルートガード（PrivateRoute・TlAdminRoute・AdminRoute）・ScrollToTopButton |
+| `apps/frontend/src/features/auth/` | ログイン・初回パスワード変更・マイページパスワード変更（API / 型 / ページ） |
+| `apps/frontend/src/features/inventory/` | ダッシュボード・棚卸入力・前年度比較・目標振り返り・目標設定・棚卸履歴・グラフ（API / 型 / コンポーネント / ページ） |
+| `apps/frontend/src/features/team/` | チーム照会・メンバー詳細・全ユーザー照会（API / 型 / ページ） |
+| `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー管理） |
+| `apps/frontend/src/features/interview/` | 面談機能の API 呼び出し・型定義（ページは features/team に統合） |
 | `infra/docker/` | 各サービスの Dockerfile・nginx 設定 |
 | `infra/compose/` | Docker Compose ファイル（ローカル用・本番用） |
