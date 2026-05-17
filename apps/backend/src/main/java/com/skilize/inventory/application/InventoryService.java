@@ -18,6 +18,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 棚卸の作成・明細更新・提出・目標管理のビジネスロジック。
+ * 明細（ITスキル・資格・セミナー）は全件洗い替え方式（先に全削除→再 INSERT）で更新する。
+ * 目標完了時に件数バリデーション（ITスキル/資格 ≥1 件・AD ≥2 件）を行い、InventoryCompletedEvent を発火する。
+ */
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -37,15 +42,21 @@ public class InventoryService {
 
     // --- Inventory header ---
 
+    // readOnly = true: Hibernate の dirty checking（変更検知）を無効化してパフォーマンスを向上させる。
+    // 書き込みが発生しないことを保証し、DB が読み取りレプリカへのルーティングをサポートする場合にも有効。
     @Transactional(readOnly = true)
     public List<Inventory> findMine(int userId) {
         return inventoryRepository.findByUserIdWithFiscalYear(userId);
     }
 
+    /**
+     * 棚卸を新規作成する。ユーザーと年度の組み合わせで1件のみ作成可能（重複は 409 Conflict）。
+     */
     @Transactional
     public Inventory create(User user, int fiscalYearId) {
         fiscalYearRepository.findById(fiscalYearId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "年度が見つかりません"));
+        // 同一ユーザー×年度の棚卸がすでにある場合は重複エラーを返す
         inventoryRepository.findByUserIdAndFiscalYearId(user.getId(), fiscalYearId).ifPresent(i -> {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "当該年度の棚卸はすでに作成されています");
         });
@@ -53,8 +64,13 @@ public class InventoryService {
         return inventoryRepository.save(Inventory.create(user, fy));
     }
 
+    /**
+     * 棚卸をIDで取得する。アクセス権限チェックも同時に行う。
+     * TL/ADMIN は他ユーザーの棚卸も参照可（チーム照会・面談用途）。
+     */
     @Transactional(readOnly = true)
     public Inventory findById(int id, User user) {
+        // findByIdWithAssociations: user・fiscalYear を JOIN FETCH して N+1 問題を防ぐカスタムクエリ
         Inventory inv = inventoryRepository.findByIdWithAssociations(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません"));
         checkOwnership(inv, user);
@@ -67,6 +83,8 @@ public class InventoryService {
     public List<ItSkillDetail> saveItSkillDetails(int inventoryId, User user,
                                                    List<ItSkillDetailItem> items) {
         Inventory inv = findById(inventoryId, user);
+        // 全件洗い替え: 差分更新ではなく「全削除 → 全 INSERT」で明細を更新する。
+        // 追加・削除・並び替えを一度の PUT で処理でき、差分ロジックを持たなくて済む。
         itSkillDetailRepository.deleteByInventoryId(inventoryId);
         List<ItSkillDetail> saved = items.stream().map(item -> {
             ItSkill skill = item.itSkillId() != null
@@ -105,12 +123,14 @@ public class InventoryService {
     public List<QualificationDetail> saveQualificationDetails(int inventoryId, User user,
                                                                List<QualificationDetailItem> items) {
         Inventory inv = findById(inventoryId, user);
+        // 全件洗い替え（ITスキル明細と同じパターン）
         qualificationDetailRepository.deleteByInventoryId(inventoryId);
         List<QualificationDetail> saved = items.stream().map(item -> {
             Qualification q = item.qualificationId() != null
                     ? qualificationRepository.findById(item.qualificationId())
                             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "資格が見つかりません"))
                     : null;
+            // LocalDate.parse() はフォーマット未指定の場合 ISO-8601（yyyy-MM-dd）を前提とする
             LocalDate date = item.acquiredYearMonth() != null ? LocalDate.parse(item.acquiredYearMonth()) : null;
             return QualificationDetail.create(inv, q, item.customQualificationName(), date, item.remarks());
         }).toList();
@@ -130,6 +150,7 @@ public class InventoryService {
     public List<SeminarDetail> saveSeminarDetails(int inventoryId, User user,
                                                    List<SeminarDetailItem> items) {
         Inventory inv = findById(inventoryId, user);
+        // 全件洗い替え（ITスキル明細と同じパターン）
         seminarDetailRepository.deleteByInventoryId(inventoryId);
         List<SeminarDetail> saved = items.stream().map(item -> {
             AdSeminar ad = item.adSeminarId() != null
@@ -154,15 +175,25 @@ public class InventoryService {
 
     // --- Submit ---
 
+    /**
+     * 棚卸を提出する。ステータスを DRAFT → PENDING_GOAL に変更し、提出日時を記録する。
+     * 提出後は前年度目標の振り返り → 今年度目標設定 の流れに進む。
+     */
     @Transactional
     public Inventory submit(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
+        // ドメインメソッド submit() でステータス変更と提出日時の記録を一括して行う
         inv.submit();
         return inventoryRepository.save(inv);
     }
 
     // --- Comparison ---
 
+    /**
+     * 前年度との ITスキルレベル比較データを取得する。
+     * 前年度棚卸が存在しない場合は hasPrevYear=false で返す。
+     * カスタムスキル（マスタ未登録）は itSkill が null のため比較対象外とする。
+     */
     @Transactional(readOnly = true)
     public ComparisonResponse getComparison(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -171,6 +202,7 @@ public class InventoryService {
         List<ItSkillDetail> currentDetails = itSkillDetailRepository.findByInventoryId(inventoryId);
 
         List<Inventory> allInventories = inventoryRepository.findByUserIdWithFiscalYear(inv.getUser().getId());
+        // 現在の棚卸を除外し、現在の年度開始日より前に終了している棚卸を「前年度」とする
         Inventory prevInv = allInventories.stream()
                 .filter(i -> !i.getId().equals(inventoryId))
                 .filter(i -> i.getFiscalYear().getEndDate().isBefore(inv.getFiscalYear().getStartDate()))
@@ -181,6 +213,7 @@ public class InventoryService {
         }
 
         List<ItSkillDetail> prevDetails = itSkillDetailRepository.findByInventoryId(prevInv.getId());
+        // 前年度明細をスキルID でインデックス化して、O(1) で参照できるようにする
         Map<Integer, ItSkillDetail> prevBySkillId = prevDetails.stream()
                 .filter(d -> d.getItSkill() != null)
                 .collect(Collectors.toMap(d -> d.getItSkill().getId(), d -> d));
@@ -203,6 +236,11 @@ public class InventoryService {
 
     // --- Goal review ---
 
+    /**
+     * 前年度に設定した目標の振り返りデータを取得する。
+     * 前年度の目標（InventoryGoal）を取得し、振り返りステータス・コメントを含めて返す。
+     * 前年度棚卸が存在しない場合は hasPrevGoals=false で返す。
+     */
     @Transactional(readOnly = true)
     public GoalReviewResponse getGoalReview(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -231,6 +269,10 @@ public class InventoryService {
         return new GoalReviewResponse(prevInv.getFiscalYear().getName(), !items.isEmpty(), items);
     }
 
+    /**
+     * 前年度目標の振り返り（達成状況・コメント）を保存する。
+     * 目標ごとに達成状況（ACHIEVED/PARTIAL/NOT_ACHIEVED）とコメントを個別に更新する。
+     */
     @Transactional
     public GoalReviewResponse saveGoalReview(int inventoryId, User user,
                                              List<GoalReviewUpdateItem> items) {
@@ -238,14 +280,21 @@ public class InventoryService {
         items.forEach(item -> {
             InventoryGoal goal = inventoryGoalRepository.findById(item.prevGoalId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "目標が見つかりません"));
+            // 達成状況が null（未入力）の場合は null のまま保存する（未振り返りとして扱う）
+            // AchievementStatus.valueOf(): 文字列 "ACHIEVED" 等を Enum に変換する
             AchievementStatus status = item.achievementStatus() != null
                     ? AchievementStatus.valueOf(item.achievementStatus()) : null;
             goal.updateReview(status, item.reviewNote());
             inventoryGoalRepository.save(goal);
         });
+        // 保存後の最新状態を取得して返す
         return getGoalReview(inventoryId, user);
     }
 
+    /**
+     * 目標振り返りを完了する。ステータスは変えず、goal_review_completed_at のみを記録する。
+     * 振り返りは任意フロー（完了しなくても次のステップに進める）。
+     */
     @Transactional
     public Inventory completeGoalReview(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -264,6 +313,7 @@ public class InventoryService {
     @Transactional
     public List<InventoryGoal> saveGoals(int inventoryId, User user, List<GoalItem> items) {
         Inventory inv = findById(inventoryId, user);
+        // 全件洗い替え（ITスキル明細と同じパターン）
         inventoryGoalRepository.deleteByInventoryId(inventoryId);
         List<InventoryGoal> saved = items.stream().map(item -> {
             ItSkill skill = item.itSkillId() != null
@@ -285,6 +335,7 @@ public class InventoryService {
         Inventory inv = findById(inventoryId, user);
         List<InventoryGoal> goals = inventoryGoalRepository.findByInventoryId(inventoryId);
 
+        // 目標完了の条件: ITスキル/資格 ≥1 件 AND AD ≥2 件
         long itOrQual = goals.stream()
                 .filter(g -> g.getGoalCategory() == GoalCategory.IT_SKILL
                         || g.getGoalCategory() == GoalCategory.QUALIFICATION)
@@ -302,12 +353,16 @@ public class InventoryService {
 
         inv.completeGoal();
         Inventory saved = inventoryRepository.save(inv);
+        // ApplicationEventPublisher: Spring のプロセス内イベントバス。
+        // publishEvent() を呼ぶと、同一 JVM 内の @TransactionalEventListener が受け取る。
+        // イベントリスナーは AFTER_COMMIT フェーズで動作するため、このトランザクションの確定後に AI 分析が始まる。
         eventPublisher.publishEvent(new InventoryCompletedEvent(saved.getUser().getId(), saved.getFiscalYear().getId()));
         return saved;
     }
 
     private void checkOwnership(Inventory inv, User user) {
         if (!inv.getUser().getId().equals(user.getId())) {
+            // TL/ADMIN は他ユーザーの棚卸を参照可（チーム照会・面談用途）。GENERAL は自分のみ。
             String role = user.getRole().name();
             if (!"TL".equals(role) && !"ADMIN".equals(role)) {
                 throw new AuthException("FORBIDDEN", "アクセス権限がありません");

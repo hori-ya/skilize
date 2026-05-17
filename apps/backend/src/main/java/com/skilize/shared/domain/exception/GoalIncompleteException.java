@@ -2,6 +2,11 @@ package com.skilize.shared.domain.exception;
 
 import java.util.List;
 
+/**
+ * 目標設定の件数バリデーション違反例外。
+ * ITスキル/資格 ≥1 件・AD ≥2 件の条件を満たさずに目標完了操作を行った場合にスローされ、
+ * GlobalExceptionHandler が 422 Unprocessable Entity として返す。
+ */
 public class GoalIncompleteException extends RuntimeException {
 
     private final List<GoalValidationError> errors;

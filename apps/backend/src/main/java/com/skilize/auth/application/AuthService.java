@@ -13,6 +13,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * ログイン・パスワード変更・自情報取得のビジネスロジック。
+ * ユーザーIDの存在有無を外部に漏らさないため、ユーザー不在とパスワード不一致で同一エラーを返す。
+ */
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -21,33 +25,52 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
 
+    /**
+     * ログイン処理。ユーザーID・パスワードを検証し、成功時に JWT を発行して返す。
+     * ユーザー不在とパスワード不一致を同一エラーにすることで、ユーザーIDの存在有無を外部に漏らさない。
+     */
     public LoginResponse login(LoginRequest request) {
+        // ユーザーIDが存在しない場合もパスワード不一致と同じエラーメッセージを返す（ユーザー列挙攻撃対策）
         User user = userRepository.findByUserId(request.userId())
                 .orElseThrow(() -> new AuthException("AUTH_FAILED", "ユーザーIDまたはパスワードが違います"));
 
+        // 無効化済みアカウントは認証前に弾く
         if (!user.isActive()) {
             throw new AuthException("FORBIDDEN", "このアカウントは無効化されています");
         }
 
+        // passwordEncoder.matches(): 入力値をハッシュ化して DB のハッシュと比較する（BCrypt の遅い照合が実行される）
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
             throw new AuthException("AUTH_FAILED", "ユーザーIDまたはパスワードが違います");
         }
 
+        // 認証成功。JWT を生成してユーザー情報と合わせてレスポンスを組み立てる
         return buildLoginResponse(jwtUtil.generateToken(user), user);
     }
 
+    /**
+     * パスワード変更処理。現在のパスワードを確認した上で新しいパスワードに更新する。
+     * 変更完了後は is_initial_password が false になり、初回変更強制が解除される。
+     */
     @Transactional
     public void changePassword(ChangePasswordRequest request, User currentUser) {
+        // admin アカウントはシステム設定のため変更不可（初期状態を維持する運用方針）
         if ("admin".equals(currentUser.getUserId())) {
             throw new AuthException("FORBIDDEN", "このアカウントはパスワードを変更できません");
         }
+        // SecurityContext のユーザーは JPA 管理外の可能性があるため ID で再フェッチしてトランザクション内で更新する
+        // （JPA の管理外エンティティへの変更は DB に保存されない）
         User user = userRepository.findById(currentUser.getId()).orElseThrow();
         if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
             throw new AuthException("AUTH_FAILED", "現在のパスワードが正しくありません");
         }
+        // passwordEncoder.encode(): 新しいパスワードを BCrypt でハッシュ化してから保存する
         user.changePassword(passwordEncoder.encode(request.newPassword()));
     }
 
+    /**
+     * 自分のユーザー情報を取得する。JWT から復元した認証済みユーザーを DTO に変換して返す。
+     */
     public MeResponse getMe(User user) {
         return new MeResponse(
                 user.getId(),
@@ -61,6 +84,7 @@ public class AuthService {
         );
     }
 
+    /** ログイン成功時のレスポンスオブジェクトを組み立てる。 */
     private LoginResponse buildLoginResponse(String token, User user) {
         LoginResponse.UserInfo userInfo = new LoginResponse.UserInfo(
                 user.getId(),
@@ -72,8 +96,10 @@ public class AuthService {
         return new LoginResponse(token, userInfo);
     }
 
+    /** TLユーザーIDが設定されている場合のみ DB を参照してTL情報（ID・氏名）を返す。null は上長なし。 */
     private LoginResponse.TlUserInfo resolveTlUser(Integer tlUserId) {
         if (tlUserId == null) return null;
+        // map(): Optional の中身を変換する。TLが存在しない場合は orElse(null) で空を返す。
         return userRepository.findById(tlUserId)
                 .map(tl -> new LoginResponse.TlUserInfo(tl.getId(), tl.getName()))
                 .orElse(null);

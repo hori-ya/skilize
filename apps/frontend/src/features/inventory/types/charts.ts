@@ -1,3 +1,8 @@
+/**
+ * グラフ用の型定義。バックエンド ChartService のレスポンスと 1:1 対応する。
+ * レーダー（radar）・成長推移（growth）・ヒートマップ（heatmap）・タイムライン（timeline）の4種類。
+ */
+
 export interface RadarAxis {
   category1Id: number;
   category1Name: string;
@@ -50,6 +55,11 @@ export interface HeatmapResponse {
   rows: HeatmapRow[];
 }
 
+/**
+ * タイムラインのイベント種別。
+ * QUALIFICATION / AD_SEMINAR / FREE_SEMINAR: 過去の実績（取得・受講済み）
+ * GOAL_*: 今年度の目標（未来の予定）
+ */
 export type TimelineEventType =
   | 'QUALIFICATION'
   | 'AD_SEMINAR'
@@ -58,6 +68,11 @@ export type TimelineEventType =
   | 'GOAL_IT_SKILL'
   | 'GOAL_AD';
 
+/**
+ * タイムラインのレーン（行）。
+ * ACHIEVEMENT: 資格取得など達成事項のレーン
+ * ACTIVITY:    セミナー受講など活動のレーン
+ */
 export type TimelineLane = 'ACHIEVEMENT' | 'ACTIVITY';
 
 export interface TimelineEvent {

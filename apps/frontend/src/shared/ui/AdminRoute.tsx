@@ -1,3 +1,4 @@
+/** ADMIN のみアクセス可能なルートガード。TL/GENERAL はトップにリダイレクトする。 */
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../app/providers/AuthProvider';
 import type { ReactNode } from 'react';

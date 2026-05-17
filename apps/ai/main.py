@@ -1,3 +1,8 @@
+"""
+AI キャリア分析サービスのエントリーポイント。
+Spring Boot バックエンドからの内部 HTTP 呼び出しのみを受け付ける（外部公開しない）。
+/analyze は即時 202 を返し、LLM 呼び出しをバックグラウンドタスクで非同期処理する。
+"""
 import logging
 import os
 
@@ -20,6 +25,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     logger.error("422 Validation error: body=%s errors=%s", await request.body(), exc.errors())
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
+# 環境変数 AI_SECRET_KEY が設定されている場合、X-Internal-Key ヘッダーで内部認証を行う
 AI_SECRET_KEY = os.environ.get("AI_SECRET_KEY", "")
 
 
@@ -29,6 +35,7 @@ class AnalyzeRequest(BaseModel):
 
 
 def _process(user_id: int, fiscal_year_id: int):
+    """分析処理本体。DB から棚卸データを取得し LLM で分析して結果を保存する。"""
     update_status(user_id, fiscal_year_id, "PROCESSING")
     try:
         data = fetch_analysis_data(user_id, fiscal_year_id)
@@ -50,6 +57,7 @@ def analyze(
     if AI_SECRET_KEY and x_internal_key != AI_SECRET_KEY:
         logger.warning("Forbidden: invalid X-Internal-Key")
         raise HTTPException(status_code=403, detail="Forbidden")
+    # バックグラウンドタスクで分析を実行し、202 Accepted を即時返す（fire-and-forget）
     background_tasks.add_task(_process, req.userId, req.fiscalYearId)
     return {"accepted": True}
 

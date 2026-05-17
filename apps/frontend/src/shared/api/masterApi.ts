@@ -1,3 +1,7 @@
+/**
+ * マスタデータ API。複数 feature（inventory/master）から共有するため shared/api に配置する。
+ * isActive パラメーターを省略した場合はすべて（有効・無効含む）を取得する。
+ */
 import apiClient from './client';
 import type { FiscalYear, FiscalYearSettings, FiscalYearRequest, SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory } from '../types/master';
 

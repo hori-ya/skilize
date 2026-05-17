@@ -1,3 +1,4 @@
+/** DRAFT=下書き / PENDING_GOAL=提出済み・目標設定待ち / COMPLETED=目標設定完了 */
 export type InventoryStatus = 'DRAFT' | 'PENDING_GOAL' | 'COMPLETED';
 export type GoalCategory = 'IT_SKILL' | 'QUALIFICATION' | 'AD';
 export type AchievementStatus = 'ACHIEVED' | 'PARTIAL' | 'NOT_ACHIEVED';
@@ -106,6 +107,7 @@ export interface GoalItem {
   reason: string | null;
 }
 
+/** PENDING=待機中 / PROCESSING=分析中 / COMPLETED=完了 / FAILED=失敗 */
 export type AiAnalysisStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 
 export interface AiAnalysisResult {

@@ -13,6 +13,11 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * スキル統計グラフ（レーダー・成長推移・ヒートマップ・タイムライン）の集計ロジック。
+ * ITスキルカテゴリは最大3階層のツリー構造を持ち、resolveAncestorById で第1/第2レベルへ遡上する。
+ * グラフデータの集計はすべて読み取り専用トランザクション内で実行する。
+ */
 @Service
 @RequiredArgsConstructor
 public class ChartService {
@@ -55,6 +60,8 @@ public class ChartService {
                         .findFirst().orElse(null)
                 : null;
 
+        // computeIfAbsent: キーが存在しない場合のみ新しいリストを作成してマップに挿入する。
+        // cat1（大分類）ごとにスキルレベル値を集約し、後で平均を計算する。
         // cat1Id → scored levelValues
         Map<Integer, List<Short>> currentByCat1 = new HashMap<>();
         boolean hasCurrentYearData = false;
@@ -121,7 +128,8 @@ public class ChartService {
                 if (d.getItSkill() == null) continue;
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
-                cat1Score.merge(cat1.getId(), (int) d.getSkillLevel().getLevelValue(), Integer::sum);
+                // Map.merge: キーが存在すればマージ関数（Integer::sum）で合計、存在しなければ新規挿入する
+            cat1Score.merge(cat1.getId(), (int) d.getSkillLevel().getLevelValue(), Integer::sum);
             }
             scoreMap.put(inv.getId(), cat1Score);
         }
@@ -169,6 +177,8 @@ public class ChartService {
 
         Set<Integer> activeSkillIds = activeSkills.stream().map(ItSkill::getId).collect(Collectors.toSet());
 
+        // LinkedHashMap: 挿入順を保持する HashMap。cat1 の表示順を維持するために使用する。
+        // 通常の HashMap はキーの順序を保証しない。
         // cat1Id → cat2Key → skill entries (LinkedHashMap preserves insertion order)
         Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> structure = initStructure(cat1List);
 
@@ -185,7 +195,8 @@ public class ChartService {
                     .add(new SkillEntry(skill.getName(), levelValue));
         }
 
-        // Add inactive skills that were scored (not in activeSkills)
+        // 無効化済みスキル（is_active=false）でもユーザーが採点している場合はヒートマップに表示する。
+        // 過去に登録されたスキルが後からマスタ削除された場合の表示継続を保証する。
         for (ItSkillDetail d : details) {
             if (d.getItSkill() == null || activeSkillIds.contains(d.getItSkill().getId())) continue;
             ItSkill skill = d.getItSkill();
@@ -263,7 +274,8 @@ public class ChartService {
         List<TimelineEvent> events = new ArrayList<>();
         LocalDate firstOfMonth = LocalDate.now().withDayOfMonth(1);
 
-        // 実績は「提出済みの最新棚卸」1件のみから取得（引き継ぎによる重複を防ぐ）
+        // 資格・セミナー実績は複数年度の棚卸に同じデータが重複して登録される場合があるため、
+        // 最新の提出済み棚卸 1 件のみを実績ソースとして扱う
         Optional<Inventory> achievementSourceOpt = inventories.stream()
                 .filter(i -> i.getStatus() == InventoryStatus.PENDING_GOAL
                         || i.getStatus() == InventoryStatus.COMPLETED)
@@ -334,6 +346,8 @@ public class ChartService {
                 .orElse(5);
     }
 
+    // カテゴリツリーを leaf から上方向にたどり targetLevel の祖先カテゴリを返す
+    // 最大5回でガードするのは循環参照や想定外の深い階層への対策
     private ItSkillCategory resolveAncestorById(int leafCategoryId,
                                                   Map<Integer, ItSkillCategory> catMap,
                                                   short targetLevel) {
@@ -352,6 +366,7 @@ public class ChartService {
         return values.stream().mapToInt(Short::intValue).average().orElse(0.0);
     }
 
+    // 小数第1位に丸める。Math.round は最近接偶数丸めではなく四捨五入（0.5 → 切り上げ）。
     private double round1(double value) {
         return Math.round(value * 10.0) / 10.0;
     }

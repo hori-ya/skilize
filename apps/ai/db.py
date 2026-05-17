@@ -1,3 +1,7 @@
+"""
+AI モジュール用 DB アクセス。
+Spring Boot API を経由せず直接 PostgreSQL に接続する（内部サービスのため API 呼び出しのオーバーヘッドを避ける）。
+"""
 import os
 import psycopg2
 import psycopg2.extras
@@ -8,6 +12,7 @@ def get_connection():
 
 
 def fetch_analysis_data(user_id: int, fiscal_year_id: int) -> dict:
+    """指定ユーザー・年度の棚卸データ（ITスキル・資格・セミナー・目標・期待コメント）を取得する。"""
     conn = get_connection()
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -89,6 +94,7 @@ def fetch_analysis_data(user_id: int, fiscal_year_id: int) -> dict:
 
 def update_status(user_id: int, fiscal_year_id: int, status: str,
                   analysis_result: str | None = None, error_message: str | None = None):
+    """ai_career_analyses のステータスを更新する。引数の有無によって更新カラムを切り替える。"""
     conn = get_connection()
     try:
         cur = conn.cursor()

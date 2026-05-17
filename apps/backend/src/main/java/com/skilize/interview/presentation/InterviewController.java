@@ -11,6 +11,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * 面談メモの REST API コントローラー（TL/ADMIN 向け）。
+ * 棚卸IDをキーに面談メモを取得・保存する。ロール制御は Service 層で行う。
+ */
 @RestController
 @RequestMapping("/api/interviews")
 @RequiredArgsConstructor
@@ -18,9 +22,14 @@ public class InterviewController {
 
     private final InterviewService interviewService;
 
+    /**
+     * 指定棚卸の面談メモを取得する。
+     * 面談メモがまだ作成されていない場合は 404 を返す（空のメモは作成しない設計）。
+     */
     @GetMapping("/inventory/{inventoryId}")
     public ResponseEntity<InterviewResponse> getMine(@PathVariable int inventoryId,
                                                       @AuthenticationPrincipal User user) {
+        // Optional のまま処理し、存在する場合のみ明細ノートを取得して200を返す
         return interviewService.findMine(inventoryId, user)
                 .map(interview -> {
                     List<DetailNoteResponse> notes = interviewService.findDetailNotes(interview.getId())
@@ -30,20 +39,30 @@ public class InterviewController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
+    /**
+     * 面談メモを保存する（upsert）。ヘッダー（全体備忘録）と明細ノートをまとめて保存する。
+     * 既存レコードがあれば更新、なければ新規作成する（InterviewService.save() で制御）。
+     */
     @PutMapping("/inventory/{inventoryId}")
     public InterviewResponse save(@PathVariable int inventoryId,
                                    @AuthenticationPrincipal User user,
                                    @RequestBody @Valid SaveInterviewRequest req) {
+        // リクエストの detailNotes を Service が受け取れる内部レコード型に変換する
         List<InterviewService.DetailNoteItem> items = req.detailNotes().stream()
                 .map(d -> new InterviewService.DetailNoteItem(d.detailType(), d.detailId(), d.note()))
                 .toList();
         InventoryInterview saved = interviewService.save(
                 inventoryId, user, req.generalNote(), items);
+        // 保存後に明細ノートを再取得してレスポンスに付与する
         List<DetailNoteResponse> notes = interviewService.findDetailNotes(saved.getId())
                 .stream().map(DetailNoteResponse::from).toList();
         return InterviewResponse.from(saved, inventoryId, notes);
     }
 
+    /**
+     * 前年度の面談メモを取得する。今年度棚卸の比較・参照用途。
+     * 前年度棚卸が存在しないか、面談メモが未作成の場合は 404 を返す。
+     */
     @GetMapping("/inventory/{inventoryId}/prev-year")
     public ResponseEntity<InterviewResponse> getPrevYear(@PathVariable int inventoryId,
                                                           @AuthenticationPrincipal User user) {

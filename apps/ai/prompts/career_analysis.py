@@ -1,3 +1,10 @@
+"""
+AI キャリア分析のプロンプトテンプレート。
+SYSTEM_PROMPT はトーン・出力形式（JSON）・期待コメントの扱い方を定義する。
+USER_PROMPT_TEMPLATE は棚卸データを埋め込む変数プレースホルダーを持つ。
+出力 JSON: { summary, strengths[], growth_areas[], expectation_fit, recommended_actions[] }
+"""
+
 SYSTEM_PROMPT = """あなたはキャリア支援の専門家です。
 社員のスキル棚卸データと今年度の目標をもとに、その社員へのキャリア分析レポートを生成してください。
 

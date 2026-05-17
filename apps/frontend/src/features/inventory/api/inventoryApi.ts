@@ -1,3 +1,7 @@
+/**
+ * 棚卸関連 API。明細（ITスキル・資格・セミナー）は PUT で全件洗い替えを行う。
+ * completeGoal は目標件数の条件（ITスキル/資格 ≥1・AD ≥2）を満たさない場合 422 を返す。
+ */
 import apiClient from '../../../shared/api/client';
 import type {
   DashboardResponse, InventorySummary, InventoryDetail,

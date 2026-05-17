@@ -24,19 +24,25 @@ export default function NavBar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [adminOpen, setAdminOpen] = useState(false);
+  // useRef: DOM 要素への参照を保持する。useState と異なり値変更時に再レンダリングを起こさない。
+  // ドロップダウンの div 要素を参照し、クリックが要素の外側かどうかを判定するために使う。
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
+      // contains(): クリックされた要素がドロップダウン内部かどうかを確認する DOM API
+      // 内部クリックは無視し、外部クリック時のみドロップダウンを閉じる
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setAdminOpen(false);
       }
     };
     document.addEventListener('mousedown', handler);
+    // useEffect の戻り値はクリーンアップ関数。コンポーネントのアンマウント時に実行される。
+    // イベントリスナーを解除しないとメモリリークの原因になる。
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  // Close dropdown on route change
+  // location.pathname を deps に指定することで、ルート変遷のたびにドロップダウンを閉じる
   useEffect(() => { setAdminOpen(false); }, [location.pathname]);
 
   const handleLogout = () => {

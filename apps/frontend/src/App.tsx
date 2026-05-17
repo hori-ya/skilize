@@ -23,6 +23,12 @@ import QualificationMasterPage from './features/master/pages/QualificationMaster
 import AdSeminarMasterPage from './features/master/pages/AdSeminarMasterPage';
 import UserMasterPage from './features/master/pages/UserMasterPage';
 
+/**
+ * アプリのルーティング定義。ルートガードは以下の3種類を使い分ける:
+ * - PrivateRoute: ログイン必須（未ログイン → /login、初期PW → /change-password）
+ * - TlAdminRoute: TL または ADMIN のみ
+ * - AdminRoute: ADMIN のみ
+ */
 export default function App() {
   return (
     <AuthProvider>
