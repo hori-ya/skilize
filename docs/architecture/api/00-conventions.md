@@ -192,3 +192,4 @@
 | [06-charts.md](./06-charts.md) | `/api/charts/**`（グラフ集計） |
 | [07-interview.md](./07-interview.md) | `/api/interviews/**`（面談メモ） |
 | [08-expectations.md](./08-expectations.md) | `/api/users/{userId}/expectations/**`（期待コメント） |
+| [09-ai-analysis.md](./09-ai-analysis.md) | `/api/users/me/ai-analyses`、`/api/users/{userId}/ai-analyses`（AIキャリア分析） |

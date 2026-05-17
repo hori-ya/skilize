@@ -7,6 +7,7 @@ import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.domain.exception.GoalIncompleteException;
 import com.skilize.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,7 @@ public class InventoryService {
     private final QualificationRepository qualificationRepository;
     private final AdSeminarRepository adSeminarRepository;
     private final SeminarCategoryRepository seminarCategoryRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     // --- Inventory header ---
 
@@ -299,7 +301,9 @@ public class InventoryService {
         }
 
         inv.completeGoal();
-        return inventoryRepository.save(inv);
+        Inventory saved = inventoryRepository.save(inv);
+        eventPublisher.publishEvent(new InventoryCompletedEvent(saved.getUser().getId(), saved.getFiscalYear().getId()));
+        return saved;
     }
 
     private void checkOwnership(Inventory inv, User user) {

@@ -21,5 +21,12 @@ app:
     expiration-ms: ${JWT_EXPIRATION_MS:28800000}
   frontend-origin: ${FRONTEND_ORIGIN:http://localhost:5173,http://localhost:8081}
 
+ai:
+  enabled: ${AI_ENABLED:true}
+  service:
+    url: ${AI_SERVICE_URL:http://ai:8000}
+  secret:
+    key: ${AI_SECRET_KEY:}
+
 server:
   port: 8080

@@ -2674,3 +2674,95 @@ body {
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* ── AI Analysis ──────────────────────────────────────── */
+
+.ai-analysis-section {
+  margin-top: 32px;
+}
+
+.ai-analysis-card {
+  background: #ffffff;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.ai-analysis-card--pending {
+  background: var(--color-bg);
+  border-style: dashed;
+}
+
+.ai-analysis-card--failed {
+  background: #fff8f8;
+  border-color: #f0aaaa;
+}
+
+.ai-analysis-pending-text {
+  color: var(--color-text-light);
+  font-size: 14px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.ai-analysis-failed-text {
+  color: #c0392b;
+  font-size: 14px;
+}
+
+.ai-analysis-error-detail {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin-top: 6px;
+}
+
+.ai-analysis-card__year {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0 0 8px;
+}
+
+.ai-analysis-updated {
+  font-size: 12px;
+  color: var(--color-text-light);
+  margin-bottom: 16px;
+}
+
+.ai-analysis-section-block {
+  margin-bottom: 20px;
+}
+
+.ai-analysis-section-block:last-child {
+  margin-bottom: 0;
+}
+
+.ai-analysis-section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-primary);
+  margin: 0 0 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.ai-analysis-text {
+  font-size: 14px;
+  color: var(--color-text);
+  line-height: 1.7;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.ai-analysis-list {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--color-text);
+  line-height: 1.8;
+}
+
+.ai-analysis-list li {
+  margin-bottom: 4px;
+}

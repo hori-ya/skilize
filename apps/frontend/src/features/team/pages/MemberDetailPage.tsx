@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useMemo, Fragment } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { getMemberInventories, getExpectations, saveTlExpectation, saveCompanyExpectation } from '../api/userApi';
+import { getMemberInventories, getExpectations, saveTlExpectation, saveCompanyExpectation, getMemberAiAnalyses } from '../api/userApi';
 import {
   getItSkillDetails, getQualificationDetails,
   getSeminarDetails, getGoals, getComparison, getGoalReview,
@@ -9,15 +9,16 @@ import { getItSkills } from '../../../shared/api/masterApi';
 import { getInterview, saveInterview, getPrevYearInterview } from '../../interview/api/interviewApi';
 import type {
   InventorySummary, ItSkillDetailItem, QualificationDetailItem,
-  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem,
+  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem, AiAnalysis,
 } from '../../inventory/types/index';
 import type { ItSkill } from '../../../shared/types/master';
 import type { InterviewMemo, DetailType } from '../../interview/types';
 import type { UserExpectation } from '../types/index';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import NavBar from '../../../app/layouts/NavBar';
+import AiAnalysisCard from '../../inventory/components/AiAnalysisCard';
 
-type TabKey = 'it-skills' | 'qualifications' | 'seminars' | 'goals' | 'expectations';
+type TabKey = 'it-skills' | 'qualifications' | 'seminars' | 'goals' | 'expectations' | 'ai-analysis';
 
 const TAB_LABELS: Record<TabKey, string> = {
   'it-skills': 'ITスキル',
@@ -25,6 +26,7 @@ const TAB_LABELS: Record<TabKey, string> = {
   seminars: 'セミナー',
   goals: '目標',
   expectations: '期待',
+  'ai-analysis': 'AI分析',
 };
 
 const GOAL_CATEGORY_LABEL: Record<string, string> = {
@@ -97,6 +99,10 @@ export default function MemberDetailPage() {
     width: 320,
     height: 280,
   }));
+
+  // AI分析 state
+  const [memberAiAnalyses, setMemberAiAnalyses] = useState<AiAnalysis[]>([]);
+  const [aiAnalysisLoaded, setAiAnalysisLoaded] = useState(false);
 
   // 期待コメント state
   const [expectation, setExpectation] = useState<UserExpectation | null>(null);
@@ -240,6 +246,14 @@ export default function MemberDetailPage() {
       setPrevYearInterview(prevYearRes?.data ?? null);
     }).finally(() => setLoading(false));
   }, [selectedId, inventories, isTlOrAdmin]);
+
+  useEffect(() => {
+    if (activeTab !== 'ai-analysis' || aiAnalysisLoaded || !isTlOrAdmin) return;
+    getMemberAiAnalyses(userIdNum)
+      .then(res => setMemberAiAnalyses(res.data))
+      .catch(() => {})
+      .finally(() => setAiAnalysisLoaded(true));
+  }, [activeTab, aiAnalysisLoaded, isTlOrAdmin, userIdNum]);
 
   useEffect(() => {
     if (activeTab !== 'expectations' || expLoaded || !isTlOrAdmin) return;
@@ -443,7 +457,7 @@ export default function MemberDetailPage() {
               <>
                 <div className="tab-bar">
                   {(Object.keys(TAB_LABELS) as TabKey[])
-                    .filter(tab => tab !== 'expectations' || isTlOrAdmin)
+                    .filter(tab => (tab !== 'expectations' && tab !== 'ai-analysis') || isTlOrAdmin)
                     .map(tab => (
                       <button
                         key={tab}
@@ -682,6 +696,22 @@ export default function MemberDetailPage() {
                         )}
                       </>
                     )}
+                  </div>
+                )}
+
+                {/* ── AI分析タブ ── */}
+                {activeTab === 'ai-analysis' && isTlOrAdmin && (
+                  <div className="history-tab-content">
+                    {!aiAnalysisLoaded ? (
+                      <div className="loading">読み込み中...</div>
+                    ) : (() => {
+                      const analysis = memberAiAnalyses.find(a => {
+                        const inv = inventories.find(i => i.id === selectedId);
+                        return inv && a.fiscalYearId === inv.fiscalYear.id;
+                      });
+                      if (!analysis) return <p className="no-data">この年度のAI分析データはありません。</p>;
+                      return <AiAnalysisCard analysis={analysis} />;
+                    })()}
                   </div>
                 )}
 

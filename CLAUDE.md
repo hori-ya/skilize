@@ -291,6 +291,13 @@ docker compose up db     # init.sql が再実行される
 | `DB_NAME` | Docker DB 名（docker-compose 用） | — |
 | `DB_USER` | Docker DB ユーザー（docker-compose 用） | — |
 | `DB_PASSWORD` | Docker DB パスワード（docker-compose 用） | — |
+| `AI_ENABLED` | AI機能の有効化（`false` で LLM 呼び出し停止） | `true` |
+| `LLM_PROVIDER` | AI モジュールの LLM プロバイダー | `openai` |
+| `LLM_MODEL` | 使用 LLM モデル名 | `gpt-4o` |
+| `OPENAI_API_KEY` | OpenAI API キー（`LLM_PROVIDER=openai` 時は必須） | — |
+| `ANTHROPIC_API_KEY` | Anthropic API キー（`LLM_PROVIDER=anthropic` 時は必須） | — |
+| `AI_SECRET_KEY` | Spring Boot → Python AI サービス間の内部認証キー | なし（必須） |
+| `AI_SERVICE_URL` | Python FastAPI の内部 URL | `http://ai:8000` |
 
 `.env` ファイルに記載し、`.gitignore` で除外する（`.env.example` に雛形を置く）。
 

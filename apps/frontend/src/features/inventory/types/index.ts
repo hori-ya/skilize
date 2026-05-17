@@ -106,6 +106,26 @@ export interface GoalItem {
   reason: string | null;
 }
 
+export type AiAnalysisStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+
+export interface AiAnalysisResult {
+  summary: string;
+  strengths: string[];
+  growth_areas: string[];
+  expectation_fit: string;
+  recommended_actions: string[];
+}
+
+export interface AiAnalysis {
+  id: number;
+  fiscalYearId: number;
+  status: AiAnalysisStatus;
+  analysisResult: AiAnalysisResult | null;
+  errorMessage: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DashboardResponse {
   user: { id: number; name: string; role: string };
   currentFiscalYear: { id: number; name: string } | null;

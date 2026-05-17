@@ -3,7 +3,7 @@ import type {
   DashboardResponse, InventorySummary, InventoryDetail,
   ItSkillDetailItem, QualificationDetailItem, SeminarDetailItem,
   ComparisonResponse, GoalReviewResponse,
-  GoalItem,
+  GoalItem, AiAnalysis,
 } from '../types/index';
 
 export const getDashboard = () => apiClient.get<DashboardResponse>('/dashboard');
@@ -70,3 +70,6 @@ export const saveGoals = (id: number, items: Array<{
 
 export const completeGoal = (id: number) =>
   apiClient.post<{ id: number; status: string; goalCompletedAt: string }>(`/inventories/${id}/goals/complete`);
+
+export const getMyAiAnalyses = () =>
+  apiClient.get<AiAnalysis[]>('/users/me/ai-analyses');

@@ -1,6 +1,6 @@
 # システム全体構成
 
-**バージョン**: 1.1.0  
+**バージョン**: 1.2.0  
 **作成日**: 2026-05-09  
 **更新日**: 2026-05-17
 
@@ -9,7 +9,7 @@
 ## 1. システム概要
 
 社員が年次でスキルの棚卸を行うWebアプリケーション。  
-フロントエンド（React）とバックエンド（Spring Boot）をDockerコンテナで構成し、AWS EC2上で稼働する。  
+フロントエンド（React）・バックエンド（Spring Boot）・AI モジュール（Python）をDockerコンテナで構成し、AWS EC2上で稼働する。  
 データベースはAWS RDS（PostgreSQL）を使用する。
 
 ---
@@ -32,16 +32,17 @@
   │        │ /api/*                 │
   │        ▼                        │
   │  ┌─────────────┐                │
-  │  │  Backend    │                │
-  │  │ (Spring     │                │
-  │  │  Boot)      │                │
-  │  │  :8080      │                │
-  │  └──────┬──────┘                │
-  └─────────┼───────────────────────┘
-            │
-            ▼
-  [ AWS RDS ]
-  PostgreSQL 16.4
+  │  │  Backend    │─── POST ──▶ ┌──┴──────────┐
+  │  │ (Spring     │  (内部のみ)  │  AI Module  │
+  │  │  Boot)      │◀── DB ────  │  (Python    │
+  │  │  :8080      │             │   FastAPI)  │
+  │  └──────┬──────┘             │   :8000     │
+  └─────────┼────────────────────┴─────────────┘
+            │                         │
+            └────────────┬────────────┘
+                         ▼
+               [ AWS RDS ]
+               PostgreSQL 16.4
 ```
 
 ---
@@ -53,6 +54,7 @@
 | Nginx | nginx:alpine | リバースプロキシ。`/api/*` をバックエンド、それ以外をフロントエンドへルーティング |
 | Frontend | React | SPA。画面描画・ユーザー操作の受付 |
 | Backend | Spring Boot 4.0.6 / Java 22 | REST API提供。ビジネスロジック・認証・認可 |
+| AI Module | Python 3.12 / FastAPI / LangChain | AIキャリア分析。Spring Boot から内部 HTTP で非同期呼び出し。外部公開しない |
 | Database | PostgreSQL 16.4（AWS RDS） | データ永続化 |
 
 ---
@@ -117,6 +119,13 @@ apps/frontend/src/
     └── interview/
         ├── api/interviewApi.ts       ← 面談メモ API（getInterview / saveInterview / getPrevYearInterview）
         └── types/index.ts            ← InterviewMemo / DetailNoteItem / DetailType 型
+
+apps/ai/                              ← Python FastAPI（AI モジュール・内部サービス）
+├── main.py                           ← FastAPI エントリーポイント
+├── analyzer.py                       ← LangChain 分析ロジック
+├── db.py                             ← PostgreSQL 接続・棚卸データ取得
+├── prompts/career_analysis.py        ← プロンプトテンプレート
+└── requirements.txt
 ```
 
 **依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）  
@@ -161,10 +170,14 @@ apps/backend/src/main/java/com/skilize/
 │   ├── presentation/               ← InterviewController + Request/Response DTO
 │   ├── application/                ← InterviewService（@Transactional）
 │   └── domain/                     ← InventoryInterview・InterviewDetailNote・DetailType・Repository
-└── expectation/
-    ├── presentation/               ← ExpectationController + Request/Response DTO
-    ├── application/                ← ExpectationService（@Transactional）
-    └── domain/                     ← UserExpectation・UserExpectationRepository
+├── expectation/
+│   ├── presentation/               ← ExpectationController + Request/Response DTO
+│   ├── application/                ← ExpectationService（@Transactional）
+│   └── domain/                     ← UserExpectation・UserExpectationRepository
+└── ai/
+    ├── presentation/               ← AiAnalysisController + Response DTO
+    ├── application/                ← AiAnalysisService（@Async）・InventoryCompletedEventListener
+    └── domain/                     ← AiCareerAnalysis・AiAnalysisStatus・AiCareerAnalysisRepository
 ```
 
 **依存方向**（厳守）:
@@ -188,6 +201,7 @@ infrastructure → domain / application
 | 非機能要件 | [docs/requirements/non-functional/non-functional-requirements.md](../requirements/non-functional/non-functional-requirements.md) |
 | データモデル（概念） | [docs/architecture/database/data-model.md](./database/data-model.md) |
 | ER図 | [docs/architecture/database/er-diagram.md](./database/er-diagram.md) |
+| AIモジュールアーキテクチャ | [docs/architecture/ai-module.md](./ai-module.md) |
 | 技術スタック詳細 | [.claude/context/tech-stack.md](../../.claude/context/tech-stack.md) |
 | バックエンドアーキテクチャルール | [.claude/context/backend-architecture.md](../../.claude/context/backend-architecture.md) |
 | フロントエンドアーキテクチャルール | [.claude/context/frontend-architecture.md](../../.claude/context/frontend-architecture.md) |

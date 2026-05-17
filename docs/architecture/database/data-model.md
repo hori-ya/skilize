@@ -1,6 +1,6 @@
 # データモデル（概念設計）
 
-**バージョン**: 1.2.0  
+**バージョン**: 1.3.0  
 **作成日**: 2026-05-09  
 **更新日**: 2026-05-17
 
@@ -185,6 +185,29 @@ UserExpectation（ユーザーへの期待コメント）
   ├─ tl_updated_at（TL期待コメントの最終更新日時。nullable）
   └─ company_updated_at（会社期待コメントの最終更新日時。nullable）
 ```
+
+### AIキャリア分析
+
+```
+AiCareerAnalysis（AIキャリア分析）
+  ├─ id
+  ├─ user_id → User
+  ├─ fiscal_year_id → FiscalYear（UNIQUE: user_id × fiscal_year_id）
+  ├─ status（PENDING / PROCESSING / COMPLETED / FAILED）
+  ├─ analysis_result（JSONB。nullable。COMPLETED 時のみ格納）
+  │   ├─ summary（全体総括メッセージ）
+  │   ├─ strengths（強み・成長点のリスト）
+  │   ├─ growth_areas（伸び代・注力領域のリスト）
+  │   ├─ expectation_fit（期待との整合性コメント）
+  │   └─ recommended_actions（ネクストステップのリスト）
+  └─ error_message（nullable。FAILED 時のみ格納）
+```
+
+> UNIQUE 制約は `(user_id, fiscal_year_id)` の複合。ユーザー×年度で最大1レコード。  
+> 棚卸が `COMPLETED` に遷移するたびに UPSERT（再提出時は上書き）される。  
+> Python（FastAPI + LangChain）モジュールが非同期で生成・更新する。
+
+---
 
 > `user_expectations` はユーザーごとに最大1レコード。  
 > TL期待コメントはそのユーザーに割り当てられたTL（`users.tl_user_id`）のみ編集可能。  

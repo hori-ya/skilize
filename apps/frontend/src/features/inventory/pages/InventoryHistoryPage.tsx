@@ -3,22 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import {
   getMyInventories, getItSkillDetails, getQualificationDetails,
   getSeminarDetails, getGoals, getComparison, patchItSkillRemarks, getGoalReview,
+  getMyAiAnalyses,
 } from '../api/inventoryApi';
 import { getItSkills } from '../../../shared/api/masterApi';
 import type {
   InventorySummary, ItSkillDetailItem, QualificationDetailItem,
-  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem,
+  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem, AiAnalysis,
 } from '../types/index';
 import type { ItSkill } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
+import AiAnalysisCard from '../components/AiAnalysisCard';
 
-type TabKey = 'it-skills' | 'qualifications' | 'seminars' | 'goals';
+type TabKey = 'it-skills' | 'qualifications' | 'seminars' | 'goals' | 'ai-analysis';
 
 const TAB_LABELS: Record<TabKey, string> = {
   'it-skills': 'ITスキル',
   qualifications: '資格',
   seminars: 'セミナー',
   goals: '目標',
+  'ai-analysis': 'AI分析',
 };
 
 const GOAL_CATEGORY_LABEL: Record<string, string> = {
@@ -67,12 +70,14 @@ export default function InventoryHistoryPage() {
 
   const [editingRemarks, setEditingRemarks] = useState<Record<number, string>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [aiAnalyses, setAiAnalyses] = useState<AiAnalysis[]>([]);
 
   useEffect(() => {
     getMyInventories().then(res => {
       setInventories(res.data);
       if (res.data.length > 0) setSelectedId(res.data[0].id);
     });
+    getMyAiAnalyses().then(res => setAiAnalyses(res.data)).catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -401,6 +406,20 @@ export default function InventoryHistoryPage() {
                         </table>
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* ── AI分析タブ ── */}
+                {activeTab === 'ai-analysis' && (
+                  <div className="history-tab-content">
+                    {(() => {
+                      const analysis = aiAnalyses.find(a => {
+                        const inv = inventories.find(i => i.id === selectedId);
+                        return inv && a.fiscalYearId === inv.fiscalYear.id;
+                      });
+                      if (!analysis) return <p className="no-data">この年度のAI分析データはありません。目標設定完了後に自動生成されます。</p>;
+                      return <AiAnalysisCard analysis={analysis} />;
+                    })()}
                   </div>
                 )}
 

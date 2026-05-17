@@ -1,6 +1,6 @@
 # テーブル定義書
 
-**バージョン**: 1.2.0  
+**バージョン**: 1.3.0  
 **作成日**: 2026-05-09  
 **更新日**: 2026-05-17  
 **DB**: PostgreSQL 16.4
@@ -32,6 +32,7 @@
 | 17 | `inventory_interviews` | 面談メモヘッダー | TL/ADMINが棚卸に対して記録する面談メモ（入力者×棚卸で1件） |
 | 18 | `interview_detail_notes` | 面談メモ明細 | 各棚卸明細行（ITスキル・資格・セミナー・目標）に紐づく明細レベルのメモ |
 | 19 | `user_expectations` | ユーザーへの期待 | TL期待コメント・会社期待コメントをユーザーごとに1行で管理 |
+| 20 | `ai_career_analyses` | AIキャリア分析 | AI分析結果をユーザー×年度ごとに保存 |
 
 ---
 
@@ -588,6 +589,49 @@ TL/ADMINが棚卸ヘッダーに対して記録する面談メモ。
 |------|------|------|
 | PK | user_id | — |
 | FK | user_id | `users(id)` |
+
+---
+
+## 20. ai_career_analyses（AIキャリア分析）
+
+AI によるキャリア分析結果をユーザー×年度ごとに保存するテーブル。  
+棚卸ステータスが `COMPLETED` に遷移した際にバックグラウンドで自動生成される。
+
+### カラム定義
+
+| # | カラム名 | データ型 | NOT NULL | デフォルト | 説明 |
+|---|---------|---------|:--------:|-----------|------|
+| 1 | id | `SERIAL` | ○ | — | PK（自動採番） |
+| 2 | user_id | `INTEGER` | ○ | — | FK → users.id |
+| 3 | fiscal_year_id | `INTEGER` | ○ | — | FK → fiscal_years.id |
+| 4 | status | `VARCHAR(20)` | ○ | `'PENDING'` | 処理ステータス（PENDING / PROCESSING / COMPLETED / FAILED） |
+| 5 | analysis_result | `JSONB` | — | `NULL` | LLM が生成した分析結果 JSON（status=COMPLETED 時のみ格納） |
+| 6 | error_message | `TEXT` | — | `NULL` | エラー内容（status=FAILED 時のみ格納） |
+| 7 | created_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 作成日時 |
+| 8 | updated_at | `TIMESTAMPTZ` | ○ | `CURRENT_TIMESTAMP` | 最終更新日時 |
+
+### 制約・インデックス
+
+| 種別 | 対象 | 内容 |
+|------|------|------|
+| PK | id | — |
+| UNIQUE | (user_id, fiscal_year_id) | ユーザー×年度で1レコードのみ |
+| FK | user_id | `users(id)` |
+| FK | fiscal_year_id | `fiscal_years(id)` |
+| CHECK | status | `IN ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED')` |
+| INDEX | user_id, fiscal_year_id | 検索・API 取得用 |
+
+### analysis_result JSON 構造
+
+```json
+{
+  "summary": "string",
+  "strengths": ["string"],
+  "growth_areas": ["string"],
+  "expectation_fit": "string",
+  "recommended_actions": ["string"]
+}
+```
 
 ---
 

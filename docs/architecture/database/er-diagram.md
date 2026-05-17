@@ -1,6 +1,6 @@
 # ER図
 
-**バージョン**: 1.2.0  
+**バージョン**: 1.3.0  
 **作成日**: 2026-05-09  
 **更新日**: 2026-05-17
 
@@ -241,6 +241,21 @@ erDiagram
     timestamp company_updated_at "nullable"
   }
 
+  %% -------------------------
+  %% AIキャリア分析
+  %% -------------------------
+
+  ai_career_analyses {
+    int     id              PK
+    int     user_id         FK "UK(user_id, fiscal_year_id)"
+    int     fiscal_year_id  FK
+    varchar status          "PENDING/PROCESSING/COMPLETED/FAILED"
+    jsonb   analysis_result "LLM出力JSON nullable"
+    text    error_message   "エラー内容 nullable"
+    timestamp created_at
+    timestamp updated_at
+  }
+
   interview_detail_notes {
     int      id           PK
     int      interview_id FK "UK(interview_id, detail_type, detail_id)"
@@ -279,6 +294,8 @@ erDiagram
   users                     ||--o{  inventory_interviews    : "interviews"
   inventory_interviews      ||--o{  interview_detail_notes  : "contains"
   users                     ||--o|  user_expectations       : "has"
+  users                     ||--o{  ai_career_analyses      : "analyzed_by"
+  fiscal_years              ||--o{  ai_career_analyses      : "for"
 ```
 
 ---

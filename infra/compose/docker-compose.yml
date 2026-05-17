@@ -51,6 +51,21 @@ services:
     ports:
       - "5173:5173"
 
+  ai:
+    build:
+      context: ../..
+      dockerfile: infra/docker/ai/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      AI_SECRET_KEY: ${AI_SECRET_KEY}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openai}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+
   nginx:
     image: nginx:alpine
     ports:

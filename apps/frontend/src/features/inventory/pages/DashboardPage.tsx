@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDashboard, createInventory } from '../api/inventoryApi';
+import { getDashboard, createInventory, getMyAiAnalyses } from '../api/inventoryApi';
 import { getRadarChart, getGrowthChart, getHeatmapChart, getTimelineChart } from '../api/chartApi';
-import type { DashboardResponse } from '../types/index';
+import type { DashboardResponse, AiAnalysis } from '../types/index';
 import type { RadarResponse, GrowthResponse, HeatmapResponse, TimelineResponse } from '../types/charts';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconPlay, IconEdit, IconEye, IconHistory } from '../../../shared/ui/Icons';
@@ -10,6 +10,7 @@ import RadarChartCard from '../components/RadarChartCard';
 import GrowthChartCard from '../components/GrowthChartCard';
 import HeatmapChartCard from '../components/HeatmapChartCard';
 import TimelineChartCard from '../components/TimelineChartCard';
+import AiAnalysisCard from '../components/AiAnalysisCard';
 
 interface ChartsState {
   radar: RadarResponse | null;
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [chartsLoading, setChartsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
+  const [aiAnalyses, setAiAnalyses] = useState<AiAnalysis[]>([]);
 
   useEffect(() => {
     getDashboard()
@@ -41,6 +43,8 @@ export default function DashboardPage() {
         });
       })
       .finally(() => setChartsLoading(false));
+
+    getMyAiAnalyses().then(res => setAiAnalyses(res.data)).catch(() => {});
   }, []);
 
   const handleStartInventory = async () => {
@@ -173,6 +177,14 @@ export default function DashboardPage() {
             </>
           )}
         </section>
+
+        {/* AI Analysis section */}
+        {aiAnalyses.length > 0 && (
+          <section className="ai-analysis-section">
+            <h2 className="chart-section__title">AIキャリア分析</h2>
+            <AiAnalysisCard analysis={aiAnalyses[0]} />
+          </section>
+        )}
       </main>
     </div>
   );
