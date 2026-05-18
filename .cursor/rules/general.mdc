@@ -1,3 +1,58 @@
 ---
 alwaysApply: true
+description: "プロジェクト全体に適用される共通ルール（命名・API設計・禁止事項）"
 ---
+
+# Skilize 共通ルール
+
+## プロジェクト概要
+
+社内向けスキル棚卸管理 Web アプリ。ユーザーが ITスキル・資格・セミナー受講履歴を登録し、TL がレビューする。
+
+- ロール: `GENERAL`（一般ユーザー）/ `TL`（チームリーダー）/ `ADMIN`（管理者）
+- 初回ログイン時はパスワード変更が必須（`is_initial_password` フラグ制御）
+
+## 命名規則
+
+| 対象 | 規則 | 例 |
+|---|---|---|
+| Java クラス | PascalCase | `AuthService`, `LoginRequest` |
+| Java メソッド・フィールド | camelCase | `findByUserId`, `passwordHash` |
+| DB テーブル・カラム | snake_case | `users`, `password_hash`, `is_active` |
+| REST パス | kebab-case（小文字） | `/api/auth/change-password` |
+| React コンポーネント | PascalCase | `LoginPage`, `NavBar` |
+| CSS クラス | BEM ライク | `.navbar__link`, `.btn-primary` |
+
+## API 設計ルール
+
+- ベースパス: `/api`
+- 認証不要: `POST /api/auth/login`、`GET /api/health` のみ
+- 全エンドポイントに `Authorization: Bearer <JWT>` 必須（上記以外）
+- レスポンス形式: JSON
+- エラーレスポンス: `{ "code": "ERROR_CODE", "message": "..." }`
+- バリデーションエラー: `{ "errors": [{ "field": "...", "message": "..." }] }`
+
+## 環境変数ルール
+
+- `application.yml` に機密情報をハードコードしない（必ず環境変数参照）
+- フロントエンドの `.env` に秘密情報を直書きしない
+
+## 絶対禁止事項
+
+- パスワードを平文で DB に保存しない（必ず BCrypt ハッシュ化）
+- JWT をセッションや Cookie に保存しない（localStorage のみ）
+- `User` エンティティに `@Setter` を付けない
+- Flyway マイグレーション済みファイルを後から編集しない（新バージョンで対応）
+
+## DB スキーマ変更時の手順
+
+エンティティに新規フィールドを追加する場合、必ず以下の**両方**を更新すること:
+
+1. `apps/backend/src/main/resources/db/migration/V{n}__xxx.sql`（Flyway 用・本番/CI）
+2. `scripts/db/init.sql`（ローカル Docker 用）
+
+## コメントルール
+
+- コードのWHAT（何をしているか）は書かない。WHY（なぜそうしているか）のみ書く
+- 自明なコードにコメントを付けない
+- Javadoc は公開 API のみ、かつ必要最小限

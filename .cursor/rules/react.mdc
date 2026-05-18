@@ -1,3 +1,112 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: "React / TypeScript フロントエンドのアーキテクチャ・コーディングルール"
+globs: ["apps/frontend/src/**/*.tsx", "apps/frontend/src/**/*.ts"]
 ---
+
+# React / TypeScript コーディングルール
+
+## フォルダ構成（3層 feature アーキテクチャ）
+
+```
+src/
+├── app/
+│   ├── providers/   ← AuthProvider・useAuth hook（認証状態のグローバル共有）
+│   └── layouts/     ← NavBar（グローバルナビゲーション）
+│
+├── shared/
+│   ├── api/         ← Axios クライアント・複数 feature で使うマスタ API
+│   ├── types/       ← 複数 feature で使うマスタデータ型定義
+│   └── ui/          ← ルートガード（PrivateRoute・TlAdminRoute・AdminRoute）・共通 UI
+│
+└── features/
+    ├── auth/        ← ログイン・パスワード変更（api / types / pages）
+    ├── inventory/   ← 棚卸・ダッシュボード・グラフ（api / types / components / pages）
+    ├── team/        ← チーム照会・メンバー詳細（api / types / pages）
+    ├── master/      ← マスタ管理ページ群（api / types / pages）
+    └── interview/   ← 面談機能（api / types）※ページは features/team に統合
+```
+
+## 依存方向（厳守）
+
+```
+App.tsx → features → shared
+```
+
+**禁止**:
+- `shared` が `features` をインポートする
+- feature 間で直接インポートする（型の参照は許容）
+- 新機能を feature フォルダ外に実装する
+
+## コンポーネントルール
+
+- **関数コンポーネント + hooks のみ**（クラスコンポーネント禁止）
+- 1コンポーネント = 1責務。200行を超えたら分割を検討する
+- `any` 型の使用禁止（TypeScript 型を必ず定義する）
+
+```tsx
+// OK
+const UserCard = ({ user }: { user: User }) => { ... }
+
+// NG
+const UserCard = ({ user }: { user: any }) => { ... }
+```
+
+## API 呼び出しルール
+
+- `async/await` + Axios で API を呼び出す
+- API 呼び出しは必ず `features/{name}/api/` に分離する
+- コンポーネント内に直接 `fetch`・`axios` を書かない
+
+```ts
+// OK: features/inventory/api/inventoryApi.ts
+export async function fetchInventories(): Promise<Inventory[]> { ... }
+
+// NG: コンポーネント内に直接書く
+useEffect(() => {
+  axios.get('/api/inventories/mine').then(...);
+}, []);
+```
+
+## 状態管理ルール
+
+- グローバル状態は **`AuthContext`（`app/providers/AuthProvider.tsx`）のみ**
+- 外部状態管理ライブラリ（Redux・Zustand 等）を新たに導入しない
+- ローカル状態は `useState` / `useReducer` を使う
+- サーバーデータを不必要にグローバル状態に保存しない
+
+## スタイルルール
+
+- `index.css` の BEM ライクなクラス名を使う
+- インラインスタイルの乱用禁止
+- feature 固有スタイルはグローバル CSS に混在させない
+
+```tsx
+// OK
+<button className="btn-primary">送信</button>
+<nav className="navbar__link">ホーム</nav>
+
+// NG
+<button style={{ backgroundColor: 'blue' }}>送信</button>
+```
+
+## 型定義ルール
+
+- 複数 feature で使う型 → `shared/types/`
+- feature 固有の型 → `features/{name}/types/`
+- `any` 禁止・`unknown` を適切に使う
+- API レスポンス型は必ず定義する
+
+## feature 新規追加時のルール
+
+1. `features/{name}/` フォルダを作成する
+2. `api/`・`types/`・`pages/` の各サブフォルダに分けて実装する
+3. `shared` へ置くのは3つ以上の feature で使う場合のみ
+4. `App.tsx` のルーティングに追加する
+
+## ルートガード
+
+- 認証が必要なページは `<PrivateRoute>` でラップする
+- TL/ADMIN 限定は `<TlAdminRoute>` を使う
+- ADMIN 限定は `<AdminRoute>` を使う
+（`shared/ui/` に定義済み）

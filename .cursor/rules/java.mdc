@@ -1,3 +1,150 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: "Java / Spring Boot のアーキテクチャ・コーディングルール"
+globs: ["apps/backend/**/*.java"]
 ---
+
+# Java / Spring Boot コーディングルール
+
+## パッケージ構成（feature by feature + レイヤー分離）
+
+各 feature は以下の4レイヤーで構成する:
+
+```
+com.skilize.{feature}
+├── presentation/   ← Controller・Request/Response DTO・バリデーション
+├── application/    ← ApplicationService・トランザクション境界・ワークフロー
+├── domain/         ← エンティティ・ドメインルール・Repositoryインターフェース
+└── infrastructure/ ← JPA実装・外部API・Security実装
+```
+
+既存 feature 一覧: `auth`, `user`, `inventory`, `master`, `fiscalyear`, `dashboard`, `charts`, `ai`, `interview`
+
+共有コードは `shared/` に置くが、**業務ロジックを shared に置かない**。3回以上重複した場合のみ shared 化を検討する。
+
+## 依存方向（厳守）
+
+```
+presentation → application → domain
+infrastructure → domain / application
+```
+
+**禁止**:
+- `domain → infrastructure`（domain に Spring Framework を持ち込まない）
+- `domain → presentation`
+- feature 間の直接依存（shared 経由のみ許可）
+
+## レイヤー別責務と禁止事項
+
+### presentation（Controller・DTO）
+
+**責務**: HTTP処理・バリデーション・レスポンス整形のみ
+**禁止**: ビジネスロジック・SQL・トランザクション制御
+
+```java
+// OK
+@PostMapping("/users")
+public UserResponse create(@Valid @RequestBody CreateUserRequest req) {
+    return userService.create(req);
+}
+
+// NG: Controller にビジネスロジックを書かない
+```
+
+### application（Service・UseCase）
+
+**責務**: ユースケース実装・トランザクション境界・ドメイン調整
+**禁止**: SQL直接実装・@Transactional を Controller や Repository に置く
+
+```java
+// OK
+@Transactional
+public UserResponse createUser(CreateUserRequest request) { ... }
+```
+
+### domain（Entity・Repository interface・ドメインルール）
+
+**責務**: ビジネスルール・不変条件・Repositoryインターフェース定義
+**禁止**: Spring Framework への依存・JPA実装詳細・SQL実装
+
+### infrastructure（JPA・外部API）
+
+**責務**: DB アクセス・外部サービス実装・Security 設定
+SQL・JPA はここにのみ書く
+
+## DI ルール
+
+**コンストラクタ注入のみ。`@Autowired` フィールドインジェクション禁止。**
+
+```java
+// NG
+@Autowired
+private UserService userService;
+
+// OK（@RequiredArgsConstructor + final フィールド推奨）
+@RequiredArgsConstructor
+public class UserController {
+    private final UserService userService;
+}
+```
+
+## トランザクションルール
+
+- `@Transactional` は **application レイヤーのみ** に付与する
+- Controller・Repository で業務トランザクションを管理しない
+- 参照系は `@Transactional(readOnly = true)` を使う
+
+## DTOルール
+
+- Entity を API に直接返さない（必ず Request/Response DTO を分離する）
+- DTO は Java `record` を使用する
+
+```java
+// OK
+public record UserResponse(Long id, String name, String email) {}
+
+// NG
+public class UserResponse {
+    private Long id;
+    ...
+}
+```
+
+## エンティティルール
+
+- `@Setter` を付けない（フィールド変更はドメインメソッドで行う）
+- Lombok `@RequiredArgsConstructor` でコンストラクタを生成する
+
+```java
+// OK
+public void changePassword(String newHash) {
+    this.passwordHash = newHash;
+}
+
+// NG
+user.setPasswordHash(newHash);
+```
+
+## バリデーションルール
+
+- `jakarta.validation` アノテーション + `@Valid` を使用する
+- Controller で `@Valid` を付けてリクエスト DTO を受け取る
+
+## 例外ルール
+
+- 認証系例外: `AuthException`（`shared/domain/exception/`）
+- その他: Spring 標準例外（`ResponseStatusException` 等）
+- 業務例外は `GlobalExceptionHandler` で一元ハンドリングする
+
+## セキュリティルール
+
+- ロール制御は `@PreAuthorize("hasRole('ADMIN')")` 等を使用する
+- `SecurityConfig` の `permitAll()` を変更する場合は CORS 設定も確認する
+- `is_initial_password = true` の場合、`InitialPasswordFilter` が `/api/auth/change-password` 以外を 403 にブロックする
+
+## コーディングスタイル
+
+- Controller は100行以内を推奨
+- fat service 禁止（単一ユースケース単位に分割する）
+- ValueObject を積極的に活用する
+- util クラス乱立禁止（`BusinessUtil` 等の汎用 Util は作らない）

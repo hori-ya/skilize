@@ -1,3 +1,62 @@
 ---
-alwaysApply: true
+alwaysApply: false
+description: "テストコードのルール"
+globs: ["**/*Test.java", "**/*Spec.java", "**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts", "**/*.spec.tsx"]
 ---
+
+# テストコーディングルール
+
+## バックエンド（Java）
+
+### テスト配置
+
+- ユニットテスト: `src/test/java/com/skilize/{feature}/`
+- 結合テスト: `src/test/java/com/skilize/{feature}/integration/`
+
+### テスト対象レイヤー
+
+- **application**: ビジネスロジックを重点的にテストする
+- **domain**: ドメインルール・不変条件のユニットテスト
+- **presentation**: Controller テスト（MockMvc 推奨）
+- **infrastructure**: Repository テスト（実 DB 接続を推奨）
+
+### モック方針
+
+- **DB はモック化しない**（Repository テストは実 DB 接続で行う）
+- 外部 API・LLM 等の外部サービスはモック化する
+- `@MockBean` の乱用禁止（テストが実態と乖離する）
+
+### テスト命名
+
+```java
+// メソッド名: {テスト対象}_{条件}_{期待結果}
+@Test
+void createUser_whenEmailDuplicated_throwsException() { ... }
+```
+
+### アサーション
+
+- `assertThat`（AssertJ）を優先する
+- 複数アサーションは `assertAll` でまとめる
+
+## フロントエンド（TypeScript）
+
+### テスト配置
+
+- `features/{name}/` 配下の `__tests__/` または同階層に `*.test.tsx`
+
+### テスト対象
+
+- API 関数（`api/` 内）のユニットテスト
+- カスタム hooks のテスト（`@testing-library/react-hooks`）
+- 重要なページコンポーネントの統合テスト
+
+### モック方針
+
+- Axios はモック化してよい（`jest.mock`）
+- `any` をモック型に使わない
+
+### アサーション
+
+- `@testing-library/react` の `screen.getByRole` 等のセマンティクスベースのクエリを優先する
+- `getByTestId` の乱用禁止（UI 構造への依存を避ける）
