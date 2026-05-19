@@ -1,5 +1,6 @@
 package com.skilize.inventory.domain;
 
+import com.skilize.master.domain.ItSkill;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -24,4 +25,17 @@ public interface ItSkillDetailRepository extends JpaRepository<ItSkillDetail, In
     @Modifying
     @Query("DELETE FROM ItSkillDetail d WHERE d.inventory.id = :inventoryId")
     void deleteByInventoryId(@Param("inventoryId") int inventoryId);
+
+    /** カスタムスキル名のうち it_skills マスタに未登録のものを使用件数付きで返す。 */
+    @Query("SELECT d.customSkillName, COUNT(d) FROM ItSkillDetail d " +
+           "WHERE d.itSkill IS NULL AND d.customSkillName IS NOT NULL " +
+           "AND NOT EXISTS (SELECT s FROM ItSkill s WHERE s.name = d.customSkillName) " +
+           "GROUP BY d.customSkillName ORDER BY COUNT(d) DESC")
+    List<Object[]> findCustomUnregisteredSkillNames();
+
+    /** 昇格後、同名カスタムスキル明細をマスタスキルへ紐付ける。 */
+    @Modifying
+    @Query("UPDATE ItSkillDetail d SET d.itSkill = :skill, d.customSkillName = null " +
+           "WHERE d.customSkillName = :customName AND d.itSkill IS NULL")
+    void linkToMasterSkill(@Param("customName") String customName, @Param("skill") ItSkill skill);
 }

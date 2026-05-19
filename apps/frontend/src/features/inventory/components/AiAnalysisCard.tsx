@@ -5,13 +5,44 @@ interface Props {
   fiscalYearName?: string;
 }
 
-export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
-  const { status, analysisResult, errorMessage, updatedAt } = analysis;
+const STATUS_LABEL: Record<string, string> = {
+  PENDING:    '待機中',
+  PROCESSING: '分析中',
+  COMPLETED:  '完了',
+  FAILED:     '失敗',
+};
 
-  if (status === 'PENDING' || status === 'PROCESSING') {
+export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
+  const { status, analysisResult, errorMessage, createdAt, updatedAt } = analysis;
+
+  const fmtDate = (iso: string) => new Date(iso).toLocaleString('ja-JP');
+
+  if (status === 'PENDING') {
     return (
       <div className="ai-analysis-card ai-analysis-card--pending">
-        <p className="ai-analysis-pending-text">AIキャリア分析を準備中です...</p>
+        <div className="ai-status-row">
+          <span className="ai-spinner" />
+          <span className="ai-status-badge ai-status-badge--pending">{STATUS_LABEL.PENDING}</span>
+        </div>
+        <p className="ai-analysis-pending-text">
+          AI分析のリクエストを受け付けました。しばらくお待ちください。
+        </p>
+        <p className="ai-meta">リクエスト日時：{fmtDate(createdAt)}</p>
+      </div>
+    );
+  }
+
+  if (status === 'PROCESSING') {
+    return (
+      <div className="ai-analysis-card ai-analysis-card--processing">
+        <div className="ai-status-row">
+          <span className="ai-spinner ai-spinner--amber" />
+          <span className="ai-status-badge ai-status-badge--processing">{STATUS_LABEL.PROCESSING}</span>
+        </div>
+        <p className="ai-analysis-pending-text">
+          AIがキャリアデータを分析中です。完了すると自動的に表示されます。
+        </p>
+        <p className="ai-meta">リクエスト日時：{fmtDate(createdAt)}</p>
       </div>
     );
   }
@@ -19,17 +50,24 @@ export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
   if (status === 'FAILED' || !analysisResult) {
     return (
       <div className="ai-analysis-card ai-analysis-card--failed">
-        <p className="ai-analysis-failed-text">分析データがありません。</p>
+        <div className="ai-status-row">
+          <span className="ai-status-badge ai-status-badge--failed">{STATUS_LABEL.FAILED}</span>
+        </div>
+        <p className="ai-analysis-failed-text">AI分析に失敗しました。</p>
         {errorMessage && <p className="ai-analysis-error-detail">{errorMessage}</p>}
+        <p className="ai-meta">更新日時：{fmtDate(updatedAt)}</p>
       </div>
     );
   }
 
   return (
     <div className="ai-analysis-card">
-      {fiscalYearName && <h3 className="ai-analysis-card__year">{fiscalYearName}</h3>}
+      <div className="ai-status-row">
+        {fiscalYearName && <h3 className="ai-analysis-card__year" style={{ margin: 0 }}>{fiscalYearName}</h3>}
+        <span className="ai-status-badge ai-status-badge--completed">{STATUS_LABEL.COMPLETED}</span>
+      </div>
       <div className="ai-analysis-updated">
-        分析日時: {new Date(updatedAt).toLocaleString('ja-JP')}
+        分析日時：{fmtDate(updatedAt)}
       </div>
 
       <div className="ai-analysis-section-block">

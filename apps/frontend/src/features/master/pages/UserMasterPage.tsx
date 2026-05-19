@@ -3,6 +3,7 @@ import NavBar from '../../../app/layouts/NavBar';
 import type { UserAdmin, Role } from '../../auth/types/index';
 import { getUsers, createUser, updateUser, resetUserPassword } from '../../team/api/userApi';
 import { IconPlus, IconEdit, IconKey, IconX, IconCheck, IconReset } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type ModalMode = 'create' | 'edit';
 
@@ -159,7 +160,7 @@ export default function UserMasterPage() {
             <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />ユーザー追加</button>
           </div>
 
-          <div className="master-table-wrap">
+          <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
@@ -209,7 +210,7 @@ export default function UserMasterPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </StickyHorizontalScroll>
         </section>
       </main>
 

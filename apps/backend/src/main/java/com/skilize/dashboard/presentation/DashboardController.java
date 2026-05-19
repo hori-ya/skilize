@@ -44,7 +44,10 @@ public class DashboardController {
             return new DashboardResponse(userInfo, null, null);
         }
 
-        FiscalYearRef fyRef = new FiscalYearRef(currentFy.getId(), currentFy.getName());
+        FiscalYearRef fyRef = new FiscalYearRef(
+                currentFy.getId(), currentFy.getName(),
+                currentFy.getInputStartDate() != null ? currentFy.getInputStartDate().toString() : null,
+                currentFy.getInputEndDate()   != null ? currentFy.getInputEndDate().toString()   : null);
 
         // 全棚卸を取得し、今年度分をフィルタリングする
         List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(user.getId());
@@ -75,7 +78,7 @@ public class DashboardController {
     public record DashboardResponse(UserInfo user, FiscalYearRef currentFiscalYear,
                                      CurrentInventoryInfo currentInventory) {}
     public record UserInfo(int id, String name, String role) {}
-    public record FiscalYearRef(int id, String name) {}
+    public record FiscalYearRef(int id, String name, String inputStartDate, String inputEndDate) {}
     public record CurrentInventoryInfo(int id, String status,
                                         int itSkillCount, int qualificationCount, int seminarCount,
                                         String submittedAt, String goalReviewCompletedAt, String goalCompletedAt) {}

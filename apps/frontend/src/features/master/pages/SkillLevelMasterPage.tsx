@@ -3,16 +3,18 @@ import NavBar from '../../../app/layouts/NavBar';
 import type { SkillLevel } from '../../../shared/types/master';
 import { getSkillLevels, createSkillLevel, updateSkillLevel } from '../../../shared/api/masterApi';
 import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type ModalMode = 'create' | 'edit';
 
 interface FormState {
   levelValue: string;
   description: string;
+  scoreWeight: string;
   active: boolean;
 }
 
-const emptyForm = (): FormState => ({ levelValue: '', description: '', active: true });
+const emptyForm = (): FormState => ({ levelValue: '', description: '', scoreWeight: '0', active: true });
 
 export default function SkillLevelMasterPage() {
   const [levels, setLevels] = useState<SkillLevel[]>([]);
@@ -45,6 +47,7 @@ export default function SkillLevelMasterPage() {
     setForm({
       levelValue: String(level.levelValue),
       description: level.description,
+      scoreWeight: String(level.scoreWeight),
       active: level.isActive,
     });
     setFormError('');
@@ -64,17 +67,24 @@ export default function SkillLevelMasterPage() {
       return;
     }
 
+    const sw = Number(form.scoreWeight);
+    if (form.scoreWeight === '' || isNaN(sw) || sw < 0) {
+      setFormError('スコア重みは0以上の整数を入力してください');
+      return;
+    }
+
     setSaving(true);
     setFormError('');
     try {
       if (modalMode === 'create') {
-        const res = await createSkillLevel({ levelValue: lv, description: form.description });
+        const res = await createSkillLevel({ levelValue: lv, description: form.description, scoreWeight: sw });
         setLevels(prev => [...prev, res.data].sort((a, b) => a.levelValue - b.levelValue));
       } else {
         const res = await updateSkillLevel(editingId!, {
           levelValue: lv,
           description: form.description,
           active: form.active,
+          scoreWeight: sw,
         });
         setLevels(prev =>
           prev.map(l => (l.id === editingId ? res.data : l))
@@ -105,12 +115,13 @@ export default function SkillLevelMasterPage() {
             <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />レベル追加</button>
           </div>
 
-          <div className="master-table-wrap">
+          <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
                   <th style={{ width: 100 }}>レベル値</th>
                   <th>説明</th>
+                  <th style={{ width: 100 }}>スコア重み</th>
                   <th style={{ width: 80 }}>状態</th>
                   <th style={{ width: 80 }}>操作</th>
                 </tr>
@@ -118,13 +129,14 @@ export default function SkillLevelMasterPage() {
               <tbody>
                 {levels.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="master-table__empty">データがありません</td>
+                    <td colSpan={5} className="master-table__empty">データがありません</td>
                   </tr>
                 ) : (
                   levels.map(level => (
                     <tr key={level.id}>
                       <td style={{ textAlign: 'center', fontWeight: 600 }}>{level.levelValue}</td>
                       <td>{level.description}</td>
+                      <td style={{ textAlign: 'center' }}>{level.scoreWeight}</td>
                       <td>
                         <span className={level.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
                           {level.isActive ? '有効' : '無効'}
@@ -140,7 +152,7 @@ export default function SkillLevelMasterPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </StickyHorizontalScroll>
         </section>
       </main>
 
@@ -176,6 +188,19 @@ export default function SkillLevelMasterPage() {
                   placeholder="例: 独力で実務に適用できる"
                   maxLength={200}
                 />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">スコア重み <span className="required">*</span></label>
+                <input
+                  type="number"
+                  className="form-input"
+                  value={form.scoreWeight}
+                  onChange={e => setForm(f => ({ ...f, scoreWeight: e.target.value }))}
+                  min={0}
+                  style={{ width: 120 }}
+                />
+                <p className="form-hint">グラフのスコア計算に使う重み。0 にするとスコアに寄与しません。</p>
               </div>
 
               {modalMode === 'edit' && (

@@ -12,12 +12,12 @@ VALUES (1, 4)
 ON CONFLICT (id) DO NOTHING;
 
 -- レベルマスタ（1〜5）
-INSERT INTO skill_levels (level_value, description) VALUES
-    (1, '知識なし／未経験'),
-    (2, '概念を理解している'),
-    (3, '指導があれば実務で使える'),
-    (4, '独力で実務に適用できる'),
-    (5, '他者に指導・展開できる');
+INSERT INTO skill_levels (level_value, description, score_weight) VALUES
+    (1, '知識なし／未経験',         0),
+    (2, '概念を理解している',        1),
+    (3, '指導があれば実務で使える',  2),
+    (4, '独力で実務に適用できる',    3),
+    (5, '他者に指導・展開できる',    4);
 
 -- 管理者ユーザー
 -- 初期PW: admin（BCrypt cost=12）

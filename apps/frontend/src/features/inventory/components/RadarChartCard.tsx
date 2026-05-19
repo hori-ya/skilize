@@ -9,7 +9,7 @@ interface Props {
 }
 
 export default function RadarChartCard({ data }: Props) {
-  const { currentFiscalYear, prevFiscalYear, hasCurrentYearData, maxLevelValue, axes } = data;
+  const { currentFiscalYear, prevFiscalYear, hasCurrentYearData, maxScoreWeight, axes } = data;
 
   const chartData = axes.map(a => ({
     subject: a.category1Name.length > 8 ? a.category1Name.slice(0, 8) + '…' : a.category1Name,
@@ -37,8 +37,8 @@ export default function RadarChartCard({ data }: Props) {
             <PolarGrid stroke="var(--color-border)" />
             <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: 'var(--color-text-muted)' }} />
             <PolarRadiusAxis
-              domain={[0, maxLevelValue]}
-              tickCount={maxLevelValue + 1}
+              domain={[0, maxScoreWeight]}
+              tickCount={maxScoreWeight + 1}
               tick={{ fontSize: 10, fill: 'var(--color-text-muted)' }}
             />
             <Tooltip

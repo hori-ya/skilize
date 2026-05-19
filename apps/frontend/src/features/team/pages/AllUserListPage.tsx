@@ -4,6 +4,7 @@ import { getTeamMembers } from '../api/userApi';
 import type { TeamMember } from '../types/index';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconX, IconArrowRight } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 const STATUS_LABEL: Record<string, string> = {
   COMPLETED: '完了',
@@ -140,7 +141,7 @@ export default function AllUserListPage() {
             {filtered.length === 0 ? (
               <p className="no-data">該当するユーザーがいません</p>
             ) : (
-              <div className="master-table-wrap">
+              <StickyHorizontalScroll className="master-table-wrap">
                 <table className="master-table">
                   <thead>
                     <tr>
@@ -182,7 +183,7 @@ export default function AllUserListPage() {
                     ))}
                   </tbody>
                 </table>
-              </div>
+              </StickyHorizontalScroll>
             )}
           </>
         )}

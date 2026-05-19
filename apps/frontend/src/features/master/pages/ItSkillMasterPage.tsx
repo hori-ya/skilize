@@ -1,11 +1,13 @@
 import { useEffect, useState, useMemo } from 'react';
 import NavBar from '../../../app/layouts/NavBar';
-import type { ItSkillCategory, ItSkill } from '../../../shared/types/master';
+import type { ItSkillCategory, ItSkill, CustomUnregisteredItem } from '../../../shared/types/master';
 import {
   getItSkillCategories, createItSkillCategory, updateItSkillCategory,
   getItSkills, createItSkill, updateItSkill,
+  getCustomUnregisteredItSkills, promoteItSkill,
 } from '../../../shared/api/masterApi';
 import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 // ─── Category tab ────────────────────────────────────────────────────────────
 
@@ -81,7 +83,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
         <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />分類追加</button>
       </div>
 
-      <div className="master-table-wrap">
+      <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
@@ -116,7 +118,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
             )}
           </tbody>
         </table>
-      </div>
+      </StickyHorizontalScroll>
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
@@ -300,7 +302,7 @@ function SkillTab({ skills, categories, onReload }: {
         </button>
       </div>
 
-      <div className="master-table-wrap">
+      <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
@@ -335,7 +337,7 @@ function SkillTab({ skills, categories, onReload }: {
             )}
           </tbody>
         </table>
-      </div>
+      </StickyHorizontalScroll>
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
@@ -428,9 +430,205 @@ function SkillTab({ skills, categories, onReload }: {
   );
 }
 
+// ─── Promotion tab ───────────────────────────────────────────────────────────
+
+interface PromoteForm {
+  lv1Id: number | null;
+  lv2Id: number | null;
+  lv3Id: number | null;
+  name: string;
+  description: string;
+  sortOrder: string;
+}
+
+function PromotionTab({ categories, onSkillsReload }: {
+  categories: ItSkillCategory[];
+  onSkillsReload: () => void;
+}) {
+  const [items, setItems] = useState<CustomUnregisteredItem[]>([]);
+  const [tabLoading, setTabLoading] = useState(true);
+  const [tabError, setTabError] = useState('');
+  const [modalOpen, setModalOpen] = useState(false);
+  const [promoting, setPromoting] = useState<CustomUnregisteredItem | null>(null);
+  const [form, setForm] = useState<PromoteForm>({ lv1Id: null, lv2Id: null, lv3Id: null, name: '', description: '', sortOrder: '0' });
+  const [formError, setFormError] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const lv1Cats = categories.filter(c => c.level === 1 && c.isActive);
+  const lv2Cats = (pid: number | null) => categories.filter(c => c.level === 2 && c.parentId === pid && c.isActive);
+  const lv3Cats = (pid: number | null) => categories.filter(c => c.level === 3 && c.parentId === pid && c.isActive);
+  const selectedCategoryId = (): number | null => form.lv3Id ?? form.lv2Id ?? form.lv1Id;
+
+  const loadItems = () => {
+    setTabLoading(true);
+    getCustomUnregisteredItSkills()
+      .then(res => setItems(res.data))
+      .catch(() => setTabError('取得に失敗しました'))
+      .finally(() => setTabLoading(false));
+  };
+
+  useEffect(() => { loadItems(); }, []);
+
+  const openPromote = (item: CustomUnregisteredItem) => {
+    setPromoting(item);
+    setForm({ lv1Id: null, lv2Id: null, lv3Id: null, name: item.customName, description: '', sortOrder: '0' });
+    setFormError('');
+    setModalOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    const catId = selectedCategoryId();
+    if (!catId) { setFormError('分類を選択してください'); return; }
+    if (!form.name.trim()) { setFormError('スキル名は必須です'); return; }
+    if (!promoting) return;
+    setSaving(true); setFormError('');
+    try {
+      await promoteItSkill({
+        customName: promoting.customName,
+        categoryId: catId,
+        name: form.name,
+        description: form.description || null,
+        sortOrder: Number(form.sortOrder) || 0,
+      });
+      setModalOpen(false);
+      loadItems();
+      onSkillsReload();
+    } catch {
+      setFormError('昇格に失敗しました');
+    } finally { setSaving(false); }
+  };
+
+  if (tabLoading) return <div className="chart-loading">読み込み中...</div>;
+  if (tabError) return <div className="alert alert--error">{tabError}</div>;
+
+  return (
+    <>
+      <div className="master-card__header" style={{ marginBottom: 16 }}>
+        <h3 className="master-card__title" style={{ marginBottom: 0 }}>カスタムスキル昇格</h3>
+        <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
+          ユーザーが入力したカスタムスキルをマスタに登録できます
+        </span>
+      </div>
+
+      {items.length === 0 ? (
+        <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>
+          昇格待ちのカスタムスキルはありません
+        </div>
+      ) : (
+        <StickyHorizontalScroll className="master-table-wrap">
+          <table className="master-table">
+            <thead>
+              <tr>
+                <th>カスタムスキル名</th>
+                <th style={{ width: 110 }}>使用件数</th>
+                <th style={{ width: 80 }}>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map(item => (
+                <tr key={item.customName}>
+                  <td>{item.customName}</td>
+                  <td style={{ textAlign: 'center' }}>{item.usageCount}件</td>
+                  <td>
+                    <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>昇格</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </StickyHorizontalScroll>
+      )}
+
+      {modalOpen && (
+        <div className="modal-overlay" onClick={() => setModalOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal__header">
+              <h3>カスタムスキル昇格</h3>
+              <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
+            </div>
+            <div className="modal__body">
+              {formError && <div className="alert alert--error">{formError}</div>}
+
+              <div className="form-group">
+                <label className="form-label">カスタムスキル名（元）</label>
+                <div style={{ padding: '6px 0', fontWeight: 500 }}>{promoting?.customName}</div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">分類 <span className="required">*</span></label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <select className="master-select" style={{ width: '100%' }}
+                    value={form.lv1Id ?? ''}
+                    onChange={e => {
+                      const v = e.target.value === '' ? null : Number(e.target.value);
+                      setForm(f => ({ ...f, lv1Id: v, lv2Id: null, lv3Id: null }));
+                    }}>
+                    <option value="">第1階層を選択</option>
+                    {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  {form.lv1Id && lv2Cats(form.lv1Id).length > 0 && (
+                    <select className="master-select" style={{ width: '100%' }}
+                      value={form.lv2Id ?? ''}
+                      onChange={e => {
+                        const v = e.target.value === '' ? null : Number(e.target.value);
+                        setForm(f => ({ ...f, lv2Id: v, lv3Id: null }));
+                      }}>
+                      <option value="">第2階層を選択（任意）</option>
+                      {lv2Cats(form.lv1Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  )}
+                  {form.lv2Id && lv3Cats(form.lv2Id).length > 0 && (
+                    <select className="master-select" style={{ width: '100%' }}
+                      value={form.lv3Id ?? ''}
+                      onChange={e => {
+                        const v = e.target.value === '' ? null : Number(e.target.value);
+                        setForm(f => ({ ...f, lv3Id: v }));
+                      }}>
+                      <option value="">第3階層を選択（任意）</option>
+                      {lv3Cats(form.lv2Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">マスタ登録名 <span className="required">*</span></label>
+                <input className="form-input" value={form.name}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  maxLength={200} />
+                <span className="form-hint">カスタム名から変更して正式名称に統一できます</span>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">説明</label>
+                <textarea className="form-input" value={form.description}
+                  onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+                  rows={3} style={{ resize: 'vertical' }} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">並順</label>
+                <input type="number" className="form-input" value={form.sortOrder}
+                  onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
+                  style={{ width: 100 }} />
+              </div>
+            </div>
+            <div className="modal__footer">
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
+                <IconCheck size={13} />{saving ? '登録中...' : 'マスタに登録'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-type TabKey = 'categories' | 'skills';
+type TabKey = 'categories' | 'skills' | 'promote';
 
 export default function ItSkillMasterPage() {
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
@@ -470,13 +668,19 @@ export default function ItSkillMasterPage() {
             onClick={() => setActiveTab('skills')}>
             ITスキル管理（SCR-009）
           </button>
+          <button className={`tab-btn${activeTab === 'promote' ? ' active' : ''}`}
+            onClick={() => setActiveTab('promote')}>
+            カスタム昇格
+          </button>
         </div>
 
         <section className="master-card">
           {activeTab === 'categories' ? (
             <CategoryTab categories={categories} onReload={loadAll} />
-          ) : (
+          ) : activeTab === 'skills' ? (
             <SkillTab skills={skills} categories={categories} onReload={loadAll} />
+          ) : (
+            <PromotionTab categories={categories} onSkillsReload={loadAll} />
           )}
         </section>
       </main>

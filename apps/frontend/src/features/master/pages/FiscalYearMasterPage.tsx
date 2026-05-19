@@ -9,6 +9,7 @@ import {
   updateFiscalYear,
 } from '../../../shared/api/masterApi';
 import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type ModalMode = 'create' | 'edit';
 
@@ -190,7 +191,7 @@ export default function FiscalYearMasterPage() {
             <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />年度追加</button>
           </div>
 
-          <div className="master-table-wrap">
+          <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
@@ -230,7 +231,7 @@ export default function FiscalYearMasterPage() {
                 )}
               </tbody>
             </table>
-          </div>
+          </StickyHorizontalScroll>
         </section>
       </main>
 

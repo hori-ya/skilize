@@ -5,7 +5,7 @@
 1. [必要なツールのインストール](#1-必要なツールのインストール)
    - [Git](#11-git)
    - [Docker Desktop](#12-docker-desktop)
-   - [JDK 22（IntelliJ デバッグ実行時のみ）](#13-jdk-22intellij-デバッグ実行時のみ)
+   - [JDK 21（IntelliJ デバッグ実行時のみ）](#13-jdk-21intellij-デバッグ実行時のみ)
    - [Node.js（IntelliJ デバッグ実行時のみ）](#14-nodejsintelliJ-デバッグ実行時のみ)
 2. [リポジトリのクローン](#2-リポジトリのクローン)
 3. [環境変数の設定](#3-環境変数の設定)
@@ -102,7 +102,7 @@ docker compose version
 
 ---
 
-### 1.3 JDK 22（IntelliJ デバッグ実行時のみ）
+### 1.3 JDK 21（IntelliJ デバッグ実行時のみ）
 
 バックエンド（Spring Boot）をローカルで直接実行する場合に必要です。  
 Docker 一括起動（方法 A）のみ使う場合はインストール不要です。
@@ -110,20 +110,20 @@ Docker 一括起動（方法 A）のみ使う場合はインストール不要�
 **Windows / Mac 共通**
 
 1. [Adoptium](https://adoptium.net/) にアクセスします
-2. 「Other platforms and versions」から **Version: 22**、JVM: Temurin を選択してダウンロードします
+2. 「Other platforms and versions」から **Version: 21**、JVM: Temurin を選択してダウンロードします
 3. インストーラーに従ってインストールします
 
 **Mac（Homebrew）**
 
 ```bash
-brew install --cask temurin@22
+brew install --cask temurin@21
 ```
 
 **確認**
 
 ```bash
 java --version
-# openjdk 22.x.x と表示されれば OK
+# openjdk 21.x.x と表示されれば OK
 ```
 
 ---
@@ -301,7 +301,7 @@ docker compose down
 ### B. IntelliJ + ローカル起動（デバッグ向け）
 
 バックエンドを IntelliJ でブレークポイントを使ってデバッグしたい場合に使います。  
-JDK 22・Node.js・IntelliJ IDEA が必要です（[1. 必要なツールのインストール](#1-必要なツールのインストール) 参照）。
+JDK 21・Node.js・IntelliJ IDEA が必要です（[1. 必要なツールのインストール](#1-必要なツールのインストール) 参照）。
 
 #### ステップ 1: DB コンテナのみ起動
 
@@ -523,6 +523,6 @@ node --version   # v20 以上であることを確認
 以下を確認してください:
 
 1. `apps/backend/build.gradle` をプロジェクトとしてインポートしているか
-2. 「File」→「Project Structure」→「SDKs」で JDK 22 が登録されているか
+2. 「File」→「Project Structure」→「SDKs」で JDK 21 が登録されているか
 3. 登録されていない場合は「+」→「JDK の追加」でインストール先フォルダを指定します  
-   （例: Mac は `/Library/Java/JavaVirtualMachines/temurin-22.jdk/Contents/Home`）
+   （例: Mac は `/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`）

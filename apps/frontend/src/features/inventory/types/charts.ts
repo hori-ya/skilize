@@ -14,7 +14,7 @@ export interface RadarResponse {
   currentFiscalYear: string | null;
   prevFiscalYear: string | null;
   hasCurrentYearData: boolean;
-  maxLevelValue: number;
+  maxScoreWeight: number;
   axes: RadarAxis[];
 }
 

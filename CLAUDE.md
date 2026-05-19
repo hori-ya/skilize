@@ -17,7 +17,7 @@
 | レイヤー | 技術 |
 |---|---|
 | Frontend | React 18 + TypeScript (Vite) |
-| Backend | Spring Boot 4.0.6 / Java 22 |
+| Backend | Spring Boot 4.0.6 / Java 21 |
 | Auth | Spring Security + JWT (jjwt 0.12.6) |
 | DB | PostgreSQL 16（ローカルは Docker、本番は RDS） |
 | ORM | Spring Data JPA / Hibernate |

@@ -51,14 +51,14 @@ public class MasterController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SkillLevelDto> createSkillLevel(@Valid @RequestBody SkillLevelRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(SkillLevelDto.from(masterService.createSkillLevel(req.levelValue(), req.description())));
+                .body(SkillLevelDto.from(masterService.createSkillLevel(req.levelValue(), req.description(), req.scoreWeight())));
     }
 
     /** スキルレベルを更新する（ADMIN のみ）。active=null の場合は現在の値を維持する。 */
     @PutMapping("/skill-levels/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public SkillLevelDto updateSkillLevel(@PathVariable int id, @Valid @RequestBody SkillLevelRequest req) {
-        return SkillLevelDto.from(masterService.updateSkillLevel(id, req.levelValue(), req.description(), req.active()));
+        return SkillLevelDto.from(masterService.updateSkillLevel(id, req.levelValue(), req.description(), req.active(), req.scoreWeight()));
     }
 
     /**
@@ -92,6 +92,25 @@ public class MasterController {
         return ItSkillDto.from(skill, resolveCategory1(skill));
     }
 
+    /** マスタ未登録のカスタムITスキル名一覧を返す（TL/ADMIN）。 */
+    @GetMapping("/it-skills/custom-unregistered")
+    @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
+    public List<CustomUnregisteredDto> getCustomUnregisteredItSkills() {
+        return masterService.getCustomUnregisteredItSkills().stream()
+                .map(row -> new CustomUnregisteredDto((String) row[0], (long) row[1]))
+                .toList();
+    }
+
+    /** カスタムITスキルをマスタに昇格する（TL/ADMIN）。 */
+    @PostMapping("/it-skills/promote")
+    @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
+    public ResponseEntity<ItSkillDto> promoteItSkill(@Valid @RequestBody PromoteItSkillRequest req) {
+        ItSkill skill = masterService.promoteItSkill(req.customName(), req.categoryId(), req.name(),
+                req.description(), req.sortOrder());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ItSkillDto.from(skill, resolveCategory1(skill)));
+    }
+
     /** 資格一覧を返す。isActive フィルタリング可能。 */
     @GetMapping("/qualifications")
     public List<QualificationDto> getQualifications(@RequestParam(required = false) Boolean isActive) {
@@ -116,6 +135,24 @@ public class MasterController {
     public QualificationDto updateQualification(@PathVariable int id, @Valid @RequestBody QualificationRequest req) {
         return QualificationDto.from(masterService.updateQualification(id, req.categoryId(), req.name(),
                 req.description(), req.sortOrder(), req.active()));
+    }
+
+    /** マスタ未登録のカスタム資格名一覧を返す（TL/ADMIN）。 */
+    @GetMapping("/qualifications/custom-unregistered")
+    @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
+    public List<CustomUnregisteredDto> getCustomUnregisteredQualifications() {
+        return masterService.getCustomUnregisteredQualifications().stream()
+                .map(row -> new CustomUnregisteredDto((String) row[0], (long) row[1]))
+                .toList();
+    }
+
+    /** カスタム資格をマスタに昇格する（TL/ADMIN）。 */
+    @PostMapping("/qualifications/promote")
+    @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
+    public ResponseEntity<QualificationDto> promoteQualification(@Valid @RequestBody PromoteQualificationRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(QualificationDto.from(
+                masterService.promoteQualification(req.customName(), req.categoryId(), req.name(),
+                        req.description(), req.sortOrder())));
     }
 
     /** 資格分類一覧を返す。isActive=true の場合は有効のみ、未指定で全件。 */
@@ -251,16 +288,17 @@ public class MasterController {
                 .orElse(cat);
     }
 
-    public record SkillLevelDto(int id, short levelValue, String description, boolean isActive) {
+    public record SkillLevelDto(int id, short levelValue, String description, boolean isActive, int scoreWeight) {
         static SkillLevelDto from(SkillLevel s) {
-            return new SkillLevelDto(s.getId(), s.getLevelValue(), s.getDescription(), s.isActive());
+            return new SkillLevelDto(s.getId(), s.getLevelValue(), s.getDescription(), s.isActive(), s.getScoreWeight());
         }
     }
 
     public record SkillLevelRequest(
             @NotNull @Min(1) Short levelValue,
             @NotBlank String description,
-            Boolean active
+            Boolean active,
+            @NotNull @Min(0) Integer scoreWeight
     ) {}
 
     public record ItSkillRequest(
@@ -370,4 +408,22 @@ public class MasterController {
             return new AdSeminarCategoryDto(c.getId(), c.getName(), c.getSortOrder(), c.isActive());
         }
     }
+
+    public record CustomUnregisteredDto(String customName, long usageCount) {}
+
+    public record PromoteItSkillRequest(
+            @NotBlank String customName,
+            @NotNull Integer categoryId,
+            @NotBlank String name,
+            String description,
+            Integer sortOrder
+    ) {}
+
+    public record PromoteQualificationRequest(
+            @NotBlank String customName,
+            Integer categoryId,
+            @NotBlank String name,
+            String description,
+            Integer sortOrder
+    ) {}
 }

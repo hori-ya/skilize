@@ -17,6 +17,7 @@ import type { UserExpectation } from '../types/index';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import NavBar from '../../../app/layouts/NavBar';
 import AiAnalysisCard from '../../inventory/components/AiAnalysisCard';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type TabKey = 'it-skills' | 'qualifications' | 'seminars' | 'goals' | 'expectations' | 'ai-analysis';
 
@@ -150,7 +151,11 @@ export default function MemberDetailPage() {
     const sx = e.clientX, sy = e.clientY;
     const sl = panelRect.left, st = panelRect.top;
     attachDrag((ev) => {
-      setPanelRect(prev => ({ ...prev, left: sl + ev.clientX - sx, top: st + ev.clientY - sy }));
+      setPanelRect(prev => ({
+        ...prev,
+        left: Math.max(0, Math.min(window.innerWidth - prev.width, sl + ev.clientX - sx)),
+        top: Math.max(0, Math.min(window.innerHeight - prev.height, st + ev.clientY - sy)),
+      }));
     });
   }
 
@@ -162,10 +167,22 @@ export default function MemberDetailPage() {
     attachDrag((ev) => {
       const dx = ev.clientX - sx, dy = ev.clientY - sy;
       let nl = left, nt = top, nw = width, nh = height;
-      if (dir.includes('e')) nw = Math.max(240, width + dx);
-      if (dir.includes('s')) nh = Math.max(200, height + dy);
-      if (dir.includes('w')) { nw = Math.max(240, width - dx); nl = left + width - nw; }
-      if (dir.includes('n')) { nh = Math.max(200, height - dy); nt = top + height - nh; }
+      if (dir.includes('e')) {
+        nw = Math.min(Math.max(240, width + dx), window.innerWidth - nl);
+      }
+      if (dir.includes('s')) {
+        nh = Math.min(Math.max(200, height + dy), window.innerHeight - nt);
+      }
+      if (dir.includes('w')) {
+        nw = Math.max(240, width - dx);
+        nl = left + width - nw;
+        if (nl < 0) { nl = 0; nw = left + width; }
+      }
+      if (dir.includes('n')) {
+        nh = Math.max(200, height - dy);
+        nt = top + height - nh;
+        if (nt < 0) { nt = 0; nh = top + height; }
+      }
       setPanelRect({ left: nl, top: nt, width: nw, height: nh });
     });
   }
@@ -472,7 +489,7 @@ export default function MemberDetailPage() {
                 {/* ── ITスキルタブ ── */}
                 {activeTab === 'it-skills' && (
                   <div className="history-tab-content">
-                    <div className="comparison-table-wrapper">
+                    <StickyHorizontalScroll className="comparison-table-wrapper">
                       <table className="comparison-table">
                         <thead>
                           <tr>
@@ -538,7 +555,7 @@ export default function MemberDetailPage() {
                           )}
                         </tbody>
                       </table>
-                    </div>
+                    </StickyHorizontalScroll>
                   </div>
                 )}
 
@@ -548,7 +565,7 @@ export default function MemberDetailPage() {
                     {qualificationDetails.length === 0 ? (
                       <p className="no-data">資格データがありません</p>
                     ) : (
-                      <div className="master-table-wrap">
+                      <StickyHorizontalScroll className="master-table-wrap">
                         <table className="master-table">
                           <thead>
                             <tr>
@@ -574,7 +591,7 @@ export default function MemberDetailPage() {
                             ))}
                           </tbody>
                         </table>
-                      </div>
+                      </StickyHorizontalScroll>
                     )}
                   </div>
                 )}
@@ -585,7 +602,7 @@ export default function MemberDetailPage() {
                     {seminarDetails.length === 0 ? (
                       <p className="no-data">セミナーデータがありません</p>
                     ) : (
-                      <div className="master-table-wrap">
+                      <StickyHorizontalScroll className="master-table-wrap">
                         <table className="master-table">
                           <thead>
                             <tr>
@@ -610,7 +627,7 @@ export default function MemberDetailPage() {
                             ))}
                           </tbody>
                         </table>
-                      </div>
+                      </StickyHorizontalScroll>
                     )}
                   </div>
                 )}
@@ -625,7 +642,7 @@ export default function MemberDetailPage() {
                         {prevGoals.length > 0 && (
                           <div className="history-goal-section">
                             <h3 className="history-goal-title">前年度目標</h3>
-                            <div className="master-table-wrap">
+                            <StickyHorizontalScroll className="master-table-wrap">
                               <table className="master-table">
                                 <thead>
                                   <tr>
@@ -655,13 +672,13 @@ export default function MemberDetailPage() {
                                   })}
                                 </tbody>
                               </table>
-                            </div>
+                            </StickyHorizontalScroll>
                           </div>
                         )}
                         {goals.length > 0 && (
                           <div className="history-goal-section">
                             <h3 className="history-goal-title">今年度目標</h3>
-                            <div className="master-table-wrap">
+                            <StickyHorizontalScroll className="master-table-wrap">
                               <table className="master-table">
                                 <thead>
                                   <tr>
@@ -691,7 +708,7 @@ export default function MemberDetailPage() {
                                   })}
                                 </tbody>
                               </table>
-                            </div>
+                            </StickyHorizontalScroll>
                           </div>
                         )}
                       </>

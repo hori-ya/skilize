@@ -9,6 +9,7 @@ import { getItSkills, getSkillLevels, getQualifications, getAdSeminars } from '.
 import type { InventoryDetail } from '../types/index';
 import type { ItSkill, SkillLevel, Qualification, AdSeminar } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
 
 type Tab = 'itSkill' | 'qualification' | 'seminar';
 
@@ -53,6 +54,7 @@ export default function InventoryPage() {
   const [tab, setTab] = useState<Tab>('itSkill');
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [validationAttempted, setValidationAttempted] = useState(false);
@@ -370,8 +372,10 @@ export default function InventoryPage() {
     }
   }, [inventoryId, seminarRows, isSaving]);
 
-  const handleSubmit = async () => {
-    if (!window.confirm('棚卸を提出しますか？提出後も再編集できます。')) return;
+  const handleSubmit = () => setShowSubmitConfirm(true);
+
+  const doSubmit = async () => {
+    setShowSubmitConfirm(false);
     setIsSubmitting(true);
     try {
       await submitInventory(inventoryId);
@@ -834,6 +838,16 @@ export default function InventoryPage() {
           </button>
         </div>
       </main>
+
+      {showSubmitConfirm && (
+        <ConfirmDialog
+          title="棚卸の提出"
+          message="棚卸を提出しますか？提出後も再編集できます。"
+          confirmLabel="提出する"
+          onConfirm={doSubmit}
+          onCancel={() => setShowSubmitConfirm(false)}
+        />
+      )}
     </div>
   );
 }

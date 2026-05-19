@@ -1,11 +1,15 @@
 package com.skilize.master.application;
 
+import com.skilize.inventory.domain.ItSkillDetailRepository;
+import com.skilize.inventory.domain.QualificationDetailRepository;
 import com.skilize.master.domain.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 /**
  * マスタデータ（スキルレベル・ITスキル・ITスキル分類・資格・資格分類・ADセミナー・ADセミナー分類）の
@@ -23,11 +27,14 @@ public class MasterService {
     private final QualificationCategoryRepository qualificationCategoryRepository;
     private final AdSeminarRepository adSeminarRepository;
     private final AdSeminarCategoryRepository adSeminarCategoryRepository;
+    // 昇格時に棚卸明細のカスタム名をマスタへ紐付けるため inventory ドメインのリポジトリを参照する
+    private final ItSkillDetailRepository itSkillDetailRepository;
+    private final QualificationDetailRepository qualificationDetailRepository;
 
     /** スキルレベルを新規作成する。 */
     @Transactional
-    public SkillLevel createSkillLevel(Short levelValue, String description) {
-        return skillLevelRepository.save(SkillLevel.create(levelValue, description));
+    public SkillLevel createSkillLevel(Short levelValue, String description, int scoreWeight) {
+        return skillLevelRepository.save(SkillLevel.create(levelValue, description, scoreWeight));
     }
 
     /**
@@ -35,11 +42,11 @@ public class MasterService {
      * active が null の場合は現在の値を維持する（部分更新パターン）。
      */
     @Transactional
-    public SkillLevel updateSkillLevel(int id, Short levelValue, String description, Boolean active) {
+    public SkillLevel updateSkillLevel(int id, Short levelValue, String description, Boolean active, int scoreWeight) {
         SkillLevel level = skillLevelRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         // active が null = フロントエンドから未送信 → 既存の値をそのまま使う
-        level.update(levelValue, description, active != null ? active : level.isActive());
+        level.update(levelValue, description, active != null ? active : level.isActive(), scoreWeight);
         return skillLevelRepository.save(level);
     }
 
@@ -190,5 +197,45 @@ public class MasterService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         c.update(name, sortOrder != null ? sortOrder : c.getSortOrder(), active != null ? active : c.isActive());
         return adSeminarCategoryRepository.save(c);
+    }
+
+    /** マスタ未登録のカスタムITスキル名一覧を使用件数付きで返す。 */
+    public List<Object[]> getCustomUnregisteredItSkills() {
+        return itSkillDetailRepository.findCustomUnregisteredSkillNames();
+    }
+
+    /**
+     * カスタムITスキルをマスタに昇格する。
+     * 新規 ItSkill を登録し、同名カスタムスキル明細を新マスタへ紐付ける（同一トランザクション）。
+     */
+    @Transactional
+    public ItSkill promoteItSkill(String customName, int categoryId, String name, String description, Integer sortOrder) {
+        ItSkillCategory category = itSkillCategoryRepository.findById(categoryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "分類が見つかりません"));
+        ItSkill skill = itSkillRepository.save(
+                ItSkill.create(category, name, description, sortOrder != null ? sortOrder : 0));
+        itSkillDetailRepository.linkToMasterSkill(customName, skill);
+        return skill;
+    }
+
+    /** マスタ未登録のカスタム資格名一覧を使用件数付きで返す。 */
+    public List<Object[]> getCustomUnregisteredQualifications() {
+        return qualificationDetailRepository.findCustomUnregisteredQualificationNames();
+    }
+
+    /**
+     * カスタム資格をマスタに昇格する。
+     * 新規 Qualification を登録し、同名カスタム資格明細を新マスタへ紐付ける（同一トランザクション）。
+     */
+    @Transactional
+    public Qualification promoteQualification(String customName, Integer categoryId, String name, String description, Integer sortOrder) {
+        QualificationCategory cat = categoryId != null
+                ? qualificationCategoryRepository.findById(categoryId)
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません"))
+                : null;
+        Qualification q = qualificationRepository.save(
+                Qualification.create(cat, name, description, sortOrder != null ? sortOrder : 0));
+        qualificationDetailRepository.linkToMasterQualification(customName, q);
+        return q;
     }
 }

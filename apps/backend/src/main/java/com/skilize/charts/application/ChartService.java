@@ -61,9 +61,9 @@ public class ChartService {
                 : null;
 
         // computeIfAbsent: キーが存在しない場合のみ新しいリストを作成してマップに挿入する。
-        // cat1（大分類）ごとにスキルレベル値を集約し、後で平均を計算する。
-        // cat1Id → scored levelValues
-        Map<Integer, List<Short>> currentByCat1 = new HashMap<>();
+        // cat1（大分類）ごとにスコア重みを集約し、後で平均を計算する。
+        // cat1Id → scored scoreWeights
+        Map<Integer, List<Integer>> currentByCat1 = new HashMap<>();
         boolean hasCurrentYearData = false;
         if (currentInv != null) {
             for (ItSkillDetail d : itSkillDetailRepository.findByInventoryId(currentInv.getId())) {
@@ -71,33 +71,33 @@ public class ChartService {
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
                 currentByCat1.computeIfAbsent(cat1.getId(), k -> new ArrayList<>())
-                        .add(d.getSkillLevel().getLevelValue());
+                        .add(d.getSkillLevel().getScoreWeight());
                 hasCurrentYearData = true;
             }
         }
 
-        Map<Integer, List<Short>> prevByCat1 = new HashMap<>();
+        Map<Integer, List<Integer>> prevByCat1 = new HashMap<>();
         if (prevInv != null) {
             for (ItSkillDetail d : itSkillDetailRepository.findByInventoryId(prevInv.getId())) {
                 if (d.getItSkill() == null) continue;
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
                 prevByCat1.computeIfAbsent(cat1.getId(), k -> new ArrayList<>())
-                        .add(d.getSkillLevel().getLevelValue());
+                        .add(d.getSkillLevel().getScoreWeight());
             }
         }
 
         final boolean hasPrevInv = prevInv != null;
         List<RadarAxis> axes = cat1List.stream().map(cat1 -> {
-            List<Short> cs = currentByCat1.getOrDefault(cat1.getId(), List.of());
-            List<Short> ps = prevByCat1.getOrDefault(cat1.getId(), List.of());
-            double currentAvg = cs.isEmpty() ? 0.0 : round1(average(cs));
-            Double prevAvg = hasPrevInv ? (ps.isEmpty() ? null : round1(average(ps))) : null;
+            List<Integer> cs = currentByCat1.getOrDefault(cat1.getId(), List.of());
+            List<Integer> ps = prevByCat1.getOrDefault(cat1.getId(), List.of());
+            double currentAvg = cs.isEmpty() ? 0.0 : round1(averageInt(cs));
+            Double prevAvg = hasPrevInv ? (ps.isEmpty() ? null : round1(averageInt(ps))) : null;
             return new RadarAxis(cat1.getId(), cat1.getName(), currentAvg, prevAvg);
         }).toList();
 
         String prevFyName = prevInv != null ? prevInv.getFiscalYear().getName() : null;
-        return new RadarResponse(currentFy.getName(), prevFyName, hasCurrentYearData, maxLevelValue, axes);
+        return new RadarResponse(currentFy.getName(), prevFyName, hasCurrentYearData, getMaxScoreWeight(), axes);
     }
 
     // ===== Growth =====
@@ -120,27 +120,44 @@ public class ChartService {
             return new GrowthResponse(List.of(), series);
         }
 
-        // invId → cat1Id → total score
+        // カスタムスキルは最大重みで集計するため取得しておく
+        int maxWeight = getMaxScoreWeight();
+        // カスタムスキル用の仮 ID（マスタ cat1 と衝突しない負値）
+        final int CUSTOM_SERIES_ID = -1;
+
+        // invId → (cat1Id | CUSTOM_SERIES_ID) → total score
         Map<Integer, Map<Integer, Integer>> scoreMap = new HashMap<>();
         for (Inventory inv : submitted) {
             Map<Integer, Integer> cat1Score = new HashMap<>();
             for (ItSkillDetail d : itSkillDetailRepository.findByInventoryId(inv.getId())) {
-                if (d.getItSkill() == null) continue;
+                if (d.getItSkill() == null) {
+                    // カスタムスキル: スコアへの寄与を最大重みで扱う
+                    cat1Score.merge(CUSTOM_SERIES_ID, maxWeight, Integer::sum);
+                    continue;
+                }
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
                 // Map.merge: キーが存在すればマージ関数（Integer::sum）で合計、存在しなければ新規挿入する
-            cat1Score.merge(cat1.getId(), (int) d.getSkillLevel().getLevelValue(), Integer::sum);
+                cat1Score.merge(cat1.getId(), d.getSkillLevel().getScoreWeight(), Integer::sum);
             }
             scoreMap.put(inv.getId(), cat1Score);
         }
 
         List<String> fiscalYears = submitted.stream().map(i -> i.getFiscalYear().getName()).toList();
-        List<GrowthSeries> series = cat1List.stream().map(cat1 -> {
+        List<GrowthSeries> series = new ArrayList<>(cat1List.stream().map(cat1 -> {
             List<Integer> scores = submitted.stream()
                     .map(inv -> scoreMap.getOrDefault(inv.getId(), Map.of()).getOrDefault(cat1.getId(), 0))
                     .toList();
             return new GrowthSeries(cat1.getId(), cat1.getName(), scores);
-        }).toList();
+        }).toList());
+
+        // カスタムスキルが1件以上あれば末尾に追加
+        List<Integer> customScores = submitted.stream()
+                .map(inv -> scoreMap.getOrDefault(inv.getId(), Map.of()).getOrDefault(CUSTOM_SERIES_ID, 0))
+                .toList();
+        if (customScores.stream().anyMatch(s -> s > 0)) {
+            series.add(new GrowthSeries(CUSTOM_SERIES_ID, "カスタムスキル", customScores));
+        }
 
         return new GrowthResponse(fiscalYears, series);
     }
@@ -346,6 +363,13 @@ public class ChartService {
                 .orElse(5);
     }
 
+    private int getMaxScoreWeight() {
+        return skillLevelRepository.findByActiveOrderByLevelValueAsc(true).stream()
+                .mapToInt(SkillLevel::getScoreWeight)
+                .max()
+                .orElse(4);
+    }
+
     // カテゴリツリーを leaf から上方向にたどり targetLevel の祖先カテゴリを返す
     // 最大5回でガードするのは循環参照や想定外の深い階層への対策
     private ItSkillCategory resolveAncestorById(int leafCategoryId,
@@ -366,6 +390,10 @@ public class ChartService {
         return values.stream().mapToInt(Short::intValue).average().orElse(0.0);
     }
 
+    private double averageInt(List<Integer> values) {
+        return values.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+    }
+
     // 小数第1位に丸める。Math.round は最近接偶数丸めではなく四捨五入（0.5 → 切り上げ）。
     private double round1(double value) {
         return Math.round(value * 10.0) / 10.0;
@@ -381,7 +409,7 @@ public class ChartService {
     // ===== Response DTOs =====
 
     public record RadarResponse(String currentFiscalYear, String prevFiscalYear,
-                                 boolean hasCurrentYearData, int maxLevelValue,
+                                 boolean hasCurrentYearData, int maxScoreWeight,
                                  List<RadarAxis> axes) {}
 
     public record RadarAxis(int category1Id, String category1Name,

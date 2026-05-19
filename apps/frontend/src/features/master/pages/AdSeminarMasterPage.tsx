@@ -6,6 +6,7 @@ import {
   getAdSeminarCategories, createAdSeminarCategory, updateAdSeminarCategory,
 } from '../../../shared/api/masterApi';
 import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type ModalMode = 'create' | 'edit';
 
@@ -60,7 +61,7 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
         <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />カテゴリ追加</button>
       </div>
 
-      <div className="master-table-wrap">
+      <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
@@ -91,7 +92,7 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
             )}
           </tbody>
         </table>
-      </div>
+      </StickyHorizontalScroll>
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
@@ -223,7 +224,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
         </button>
       </div>
 
-      <div className="master-table-wrap">
+      <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
@@ -258,7 +259,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
             )}
           </tbody>
         </table>
-      </div>
+      </StickyHorizontalScroll>
 
       {modalOpen && (
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>

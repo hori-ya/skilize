@@ -33,6 +33,10 @@ public class SkillLevel {
     @Column(nullable = false)
     private String description;
 
+    // グラフスコア計算用の重み値（0=スコアに寄与しない）
+    @Column(name = "score_weight", nullable = false)
+    private int scoreWeight;
+
     // 有効フラグ
     @Column(name = "is_active", nullable = false)
     private boolean active;
@@ -45,17 +49,19 @@ public class SkillLevel {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
-    public static SkillLevel create(Short levelValue, String description) {
+    public static SkillLevel create(Short levelValue, String description, int scoreWeight) {
         SkillLevel s = new SkillLevel();
         s.levelValue = levelValue;
         s.description = description;
+        s.scoreWeight = scoreWeight;
         s.active = true;
         return s;
     }
 
-    public void update(Short levelValue, String description, boolean active) {
+    public void update(Short levelValue, String description, boolean active, int scoreWeight) {
         this.levelValue = levelValue;
         this.description = description;
         this.active = active;
+        this.scoreWeight = scoreWeight;
     }
 }

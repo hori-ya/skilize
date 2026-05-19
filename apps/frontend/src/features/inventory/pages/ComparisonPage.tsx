@@ -6,6 +6,7 @@ import type { ComparisonResponse, ComparisonItem } from '../types/index';
 import type { ItSkill } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconArrowRight } from '../../../shared/ui/Icons';
+import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 export default function ComparisonPage() {
   const { id } = useParams<{ id: string }>();
@@ -144,7 +145,7 @@ export default function ComparisonPage() {
               </div>
             )}
 
-            <div className="comparison-table-wrapper">
+            <StickyHorizontalScroll className="comparison-table-wrapper">
               <table className="comparison-table">
                 <thead>
                   <tr>
@@ -184,7 +185,7 @@ export default function ComparisonPage() {
                   )}
                 </tbody>
               </table>
-            </div>
+            </StickyHorizontalScroll>
 
             <div className="action-row">
               <button className="btn btn-primary" onClick={handleNext}>

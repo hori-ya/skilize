@@ -44,8 +44,8 @@ export default function TimelineChartCard({ events }: Props) {
     <div className="chart-card chart-card--full">
       <p className="chart-card__title">ラーニングタイムライン</p>
       <div className="timeline">
-        <TimelineLane label="成果（資格）" events={achievement} colorClass="timeline-lane--achievement" />
-        <TimelineLane label="活動（学習）" events={activity} colorClass="timeline-lane--activity" />
+        <TimelineLane label="資格取得" events={achievement} colorClass="timeline-lane--achievement" />
+        <TimelineLane label="学習活動" events={activity} colorClass="timeline-lane--activity" />
       </div>
     </div>
   );

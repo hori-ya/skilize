@@ -1,4 +1,4 @@
-FROM eclipse-temurin:22-jdk-alpine
+FROM eclipse-temurin:21-jdk-alpine
 
 ENV GRADLE_VERSION=9.4.1
 

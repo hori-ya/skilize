@@ -31,6 +31,7 @@ export interface SkillLevel {
   levelValue: number;
   description: string;
   isActive: boolean;
+  scoreWeight: number;
 }
 
 export interface ItSkillCategory {
@@ -101,4 +102,9 @@ export interface SeminarCategory {
   name: string;
   sortOrder: number;
   isActive: boolean;
+}
+
+export interface CustomUnregisteredItem {
+  customName: string;
+  usageCount: number;
 }

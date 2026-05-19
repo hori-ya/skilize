@@ -47,6 +47,16 @@ export default function DashboardPage() {
     getMyAiAnalyses().then(res => setAiAnalyses(res.data)).catch(() => {});
   }, []);
 
+  // PENDING / PROCESSING 中は 10 秒ごとにポーリングして完了を検知する
+  const latestAnalysisStatus = aiAnalyses[0]?.status;
+  useEffect(() => {
+    if (latestAnalysisStatus !== 'PENDING' && latestAnalysisStatus !== 'PROCESSING') return;
+    const timer = setInterval(() => {
+      getMyAiAnalyses().then(res => setAiAnalyses(res.data)).catch(() => {});
+    }, 10000);
+    return () => clearInterval(timer);
+  }, [latestAnalysisStatus]);
+
   const handleStartInventory = async () => {
     if (!dashboard?.currentFiscalYear) return;
     setIsCreating(true);
@@ -75,6 +85,35 @@ export default function DashboardPage() {
     }
   };
 
+  const deadlineBanner = (() => {
+    const fy = dashboard?.currentFiscalYear;
+    const invStatus = dashboard?.currentInventory?.status;
+    // 提出済み（PENDING_GOAL / COMPLETED）はアラート不要
+    if (!fy || invStatus === 'PENDING_GOAL' || invStatus === 'COMPLETED') return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (fy.inputStartDate) {
+      const start = new Date(fy.inputStartDate);
+      if (today < start) {
+        const daysUntil = Math.ceil((start.getTime() - today.getTime()) / 86400000);
+        return { level: 'warning' as const, message: `入力期間は ${fy.inputStartDate} から開始します（あと ${daysUntil} 日）` };
+      }
+    }
+
+    if (!fy.inputEndDate) return null;
+
+    const end = new Date(fy.inputEndDate);
+    const daysLeft = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+
+    if (daysLeft < 0) return { level: 'error' as const, message: `入力期間が終了しました（締切：${fy.inputEndDate}）` };
+    if (daysLeft === 0) return { level: 'urgent' as const, message: `今日が入力締切日です（${fy.inputEndDate}）` };
+    if (daysLeft <= 3)  return { level: 'urgent' as const, message: `入力締切まであと ${daysLeft} 日です（締切：${fy.inputEndDate}）` };
+    if (daysLeft <= 7)  return { level: 'warning' as const, message: `入力締切まであと ${daysLeft} 日です（締切：${fy.inputEndDate}）` };
+    return null;
+  })();
+
   const statusLabel = (status: string) => {
     switch (status) {
       case 'DRAFT': return '入力中（下書き）';
@@ -99,6 +138,13 @@ export default function DashboardPage() {
       <NavBar />
       <main className="dashboard-main">
         <h1 className="dashboard-title">ダッシュボード</h1>
+
+        {deadlineBanner && (
+          <div className={`deadline-banner deadline-banner--${deadlineBanner.level}`}>
+            <span>{deadlineBanner.level === 'warning' ? '⚠️' : '🚨'}</span>
+            <span>{deadlineBanner.message}</span>
+          </div>
+        )}
 
         {dashboard?.currentFiscalYear && (
           <div className="dashboard-card">
@@ -179,10 +225,25 @@ export default function DashboardPage() {
         </section>
 
         {/* AI Analysis section */}
-        {aiAnalyses.length > 0 && (
+        {dashboard?.currentFiscalYear && (
           <section className="ai-analysis-section">
             <h2 className="chart-section__title">AIキャリア分析</h2>
-            <AiAnalysisCard analysis={aiAnalyses[0]} />
+            {aiAnalyses.length > 0 ? (
+              <AiAnalysisCard
+                analysis={aiAnalyses[0]}
+                fiscalYearName={
+                  aiAnalyses[0].fiscalYearId === dashboard.currentFiscalYear.id
+                    ? dashboard.currentFiscalYear.name
+                    : undefined
+                }
+              />
+            ) : (
+              <div className="ai-analysis-card ai-analysis-card--none">
+                <p className="ai-no-analysis-text">
+                  棚卸を提出すると、AIによるキャリア分析が自動的に開始されます。
+                </p>
+              </div>
+            )}
           </section>
         )}
       </main>

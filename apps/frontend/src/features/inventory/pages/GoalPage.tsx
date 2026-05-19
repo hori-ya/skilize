@@ -5,6 +5,7 @@ import { getItSkills, getQualifications, getAdSeminars } from '../../../shared/a
 import type { ItSkill, Qualification, AdSeminar } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconSave, IconCheck, IconPlus } from '../../../shared/ui/Icons';
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
 
 type GoalCategory = 'IT_SKILL' | 'QUALIFICATION' | 'AD';
 
@@ -37,6 +38,7 @@ export default function GoalPage() {
   const [adSeminars, setAdSeminars] = useState<AdSeminar[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [error, setError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
 
@@ -92,7 +94,10 @@ export default function GoalPage() {
     }
   };
 
+  const handleCompleteClick = () => setShowCompleteConfirm(true);
+
   const handleComplete = async () => {
+    setShowCompleteConfirm(false);
     setIsCompleting(true);
     setError('');
     try {
@@ -224,12 +229,22 @@ export default function GoalPage() {
             <IconSave size={15} />
             {isSaving ? '保存中...' : '一時保存'}
           </button>
-          <button className="btn btn-primary" onClick={handleComplete} disabled={isCompleting}>
+          <button className="btn btn-primary" onClick={handleCompleteClick} disabled={isCompleting}>
             <IconCheck size={15} />
             {isCompleting ? '完了中...' : '目標設定を完了してダッシュボードへ'}
           </button>
         </div>
       </main>
+
+      {showCompleteConfirm && (
+        <ConfirmDialog
+          title="目標設定の完了"
+          message="目標設定を完了してダッシュボードに戻りますか？"
+          confirmLabel="完了する"
+          onConfirm={handleComplete}
+          onCancel={() => setShowCompleteConfirm(false)}
+        />
+      )}
     </div>
   );
 }

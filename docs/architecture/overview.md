@@ -53,7 +53,7 @@
 |--------------|------|------|
 | Nginx | nginx:alpine | リバースプロキシ。`/api/*` をバックエンド、それ以外をフロントエンドへルーティング |
 | Frontend | React | SPA。画面描画・ユーザー操作の受付 |
-| Backend | Spring Boot 4.0.6 / Java 22 | REST API提供。ビジネスロジック・認証・認可 |
+| Backend | Spring Boot 4.0.6 / Java 21 | REST API提供。ビジネスロジック・認証・認可 |
 | AI Module | Python 3.12 / FastAPI / LangChain | AIキャリア分析。Spring Boot から内部 HTTP で非同期呼び出し。外部公開しない |
 | Database | PostgreSQL 16.4（AWS RDS） | データ永続化 |
 

@@ -4,6 +4,7 @@ import { getGoalReview, saveGoalReview, completeGoalReview } from '../api/invent
 import type { GoalReviewResponse, AchievementStatus } from '../types/index';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconSave, IconCheck } from '../../../shared/ui/Icons';
+import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
 
 const ACHIEVEMENT_OPTIONS: { value: AchievementStatus | ''; label: string }[] = [
   { value: '', label: '（未選択）' },
@@ -32,6 +33,7 @@ export default function GoalReviewPage() {
   const [reviewState, setReviewState] = useState<Record<number, ReviewState>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   useEffect(() => {
     getGoalReview(inventoryId).then(res => {
@@ -62,7 +64,10 @@ export default function GoalReviewPage() {
     }
   };
 
+  const handleCompleteClick = () => setShowCompleteConfirm(true);
+
   const handleComplete = async () => {
+    setShowCompleteConfirm(false);
     setIsCompleting(true);
     try {
       // Save first
@@ -140,12 +145,22 @@ export default function GoalReviewPage() {
             <IconSave size={15} />
             {isSaving ? '保存中...' : '一時保存'}
           </button>
-          <button className="btn btn-primary" onClick={handleComplete} disabled={isCompleting}>
+          <button className="btn btn-primary" onClick={handleCompleteClick} disabled={isCompleting}>
             <IconCheck size={15} />
             {isCompleting ? '完了中...' : '振り返りを完了して目標設定へ'}
           </button>
         </div>
       </main>
+
+      {showCompleteConfirm && (
+        <ConfirmDialog
+          title="振り返りの完了"
+          message="振り返りを完了して目標設定画面へ進みますか？"
+          confirmLabel="完了する"
+          onConfirm={handleComplete}
+          onCancel={() => setShowCompleteConfirm(false)}
+        />
+      )}
     </div>
   );
 }

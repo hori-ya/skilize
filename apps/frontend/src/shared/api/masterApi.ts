@@ -3,15 +3,15 @@
  * isActive パラメーターを省略した場合はすべて（有効・無効含む）を取得する。
  */
 import apiClient from './client';
-import type { FiscalYear, FiscalYearSettings, FiscalYearRequest, SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory } from '../types/master';
+import type { FiscalYear, FiscalYearSettings, FiscalYearRequest, SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory, CustomUnregisteredItem } from '../types/master';
 
 export const getFiscalYears = () => apiClient.get<FiscalYear[]>('/fiscal-years');
 export const getCurrentFiscalYear = () => apiClient.get<FiscalYear>('/fiscal-years/current');
 export const getSkillLevels = (isActive?: boolean) =>
   apiClient.get<SkillLevel[]>('/skill-levels', { params: isActive !== undefined ? { isActive } : {} });
-export const createSkillLevel = (data: { levelValue: number; description: string }) =>
+export const createSkillLevel = (data: { levelValue: number; description: string; scoreWeight: number }) =>
   apiClient.post<SkillLevel>('/skill-levels', data);
-export const updateSkillLevel = (id: number, data: { levelValue: number; description: string; active: boolean }) =>
+export const updateSkillLevel = (id: number, data: { levelValue: number; description: string; active: boolean; scoreWeight: number }) =>
   apiClient.put<SkillLevel>(`/skill-levels/${id}`, data);
 export const getItSkills = (isActive?: boolean) =>
   apiClient.get<ItSkill[]>('/it-skills', { params: isActive !== undefined ? { isActive } : {} });
@@ -50,6 +50,14 @@ export const createAdSeminarCategory = (data: { name: string; sortOrder: number 
 export const updateAdSeminarCategory = (id: number, data: { name: string; sortOrder: number; active: boolean }) =>
   apiClient.put<AdSeminarCategory>(`/ad-seminar-categories/${id}`, data);
 export const getSeminarCategories = () => apiClient.get<SeminarCategory[]>('/seminar-categories');
+export const getCustomUnregisteredItSkills = () =>
+  apiClient.get<CustomUnregisteredItem[]>('/it-skills/custom-unregistered');
+export const promoteItSkill = (data: { customName: string; categoryId: number; name: string; description: string | null; sortOrder: number }) =>
+  apiClient.post<ItSkill>('/it-skills/promote', data);
+export const getCustomUnregisteredQualifications = () =>
+  apiClient.get<CustomUnregisteredItem[]>('/qualifications/custom-unregistered');
+export const promoteQualification = (data: { customName: string; categoryId: number | null; name: string; description: string | null; sortOrder: number }) =>
+  apiClient.post<Qualification>('/qualifications/promote', data);
 
 export const getFiscalYearSettings = () => apiClient.get<FiscalYearSettings>('/fiscal-year-settings');
 export const updateFiscalYearSettings = (data: { fiscalYearStartMonth: number }) =>

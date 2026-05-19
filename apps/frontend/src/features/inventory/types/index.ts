@@ -130,7 +130,7 @@ export interface AiAnalysis {
 
 export interface DashboardResponse {
   user: { id: number; name: string; role: string };
-  currentFiscalYear: { id: number; name: string } | null;
+  currentFiscalYear: { id: number; name: string; inputStartDate: string | null; inputEndDate: string | null } | null;
   currentInventory: {
     id: number;
     status: InventoryStatus;
