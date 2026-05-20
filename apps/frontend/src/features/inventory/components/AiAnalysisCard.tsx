@@ -8,7 +8,6 @@ interface Props {
 const STATUS_LABEL: Record<string, string> = {
   PENDING:    '待機中',
   PROCESSING: '分析中',
-  COMPLETED:  '完了',
   FAILED:     '失敗',
 };
 
@@ -62,10 +61,11 @@ export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
 
   return (
     <div className="ai-analysis-card">
-      <div className="ai-status-row">
-        {fiscalYearName && <h3 className="ai-analysis-card__year" style={{ margin: 0 }}>{fiscalYearName}</h3>}
-        <span className="ai-status-badge ai-status-badge--completed">{STATUS_LABEL.COMPLETED}</span>
-      </div>
+      {fiscalYearName && (
+        <div className="ai-status-row">
+          <h3 className="ai-analysis-card__year" style={{ margin: 0 }}>{fiscalYearName}</h3>
+        </div>
+      )}
       <div className="ai-analysis-updated">
         分析日時：{fmtDate(updatedAt)}
       </div>

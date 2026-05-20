@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import NavBar from '../../../app/layouts/NavBar';
 import type { ItSkillCategory, ItSkill, CustomUnregisteredItem } from '../../../shared/types/master';
 import {
@@ -120,7 +121,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
         </table>
       </StickyHorizontalScroll>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -183,7 +184,8 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -339,7 +341,7 @@ function SkillTab({ skills, categories, onReload }: {
         </table>
       </StickyHorizontalScroll>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -424,7 +426,8 @@ function SkillTab({ skills, categories, onReload }: {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -539,7 +542,7 @@ function PromotionTab({ categories, onSkillsReload }: {
         </StickyHorizontalScroll>
       )}
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -620,7 +623,8 @@ function PromotionTab({ categories, onSkillsReload }: {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

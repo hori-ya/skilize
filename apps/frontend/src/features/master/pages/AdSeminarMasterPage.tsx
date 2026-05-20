@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import NavBar from '../../../app/layouts/NavBar';
 import type { AdSeminar, AdSeminarCategory } from '../../../shared/types/master';
 import {
@@ -94,7 +95,7 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
         </table>
       </StickyHorizontalScroll>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -132,7 +133,8 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -261,7 +263,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
         </table>
       </StickyHorizontalScroll>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -316,7 +318,8 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

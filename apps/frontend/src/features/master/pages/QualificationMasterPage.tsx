@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import NavBar from '../../../app/layouts/NavBar';
 import type { Qualification, QualificationCategory, CustomUnregisteredItem } from '../../../shared/types/master';
 import {
@@ -95,7 +96,7 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
         </table>
       </StickyHorizontalScroll>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -133,7 +134,8 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -262,7 +264,7 @@ function QualificationTab({ qualifications, categories, onReload }: {
         </table>
       </StickyHorizontalScroll>
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -317,7 +319,8 @@ function QualificationTab({ qualifications, categories, onReload }: {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
@@ -423,7 +426,7 @@ function QualPromotionTab({ categories, onQualReload }: {
         </StickyHorizontalScroll>
       )}
 
-      {modalOpen && (
+      {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
@@ -479,7 +482,8 @@ function QualPromotionTab({ categories, onQualReload }: {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );

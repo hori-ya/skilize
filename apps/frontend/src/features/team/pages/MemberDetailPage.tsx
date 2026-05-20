@@ -118,6 +118,16 @@ export default function MemberDetailPage() {
   const [tlSaveError, setTlSaveError] = useState<string | null>(null);
   const [companySaveError, setCompanySaveError] = useState<string | null>(null);
 
+  // Filter states
+  const [itSkillSearch, setItSkillSearch] = useState('');
+  const [itSkillCategory1Filter, setItSkillCategory1Filter] = useState('');
+  const [itSkillDiffFilter, setItSkillDiffFilter] = useState<'' | 'up' | 'down' | 'new'>('');
+  const [qualSearch, setQualSearch] = useState('');
+  const [seminarSearch, setSeminarSearch] = useState('');
+  const [seminarTypeFilter, setSeminarTypeFilter] = useState<'' | 'AD' | 'FREE'>('');
+  const [goalCategoryFilter, setGoalCategoryFilter] = useState<'' | 'IT_SKILL' | 'QUALIFICATION' | 'AD'>('');
+  const [goalSearch, setGoalSearch] = useState('');
+
   // ドラッグ中のリスナー管理
   const dragRef = useRef<{ onMove: (e: MouseEvent) => void; onUp: () => void } | null>(null);
 
@@ -186,6 +196,17 @@ export default function MemberDetailPage() {
       setPanelRect({ left: nl, top: nt, width: nw, height: nh });
     });
   }
+
+  useEffect(() => {
+    setItSkillSearch('');
+    setItSkillCategory1Filter('');
+    setItSkillDiffFilter('');
+    setQualSearch('');
+    setSeminarSearch('');
+    setSeminarTypeFilter('');
+    setGoalCategoryFilter('');
+    setGoalSearch('');
+  }, [selectedId]);
 
   useEffect(() => {
     getMemberInventories(userIdNum).then(res => {
@@ -365,6 +386,83 @@ export default function MemberDetailPage() {
   const hasPrevYear = comparison?.hasPrevYear ?? false;
   const itSkillColCount = 3 + (hasPrevYear ? 2 : 0) + (isTlOrAdmin ? 1 : 0);
 
+  const filteredItSkillTree = useMemo(() => {
+    const searchLower = itSkillSearch.toLowerCase();
+    const filteredGroups = new Map<string, ItSkillDetailItem[]>();
+    for (const [cat1, items] of itSkillTree.groups.entries()) {
+      if (itSkillCategory1Filter && cat1 !== itSkillCategory1Filter) continue;
+      const filtered = items.filter(item => {
+        if (searchLower && !item.itSkillName?.toLowerCase().includes(searchLower)) return false;
+        if (itSkillDiffFilter) {
+          const comp = comparisonMap.get(item.id);
+          if (itSkillDiffFilter === 'new' && comp !== undefined) return false;
+          if (itSkillDiffFilter === 'up' && (comp === undefined || (comp.diff ?? 0) <= 0)) return false;
+          if (itSkillDiffFilter === 'down' && (comp === undefined || (comp.diff ?? 0) >= 0)) return false;
+        }
+        return true;
+      });
+      if (filtered.length > 0) filteredGroups.set(cat1, filtered);
+    }
+    const filteredCustom = itSkillCategory1Filter ? [] : itSkillTree.customItems.filter(item =>
+      !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
+    );
+    return { groups: filteredGroups, customItems: filteredCustom };
+  }, [itSkillTree, itSkillSearch, itSkillCategory1Filter, itSkillDiffFilter, comparisonMap]);
+
+  const filteredItSkillCount = useMemo(() => {
+    let count = 0;
+    for (const items of filteredItSkillTree.groups.values()) count += items.length;
+    return count + filteredItSkillTree.customItems.length;
+  }, [filteredItSkillTree]);
+
+  const filteredQualifications = useMemo(() => {
+    const searchLower = qualSearch.toLowerCase();
+    if (!searchLower) return qualificationDetails;
+    return qualificationDetails.filter(q => {
+      const name = (q.qualificationName ?? q.customQualificationName ?? '').toLowerCase();
+      const cat = (q.qualificationCategoryName ?? '').toLowerCase();
+      return name.includes(searchLower) || cat.includes(searchLower);
+    });
+  }, [qualificationDetails, qualSearch]);
+
+  const filteredSeminars = useMemo(() => {
+    const searchLower = seminarSearch.toLowerCase();
+    return seminarDetails.filter(s => {
+      if (seminarTypeFilter === 'AD' && s.adSeminarId === null) return false;
+      if (seminarTypeFilter === 'FREE' && s.adSeminarId !== null) return false;
+      if (searchLower) {
+        const name = (s.adSeminarName ?? s.seminarName ?? '').toLowerCase();
+        const cat = (s.adSeminarCategoryName ?? '').toLowerCase();
+        if (!name.includes(searchLower) && !cat.includes(searchLower)) return false;
+      }
+      return true;
+    });
+  }, [seminarDetails, seminarSearch, seminarTypeFilter]);
+
+  const filteredGoals = useMemo(() => {
+    const searchLower = goalSearch.toLowerCase();
+    return goals.filter(g => {
+      if (goalCategoryFilter && g.goalCategory !== goalCategoryFilter) return false;
+      if (searchLower) {
+        const name = (g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '').toLowerCase();
+        if (!name.includes(searchLower)) return false;
+      }
+      return true;
+    });
+  }, [goals, goalSearch, goalCategoryFilter]);
+
+  const filteredPrevGoals = useMemo(() => {
+    const searchLower = goalSearch.toLowerCase();
+    return prevGoals.filter(g => {
+      if (goalCategoryFilter && g.goalCategory !== goalCategoryFilter) return false;
+      if (searchLower) {
+        const name = (g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '').toLowerCase();
+        if (!name.includes(searchLower)) return false;
+      }
+      return true;
+    });
+  }, [prevGoals, goalSearch, goalCategoryFilter]);
+
   const selectedInventory = inventories.find(i => i.id === selectedId);
 
   function goalDetailId(g: GoalItem): number {
@@ -489,6 +587,39 @@ export default function MemberDetailPage() {
                 {/* ── ITスキルタブ ── */}
                 {activeTab === 'it-skills' && (
                   <div className="history-tab-content">
+                    {itSkillDetails.length > 0 && (
+                      <div className="history-filter-bar">
+                        <input
+                          className="history-filter-bar__input"
+                          placeholder="スキル名で検索"
+                          value={itSkillSearch}
+                          onChange={e => setItSkillSearch(e.target.value)}
+                        />
+                        <select
+                          className="history-filter-bar__select"
+                          value={itSkillCategory1Filter}
+                          onChange={e => setItSkillCategory1Filter(e.target.value)}
+                        >
+                          <option value="">大分類：すべて</option>
+                          {Array.from(itSkillTree.groups.keys()).map(cat1 => (
+                            <option key={cat1} value={cat1}>{cat1}</option>
+                          ))}
+                        </select>
+                        {hasPrevYear && (
+                          <select
+                            className="history-filter-bar__select"
+                            value={itSkillDiffFilter}
+                            onChange={e => setItSkillDiffFilter(e.target.value as '' | 'up' | 'down' | 'new')}
+                          >
+                            <option value="">差分：すべて</option>
+                            <option value="up">上昇</option>
+                            <option value="down">下降</option>
+                            <option value="new">新規</option>
+                          </select>
+                        )}
+                        <span className="history-result-count">{filteredItSkillCount}件</span>
+                      </div>
+                    )}
                     <StickyHorizontalScroll className="comparison-table-wrapper">
                       <table className="comparison-table">
                         <thead>
@@ -508,9 +639,15 @@ export default function MemberDetailPage() {
                                 ITスキルデータがありません
                               </td>
                             </tr>
+                          ) : filteredItSkillCount === 0 ? (
+                            <tr>
+                              <td colSpan={itSkillColCount} className="no-data-cell">
+                                条件に一致するスキルがありません
+                              </td>
+                            </tr>
                           ) : (
                             <>
-                              {Array.from(itSkillTree.groups.entries()).map(([cat1, items]) => (
+                              {Array.from(filteredItSkillTree.groups.entries()).map(([cat1, items]) => (
                                 <Fragment key={cat1}>
                                   <tr className="scoring-cat1-row">
                                     <td colSpan={itSkillColCount}>{cat1}</td>
@@ -534,12 +671,12 @@ export default function MemberDetailPage() {
                                   })}
                                 </Fragment>
                               ))}
-                              {itSkillTree.customItems.length > 0 && (
+                              {filteredItSkillTree.customItems.length > 0 && (
                                 <Fragment key="__custom__">
                                   <tr className="scoring-cat1-row">
                                     <td colSpan={itSkillColCount}>カスタムスキル ※</td>
                                   </tr>
-                                  {itSkillTree.customItems.map(detail => (
+                                  {filteredItSkillTree.customItems.map(detail => (
                                     <tr key={detail.id}>
                                       <td>{detail.customSkillName} ※</td>
                                       {hasPrevYear && <td>—</td>}
@@ -565,33 +702,48 @@ export default function MemberDetailPage() {
                     {qualificationDetails.length === 0 ? (
                       <p className="no-data">資格データがありません</p>
                     ) : (
-                      <StickyHorizontalScroll className="master-table-wrap">
-                        <table className="master-table">
-                          <thead>
-                            <tr>
-                              <th>分類</th>
-                              <th>資格名</th>
-                              <th>取得年月</th>
-                              <th>備考</th>
-                              {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {qualificationDetails.map(q => (
-                              <tr key={q.id}>
-                                <td>{q.qualificationCategoryName ?? '—'}</td>
-                                <td>
-                                  {q.qualificationName ?? q.customQualificationName ?? '—'}
-                                  {q.qualificationId === null && ' ※'}
-                                </td>
-                                <td>{q.acquiredYearMonth?.slice(0, 7) ?? '—'}</td>
-                                <td>{q.remarks || '—'}</td>
-                                {isTlOrAdmin && renderDetailNoteCell('QUALIFICATION', q.qualificationId ?? q.id)}
+                      <>
+                        <div className="history-filter-bar">
+                          <input
+                            className="history-filter-bar__input"
+                            placeholder="資格名・分類で検索"
+                            value={qualSearch}
+                            onChange={e => setQualSearch(e.target.value)}
+                          />
+                          <span className="history-result-count">{filteredQualifications.length}件</span>
+                        </div>
+                        <StickyHorizontalScroll className="master-table-wrap">
+                          <table className="master-table">
+                            <thead>
+                              <tr>
+                                <th>分類</th>
+                                <th>資格名</th>
+                                <th>取得年月</th>
+                                <th>備考</th>
+                                {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </StickyHorizontalScroll>
+                            </thead>
+                            <tbody>
+                              {filteredQualifications.length === 0 ? (
+                                <tr><td colSpan={isTlOrAdmin ? 5 : 4} className="no-data-cell">条件に一致する資格がありません</td></tr>
+                              ) : (
+                                filteredQualifications.map(q => (
+                                  <tr key={q.id}>
+                                    <td>{q.qualificationCategoryName ?? '—'}</td>
+                                    <td>
+                                      {q.qualificationName ?? q.customQualificationName ?? '—'}
+                                      {q.qualificationId === null && ' ※'}
+                                    </td>
+                                    <td>{q.acquiredYearMonth?.slice(0, 7) ?? '—'}</td>
+                                    <td>{q.remarks || '—'}</td>
+                                    {isTlOrAdmin && renderDetailNoteCell('QUALIFICATION', q.qualificationId ?? q.id)}
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </StickyHorizontalScroll>
+                      </>
                     )}
                   </div>
                 )}
@@ -602,32 +754,56 @@ export default function MemberDetailPage() {
                     {seminarDetails.length === 0 ? (
                       <p className="no-data">セミナーデータがありません</p>
                     ) : (
-                      <StickyHorizontalScroll className="master-table-wrap">
-                        <table className="master-table">
-                          <thead>
-                            <tr>
-                              <th>区分</th>
-                              <th>分類</th>
-                              <th>セミナー名</th>
-                              <th>受講年月</th>
-                              <th>備考</th>
-                              {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {seminarDetails.map(s => (
-                              <tr key={s.id}>
-                                <td>{s.adSeminarId !== null ? 'AD' : 'フリー'}</td>
-                                <td>{s.adSeminarId !== null ? (s.adSeminarCategoryName ?? '—') : '—'}</td>
-                                <td>{s.adSeminarName ?? s.seminarName ?? '—'}</td>
-                                <td>{s.attendedYearMonth?.slice(0, 7) ?? '—'}</td>
-                                <td>{s.remarks || '—'}</td>
-                                {isTlOrAdmin && renderDetailNoteCell('SEMINAR', s.id)}
+                      <>
+                        <div className="history-filter-bar">
+                          <input
+                            className="history-filter-bar__input"
+                            placeholder="セミナー名・分類で検索"
+                            value={seminarSearch}
+                            onChange={e => setSeminarSearch(e.target.value)}
+                          />
+                          <select
+                            className="history-filter-bar__select"
+                            value={seminarTypeFilter}
+                            onChange={e => setSeminarTypeFilter(e.target.value as '' | 'AD' | 'FREE')}
+                          >
+                            <option value="">区分：すべて</option>
+                            <option value="AD">AD</option>
+                            <option value="FREE">フリー</option>
+                          </select>
+                          <span className="history-result-count">{filteredSeminars.length}件</span>
+                        </div>
+                        <StickyHorizontalScroll className="master-table-wrap">
+                          <table className="master-table">
+                            <thead>
+                              <tr>
+                                <th>区分</th>
+                                <th>分類</th>
+                                <th>セミナー名</th>
+                                <th>受講年月</th>
+                                <th>備考</th>
+                                {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </StickyHorizontalScroll>
+                            </thead>
+                            <tbody>
+                              {filteredSeminars.length === 0 ? (
+                                <tr><td colSpan={isTlOrAdmin ? 6 : 5} className="no-data-cell">条件に一致するセミナーがありません</td></tr>
+                              ) : (
+                                filteredSeminars.map(s => (
+                                  <tr key={s.id}>
+                                    <td>{s.adSeminarId !== null ? 'AD' : 'フリー'}</td>
+                                    <td>{s.adSeminarId !== null ? (s.adSeminarCategoryName ?? '—') : '—'}</td>
+                                    <td>{s.adSeminarName ?? s.seminarName ?? '—'}</td>
+                                    <td>{s.attendedYearMonth?.slice(0, 7) ?? '—'}</td>
+                                    <td>{s.remarks || '—'}</td>
+                                    {isTlOrAdmin && renderDetailNoteCell('SEMINAR', s.id)}
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </StickyHorizontalScroll>
+                      </>
                     )}
                   </div>
                 )}
@@ -639,76 +815,105 @@ export default function MemberDetailPage() {
                       <p className="no-data">目標データがありません</p>
                     ) : (
                       <>
+                        <div className="history-filter-bar">
+                          <select
+                            className="history-filter-bar__select"
+                            value={goalCategoryFilter}
+                            onChange={e => setGoalCategoryFilter(e.target.value as '' | 'IT_SKILL' | 'QUALIFICATION' | 'AD')}
+                          >
+                            <option value="">カテゴリ：すべて</option>
+                            <option value="IT_SKILL">ITスキル</option>
+                            <option value="QUALIFICATION">資格</option>
+                            <option value="AD">AD</option>
+                          </select>
+                          <input
+                            className="history-filter-bar__input"
+                            placeholder="目標名で検索"
+                            value={goalSearch}
+                            onChange={e => setGoalSearch(e.target.value)}
+                          />
+                          <span className="history-result-count">
+                            {filteredPrevGoals.length + filteredGoals.length}件
+                          </span>
+                        </div>
                         {prevGoals.length > 0 && (
                           <div className="history-goal-section">
                             <h3 className="history-goal-title">前年度目標</h3>
-                            <StickyHorizontalScroll className="master-table-wrap">
-                              <table className="master-table">
-                                <thead>
-                                  <tr>
-                                    <th style={{ width: 80 }}>カテゴリ</th>
-                                    <th>目標名</th>
-                                    <th style={{ width: 120 }}>達成予定時期</th>
-                                    <th>理由・計画</th>
-                                    <th style={{ width: 90 }}>達成状況</th>
-                                    <th>振り返りコメント</th>
-                                    {isTlOrAdmin && <th className="interview-note-th">面談メモ（前年度）</th>}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {prevGoals.map(g => {
-                                    const review = prevGoalReviewMap.get(g.id);
-                                    return (
-                                      <tr key={g.id}>
-                                        <td><span className="goal-category-badge">{GOAL_CATEGORY_LABEL[g.goalCategory]}</span></td>
-                                        <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
-                                        <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
-                                        <td>{g.reason || '—'}</td>
-                                        <td>{review?.achievementStatus ? (ACHIEVEMENT_LABEL[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
-                                        <td>{review?.reviewNote || '—'}</td>
-                                        {isTlOrAdmin && renderPrevGoalNoteCell(g)}
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </StickyHorizontalScroll>
+                            {filteredPrevGoals.length === 0 ? (
+                              <p className="no-data">条件に一致する目標がありません</p>
+                            ) : (
+                              <StickyHorizontalScroll className="master-table-wrap">
+                                <table className="master-table">
+                                  <thead>
+                                    <tr>
+                                      <th style={{ width: 80 }}>カテゴリ</th>
+                                      <th>目標名</th>
+                                      <th style={{ width: 120 }}>達成予定時期</th>
+                                      <th>理由・計画</th>
+                                      <th style={{ width: 90 }}>達成状況</th>
+                                      <th>振り返りコメント</th>
+                                      {isTlOrAdmin && <th className="interview-note-th">面談メモ（前年度）</th>}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {filteredPrevGoals.map(g => {
+                                      const review = prevGoalReviewMap.get(g.id);
+                                      return (
+                                        <tr key={g.id}>
+                                          <td><span className="goal-category-badge">{GOAL_CATEGORY_LABEL[g.goalCategory]}</span></td>
+                                          <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
+                                          <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
+                                          <td>{g.reason || '—'}</td>
+                                          <td>{review?.achievementStatus ? (ACHIEVEMENT_LABEL[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
+                                          <td>{review?.reviewNote || '—'}</td>
+                                          {isTlOrAdmin && renderPrevGoalNoteCell(g)}
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </StickyHorizontalScroll>
+                            )}
                           </div>
                         )}
                         {goals.length > 0 && (
                           <div className="history-goal-section">
                             <h3 className="history-goal-title">今年度目標</h3>
-                            <StickyHorizontalScroll className="master-table-wrap">
-                              <table className="master-table">
-                                <thead>
-                                  <tr>
-                                    <th style={{ width: 80 }}>カテゴリ</th>
-                                    <th>目標名</th>
-                                    <th style={{ width: 120 }}>達成予定時期</th>
-                                    <th>理由・計画</th>
-                                    <th style={{ width: 90 }}>達成状況</th>
-                                    <th>振り返りコメント</th>
-                                    {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {goals.map(g => {
-                                    const review = goalReviewMap.get(g.id);
-                                    return (
-                                      <tr key={g.id}>
-                                        <td><span className="goal-category-badge">{GOAL_CATEGORY_LABEL[g.goalCategory]}</span></td>
-                                        <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
-                                        <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
-                                        <td>{g.reason || '—'}</td>
-                                        <td>{review?.achievementStatus ? (ACHIEVEMENT_LABEL[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
-                                        <td>{review?.reviewNote || '—'}</td>
-                                        {isTlOrAdmin && renderDetailNoteCell('GOAL', goalDetailId(g), false)}
-                                      </tr>
-                                    );
-                                  })}
-                                </tbody>
-                              </table>
-                            </StickyHorizontalScroll>
+                            {filteredGoals.length === 0 ? (
+                              <p className="no-data">条件に一致する目標がありません</p>
+                            ) : (
+                              <StickyHorizontalScroll className="master-table-wrap">
+                                <table className="master-table">
+                                  <thead>
+                                    <tr>
+                                      <th style={{ width: 80 }}>カテゴリ</th>
+                                      <th>目標名</th>
+                                      <th style={{ width: 120 }}>達成予定時期</th>
+                                      <th>理由・計画</th>
+                                      <th style={{ width: 90 }}>達成状況</th>
+                                      <th>振り返りコメント</th>
+                                      {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {filteredGoals.map(g => {
+                                      const review = goalReviewMap.get(g.id);
+                                      return (
+                                        <tr key={g.id}>
+                                          <td><span className="goal-category-badge">{GOAL_CATEGORY_LABEL[g.goalCategory]}</span></td>
+                                          <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
+                                          <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
+                                          <td>{g.reason || '—'}</td>
+                                          <td>{review?.achievementStatus ? (ACHIEVEMENT_LABEL[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
+                                          <td>{review?.reviewNote || '—'}</td>
+                                          {isTlOrAdmin && renderDetailNoteCell('GOAL', goalDetailId(g), false)}
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </StickyHorizontalScroll>
+                            )}
                           </div>
                         )}
                       </>
