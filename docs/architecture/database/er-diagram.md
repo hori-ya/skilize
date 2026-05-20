@@ -1,8 +1,8 @@
 # ER図
 
-**バージョン**: 1.3.0  
+**バージョン**: 1.4.0  
 **作成日**: 2026-05-09  
-**更新日**: 2026-05-17
+**更新日**: 2026-05-21
 
 関連資料：[データモデル（概念設計）](./data-model.md)
 
@@ -42,6 +42,7 @@ erDiagram
     int      id           PK
     int      level_value  "採点数値"
     varchar  description  "例: 知識がある"
+    int      score_weight "グラフスコア重み。0はスコア寄与なし"
     boolean  is_active
   }
 

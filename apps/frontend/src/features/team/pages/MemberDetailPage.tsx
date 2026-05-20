@@ -18,39 +18,32 @@ import { useAuth } from '../../../app/providers/AuthProvider';
 import NavBar from '../../../app/layouts/NavBar';
 import AiAnalysisCard from '../../inventory/components/AiAnalysisCard';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
+import { useTranslation } from 'react-i18next';
 
 type TabKey = 'it-skills' | 'qualifications' | 'seminars' | 'goals' | 'expectations' | 'ai-analysis';
 
-const TAB_LABELS: Record<TabKey, string> = {
-  'it-skills': 'ITスキル',
-  qualifications: '資格',
-  seminars: 'セミナー',
-  goals: '目標',
-  expectations: '期待',
-  'ai-analysis': 'AI分析',
+const GOAL_CATEGORY_KEY: Record<string, string> = {
+  IT_SKILL: 'goalCategory.itSkill',
+  QUALIFICATION: 'goalCategory.qualification',
+  AD: 'goalCategory.ad',
 };
 
-const GOAL_CATEGORY_LABEL: Record<string, string> = {
-  IT_SKILL: 'ITスキル',
-  QUALIFICATION: '資格',
-  AD: 'AD',
+const ACHIEVEMENT_KEY: Record<string, string> = {
+  ACHIEVED: 'achievement.achieved',
+  PARTIAL: 'achievement.partial',
+  NOT_ACHIEVED: 'achievement.notAchieved',
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  DRAFT: '入力中',
-  PENDING_GOAL: '提出済み・目標未設定',
-  COMPLETED: '完了',
-};
-
-const ACHIEVEMENT_LABEL: Record<string, string> = {
-  ACHIEVED: '達成',
-  PARTIAL: '一部達成',
-  NOT_ACHIEVED: '未達成',
+const STATUS_KEY: Record<string, string> = {
+  DRAFT: 'status.draft',
+  PENDING_GOAL: 'status.pendingGoal',
+  COMPLETED: 'status.completed',
 };
 
 function DiffCell({ diff, hasPrevYear }: { diff: number | null | undefined; hasPrevYear: boolean }) {
+  const { t } = useTranslation('team');
   if (!hasPrevYear) return null;
-  if (diff === null || diff === undefined) return <span className="diff-new">新規</span>;
+  if (diff === null || diff === undefined) return <span className="diff-new">{t('diffNew')}</span>;
   if (diff > 0) return <span className="diff-up">↑ +{diff}</span>;
   if (diff < 0) return <span className="diff-down">↓ {diff}</span>;
   return <span>—</span>;
@@ -65,11 +58,21 @@ export default function MemberDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation('team');
   const userIdNum = Number(userId);
   const backPath: string = (location.state as { from?: string } | null)?.from ?? '/team';
-  const backLabel: string = (location.state as { fromLabel?: string } | null)?.fromLabel ?? 'チーム照会';
+  const backLabel: string = (location.state as { fromLabel?: string } | null)?.fromLabel ?? t('memberDetail.defaultBackLabel');
 
   const isTlOrAdmin = user?.role === 'TL' || user?.role === 'ADMIN';
+
+  const TAB_LABELS: Record<TabKey, string> = {
+    'it-skills': t('memberDetail.tab.itSkills'),
+    qualifications: t('memberDetail.tab.qualifications'),
+    seminars: t('memberDetail.tab.seminars'),
+    goals: t('memberDetail.tab.goals'),
+    expectations: t('memberDetail.tab.expectations'),
+    'ai-analysis': t('memberDetail.tab.aiAnalysis'),
+  };
 
   const [inventories, setInventories] = useState<InventorySummary[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -101,11 +104,9 @@ export default function MemberDetailPage() {
     height: 280,
   }));
 
-  // AI分析 state
   const [memberAiAnalyses, setMemberAiAnalyses] = useState<AiAnalysis[]>([]);
   const [aiAnalysisLoaded, setAiAnalysisLoaded] = useState(false);
 
-  // 期待コメント state
   const [expectation, setExpectation] = useState<UserExpectation | null>(null);
   const [expLoaded, setExpLoaded] = useState(false);
   const [expLoading, setExpLoading] = useState(false);
@@ -128,7 +129,6 @@ export default function MemberDetailPage() {
   const [goalCategoryFilter, setGoalCategoryFilter] = useState<'' | 'IT_SKILL' | 'QUALIFICATION' | 'AD'>('');
   const [goalSearch, setGoalSearch] = useState('');
 
-  // ドラッグ中のリスナー管理
   const dragRef = useRef<{ onMove: (e: MouseEvent) => void; onUp: () => void } | null>(null);
 
   useEffect(() => {
@@ -268,7 +268,6 @@ export default function MemberDetailPage() {
       }
       setPrevGoalReviewMap(prevRevMap);
 
-      // Initialize interview memo state
       const memo = interviewRes?.data ?? null;
       setInterview(memo);
       setGeneralNote(memo?.generalNote ?? '');
@@ -320,7 +319,7 @@ export default function MemberDetailPage() {
       setExpectation(res.data);
       setTlSaved(true);
     } catch {
-      setTlSaveError('保存に失敗しました');
+      setTlSaveError(t('memberDetail.expectation.saveFailed'));
     } finally {
       setTlSaving(false);
     }
@@ -335,7 +334,7 @@ export default function MemberDetailPage() {
       setExpectation(res.data);
       setCompanySaved(true);
     } catch {
-      setCompanySaveError('保存に失敗しました');
+      setCompanySaveError(t('memberDetail.expectation.saveFailed'));
     } finally {
       setCompanySaving(false);
     }
@@ -501,7 +500,7 @@ export default function MemberDetailPage() {
       });
       setInterview(res.data);
     } catch {
-      setSaveError('保存に失敗しました');
+      setSaveError(t('memberDetail.interview.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -516,11 +515,11 @@ export default function MemberDetailPage() {
           className="interview-note-textarea"
           value={detailNotes.get(key) ?? ''}
           onChange={e => setDetailNote(detailType, detailId, e.target.value)}
-          placeholder="メモ"
+          placeholder={t('memberDetail.interview.noteInputPlaceholder')}
           rows={1}
         />
         {prevNote && (
-          <div className="interview-note-prev-inline">前年: {prevNote}</div>
+          <div className="interview-note-prev-inline">{t('memberDetail.interview.prevNotePrefix')}{prevNote}</div>
         )}
       </td>
     );
@@ -541,18 +540,18 @@ export default function MemberDetailPage() {
     <div className="team-page">
       <NavBar />
       <main className="team-main">
-        <button className="page-back-btn" onClick={() => navigate(backPath)}>← {backLabel}に戻る</button>
-        <h1 className="page-title">メンバー詳細照会</h1>
+        <button className="page-back-btn" onClick={() => navigate(backPath)}>{t('memberDetail.backButton', { label: backLabel })}</button>
+        <h1 className="page-title">{t('memberDetail.title')}</h1>
         {selectedInventory && (
-          <p className="page-subtitle">読み取り専用表示</p>
+          <p className="page-subtitle">{t('memberDetail.readOnly')}</p>
         )}
 
         {inventories.length === 0 ? (
-          <div className="info-card"><p>棚卸データがありません。</p></div>
+          <div className="info-card"><p>{t('memberDetail.noData')}</p></div>
         ) : (
           <>
             <div className="history-selector-row">
-              <label className="form-label">年度</label>
+              <label className="form-label">{t('memberDetail.yearLabel')}</label>
               <select
                 className="select history-year-select"
                 value={selectedId ?? ''}
@@ -560,14 +559,14 @@ export default function MemberDetailPage() {
               >
                 {inventories.map(inv => (
                   <option key={inv.id} value={inv.id}>
-                    {inv.fiscalYear.name}（{STATUS_LABEL[inv.status] ?? inv.status}）
+                    {inv.fiscalYear.name}（{t(STATUS_KEY[inv.status] ?? inv.status)}）
                   </option>
                 ))}
               </select>
             </div>
 
             {loading ? (
-              <div className="loading">読み込み中...</div>
+              <div className="loading">{t('loading')}</div>
             ) : (
               <>
                 <div className="tab-bar">
@@ -591,7 +590,7 @@ export default function MemberDetailPage() {
                       <div className="history-filter-bar">
                         <input
                           className="history-filter-bar__input"
-                          placeholder="スキル名で検索"
+                          placeholder={t('memberDetail.filter.skillSearch')}
                           value={itSkillSearch}
                           onChange={e => setItSkillSearch(e.target.value)}
                         />
@@ -600,7 +599,7 @@ export default function MemberDetailPage() {
                           value={itSkillCategory1Filter}
                           onChange={e => setItSkillCategory1Filter(e.target.value)}
                         >
-                          <option value="">大分類：すべて</option>
+                          <option value="">{t('memberDetail.filter.category1All')}</option>
                           {Array.from(itSkillTree.groups.keys()).map(cat1 => (
                             <option key={cat1} value={cat1}>{cat1}</option>
                           ))}
@@ -611,10 +610,10 @@ export default function MemberDetailPage() {
                             value={itSkillDiffFilter}
                             onChange={e => setItSkillDiffFilter(e.target.value as '' | 'up' | 'down' | 'new')}
                           >
-                            <option value="">差分：すべて</option>
-                            <option value="up">上昇</option>
-                            <option value="down">下降</option>
-                            <option value="new">新規</option>
+                            <option value="">{t('memberDetail.filter.diffAll')}</option>
+                            <option value="up">{t('memberDetail.filter.diffUp')}</option>
+                            <option value="down">{t('memberDetail.filter.diffDown')}</option>
+                            <option value="new">{t('memberDetail.filter.diffNew')}</option>
                           </select>
                         )}
                         <span className="history-result-count">{filteredItSkillCount}件</span>
@@ -624,25 +623,25 @@ export default function MemberDetailPage() {
                       <table className="comparison-table">
                         <thead>
                           <tr>
-                            <th>スキル名</th>
-                            {hasPrevYear && <th>前年度</th>}
-                            <th>今年度</th>
-                            {hasPrevYear && <th>差分</th>}
-                            <th>備考</th>
-                            {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
+                            <th>{t('memberDetail.table.skillName')}</th>
+                            {hasPrevYear && <th>{t('memberDetail.table.prevYear')}</th>}
+                            <th>{t('memberDetail.table.currentYear')}</th>
+                            {hasPrevYear && <th>{t('memberDetail.table.diff')}</th>}
+                            <th>{t('memberDetail.table.remarks')}</th>
+                            {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
                           </tr>
                         </thead>
                         <tbody>
                           {itSkillDetails.length === 0 ? (
                             <tr>
                               <td colSpan={itSkillColCount} className="no-data-cell">
-                                ITスキルデータがありません
+                                {t('memberDetail.noDataCell.itSkills')}
                               </td>
                             </tr>
                           ) : filteredItSkillCount === 0 ? (
                             <tr>
                               <td colSpan={itSkillColCount} className="no-data-cell">
-                                条件に一致するスキルがありません
+                                {t('memberDetail.noDataCell.noMatchSkills')}
                               </td>
                             </tr>
                           ) : (
@@ -674,7 +673,7 @@ export default function MemberDetailPage() {
                               {filteredItSkillTree.customItems.length > 0 && (
                                 <Fragment key="__custom__">
                                   <tr className="scoring-cat1-row">
-                                    <td colSpan={itSkillColCount}>カスタムスキル ※</td>
+                                    <td colSpan={itSkillColCount}>{t('customSkillLabel')}</td>
                                   </tr>
                                   {filteredItSkillTree.customItems.map(detail => (
                                     <tr key={detail.id}>
@@ -700,13 +699,13 @@ export default function MemberDetailPage() {
                 {activeTab === 'qualifications' && (
                   <div className="history-tab-content">
                     {qualificationDetails.length === 0 ? (
-                      <p className="no-data">資格データがありません</p>
+                      <p className="no-data">{t('memberDetail.noDataCell.qualifications')}</p>
                     ) : (
                       <>
                         <div className="history-filter-bar">
                           <input
                             className="history-filter-bar__input"
-                            placeholder="資格名・分類で検索"
+                            placeholder={t('memberDetail.filter.qualSearch')}
                             value={qualSearch}
                             onChange={e => setQualSearch(e.target.value)}
                           />
@@ -716,16 +715,16 @@ export default function MemberDetailPage() {
                           <table className="master-table">
                             <thead>
                               <tr>
-                                <th>分類</th>
-                                <th>資格名</th>
-                                <th>取得年月</th>
-                                <th>備考</th>
-                                {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
+                                <th>{t('memberDetail.table.category')}</th>
+                                <th>{t('memberDetail.table.qualName')}</th>
+                                <th>{t('memberDetail.table.acquiredYearMonth')}</th>
+                                <th>{t('memberDetail.table.remarks')}</th>
+                                {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
                               </tr>
                             </thead>
                             <tbody>
                               {filteredQualifications.length === 0 ? (
-                                <tr><td colSpan={isTlOrAdmin ? 5 : 4} className="no-data-cell">条件に一致する資格がありません</td></tr>
+                                <tr><td colSpan={isTlOrAdmin ? 5 : 4} className="no-data-cell">{t('memberDetail.noDataCell.noMatchQuals')}</td></tr>
                               ) : (
                                 filteredQualifications.map(q => (
                                   <tr key={q.id}>
@@ -752,13 +751,13 @@ export default function MemberDetailPage() {
                 {activeTab === 'seminars' && (
                   <div className="history-tab-content">
                     {seminarDetails.length === 0 ? (
-                      <p className="no-data">セミナーデータがありません</p>
+                      <p className="no-data">{t('memberDetail.noDataCell.seminars')}</p>
                     ) : (
                       <>
                         <div className="history-filter-bar">
                           <input
                             className="history-filter-bar__input"
-                            placeholder="セミナー名・分類で検索"
+                            placeholder={t('memberDetail.filter.seminarSearch')}
                             value={seminarSearch}
                             onChange={e => setSeminarSearch(e.target.value)}
                           />
@@ -767,9 +766,9 @@ export default function MemberDetailPage() {
                             value={seminarTypeFilter}
                             onChange={e => setSeminarTypeFilter(e.target.value as '' | 'AD' | 'FREE')}
                           >
-                            <option value="">区分：すべて</option>
+                            <option value="">{t('memberDetail.filter.seminarTypeAll')}</option>
                             <option value="AD">AD</option>
-                            <option value="FREE">フリー</option>
+                            <option value="FREE">{t('memberDetail.filter.seminarTypeFree')}</option>
                           </select>
                           <span className="history-result-count">{filteredSeminars.length}件</span>
                         </div>
@@ -777,21 +776,21 @@ export default function MemberDetailPage() {
                           <table className="master-table">
                             <thead>
                               <tr>
-                                <th>区分</th>
-                                <th>分類</th>
-                                <th>セミナー名</th>
-                                <th>受講年月</th>
-                                <th>備考</th>
-                                {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
+                                <th>{t('memberDetail.table.seminarType')}</th>
+                                <th>{t('memberDetail.table.category')}</th>
+                                <th>{t('memberDetail.table.seminarName')}</th>
+                                <th>{t('memberDetail.table.attendedYearMonth')}</th>
+                                <th>{t('memberDetail.table.remarks')}</th>
+                                {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
                               </tr>
                             </thead>
                             <tbody>
                               {filteredSeminars.length === 0 ? (
-                                <tr><td colSpan={isTlOrAdmin ? 6 : 5} className="no-data-cell">条件に一致するセミナーがありません</td></tr>
+                                <tr><td colSpan={isTlOrAdmin ? 6 : 5} className="no-data-cell">{t('memberDetail.noDataCell.noMatchSeminars')}</td></tr>
                               ) : (
                                 filteredSeminars.map(s => (
                                   <tr key={s.id}>
-                                    <td>{s.adSeminarId !== null ? 'AD' : 'フリー'}</td>
+                                    <td>{s.adSeminarId !== null ? 'AD' : t('memberDetail.filter.seminarTypeFree')}</td>
                                     <td>{s.adSeminarId !== null ? (s.adSeminarCategoryName ?? '—') : '—'}</td>
                                     <td>{s.adSeminarName ?? s.seminarName ?? '—'}</td>
                                     <td>{s.attendedYearMonth?.slice(0, 7) ?? '—'}</td>
@@ -812,7 +811,7 @@ export default function MemberDetailPage() {
                 {activeTab === 'goals' && (
                   <div className="history-tab-content">
                     {prevGoals.length === 0 && goals.length === 0 ? (
-                      <p className="no-data">目標データがありません</p>
+                      <p className="no-data">{t('memberDetail.noDataCell.goals')}</p>
                     ) : (
                       <>
                         <div className="history-filter-bar">
@@ -821,14 +820,14 @@ export default function MemberDetailPage() {
                             value={goalCategoryFilter}
                             onChange={e => setGoalCategoryFilter(e.target.value as '' | 'IT_SKILL' | 'QUALIFICATION' | 'AD')}
                           >
-                            <option value="">カテゴリ：すべて</option>
-                            <option value="IT_SKILL">ITスキル</option>
-                            <option value="QUALIFICATION">資格</option>
+                            <option value="">{t('memberDetail.filter.goalCategoryAll')}</option>
+                            <option value="IT_SKILL">{t('goalCategory.itSkill')}</option>
+                            <option value="QUALIFICATION">{t('goalCategory.qualification')}</option>
                             <option value="AD">AD</option>
                           </select>
                           <input
                             className="history-filter-bar__input"
-                            placeholder="目標名で検索"
+                            placeholder={t('memberDetail.filter.goalSearch')}
                             value={goalSearch}
                             onChange={e => setGoalSearch(e.target.value)}
                           />
@@ -838,21 +837,21 @@ export default function MemberDetailPage() {
                         </div>
                         {prevGoals.length > 0 && (
                           <div className="history-goal-section">
-                            <h3 className="history-goal-title">前年度目標</h3>
+                            <h3 className="history-goal-title">{t('memberDetail.goalSection.prevYear')}</h3>
                             {filteredPrevGoals.length === 0 ? (
-                              <p className="no-data">条件に一致する目標がありません</p>
+                              <p className="no-data">{t('memberDetail.noDataCell.noMatchGoals')}</p>
                             ) : (
                               <StickyHorizontalScroll className="master-table-wrap">
                                 <table className="master-table">
                                   <thead>
                                     <tr>
-                                      <th style={{ width: 80 }}>カテゴリ</th>
-                                      <th>目標名</th>
-                                      <th style={{ width: 120 }}>達成予定時期</th>
-                                      <th>理由・計画</th>
-                                      <th style={{ width: 90 }}>達成状況</th>
-                                      <th>振り返りコメント</th>
-                                      {isTlOrAdmin && <th className="interview-note-th">面談メモ（前年度）</th>}
+                                      <th style={{ width: 80 }}>{t('memberDetail.table.goalCategory')}</th>
+                                      <th>{t('memberDetail.table.goalName')}</th>
+                                      <th style={{ width: 120 }}>{t('memberDetail.table.targetPeriod')}</th>
+                                      <th>{t('memberDetail.table.reasonPlan')}</th>
+                                      <th style={{ width: 90 }}>{t('memberDetail.table.achievementStatus')}</th>
+                                      <th>{t('memberDetail.table.reviewNote')}</th>
+                                      {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.prevYearInterviewNote')}</th>}
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -860,11 +859,11 @@ export default function MemberDetailPage() {
                                       const review = prevGoalReviewMap.get(g.id);
                                       return (
                                         <tr key={g.id}>
-                                          <td><span className="goal-category-badge">{GOAL_CATEGORY_LABEL[g.goalCategory]}</span></td>
+                                          <td><span className="goal-category-badge">{t(GOAL_CATEGORY_KEY[g.goalCategory] ?? g.goalCategory)}</span></td>
                                           <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
                                           <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
                                           <td>{g.reason || '—'}</td>
-                                          <td>{review?.achievementStatus ? (ACHIEVEMENT_LABEL[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
+                                          <td>{review?.achievementStatus ? t(ACHIEVEMENT_KEY[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
                                           <td>{review?.reviewNote || '—'}</td>
                                           {isTlOrAdmin && renderPrevGoalNoteCell(g)}
                                         </tr>
@@ -878,21 +877,21 @@ export default function MemberDetailPage() {
                         )}
                         {goals.length > 0 && (
                           <div className="history-goal-section">
-                            <h3 className="history-goal-title">今年度目標</h3>
+                            <h3 className="history-goal-title">{t('memberDetail.goalSection.currentYear')}</h3>
                             {filteredGoals.length === 0 ? (
-                              <p className="no-data">条件に一致する目標がありません</p>
+                              <p className="no-data">{t('memberDetail.noDataCell.noMatchGoals')}</p>
                             ) : (
                               <StickyHorizontalScroll className="master-table-wrap">
                                 <table className="master-table">
                                   <thead>
                                     <tr>
-                                      <th style={{ width: 80 }}>カテゴリ</th>
-                                      <th>目標名</th>
-                                      <th style={{ width: 120 }}>達成予定時期</th>
-                                      <th>理由・計画</th>
-                                      <th style={{ width: 90 }}>達成状況</th>
-                                      <th>振り返りコメント</th>
-                                      {isTlOrAdmin && <th className="interview-note-th">面談メモ</th>}
+                                      <th style={{ width: 80 }}>{t('memberDetail.table.goalCategory')}</th>
+                                      <th>{t('memberDetail.table.goalName')}</th>
+                                      <th style={{ width: 120 }}>{t('memberDetail.table.targetPeriod')}</th>
+                                      <th>{t('memberDetail.table.reasonPlan')}</th>
+                                      <th style={{ width: 90 }}>{t('memberDetail.table.achievementStatus')}</th>
+                                      <th>{t('memberDetail.table.reviewNote')}</th>
+                                      {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
                                     </tr>
                                   </thead>
                                   <tbody>
@@ -900,11 +899,11 @@ export default function MemberDetailPage() {
                                       const review = goalReviewMap.get(g.id);
                                       return (
                                         <tr key={g.id}>
-                                          <td><span className="goal-category-badge">{GOAL_CATEGORY_LABEL[g.goalCategory]}</span></td>
+                                          <td><span className="goal-category-badge">{t(GOAL_CATEGORY_KEY[g.goalCategory] ?? g.goalCategory)}</span></td>
                                           <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
                                           <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
                                           <td>{g.reason || '—'}</td>
-                                          <td>{review?.achievementStatus ? (ACHIEVEMENT_LABEL[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
+                                          <td>{review?.achievementStatus ? t(ACHIEVEMENT_KEY[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
                                           <td>{review?.reviewNote || '—'}</td>
                                           {isTlOrAdmin && renderDetailNoteCell('GOAL', goalDetailId(g), false)}
                                         </tr>
@@ -925,13 +924,13 @@ export default function MemberDetailPage() {
                 {activeTab === 'ai-analysis' && isTlOrAdmin && (
                   <div className="history-tab-content">
                     {!aiAnalysisLoaded ? (
-                      <div className="loading">読み込み中...</div>
+                      <div className="loading">{t('loading')}</div>
                     ) : (() => {
                       const analysis = memberAiAnalyses.find(a => {
                         const inv = inventories.find(i => i.id === selectedId);
                         return inv && a.fiscalYearId === inv.fiscalYear.id;
                       });
-                      if (!analysis) return <p className="no-data">この年度のAI分析データはありません。</p>;
+                      if (!analysis) return <p className="no-data">{t('memberDetail.noDataCell.aiAnalysis')}</p>;
                       return <AiAnalysisCard analysis={analysis} />;
                     })()}
                   </div>
@@ -941,24 +940,23 @@ export default function MemberDetailPage() {
                 {activeTab === 'expectations' && isTlOrAdmin && (
                   <div className="history-tab-content">
                     {expLoading ? (
-                      <div className="loading">読み込み中...</div>
+                      <div className="loading">{t('loading')}</div>
                     ) : (
                       <div className="expectation-detail-panel">
-                        {/* TLが期待すること */}
                         <div className="expectation-detail-section">
-                          <h3 className="expectation-detail-title">TLが期待すること</h3>
+                          <h3 className="expectation-detail-title">{t('memberDetail.expectation.tlTitle')}</h3>
                           {user?.role === 'TL' ? (
                             <>
                               <textarea
                                 className="expectation-detail-textarea"
                                 value={editTl}
                                 onChange={e => { setEditTl(e.target.value); setTlSaved(false); }}
-                                placeholder="このメンバーへの期待を入力してください"
+                                placeholder={t('memberDetail.expectation.tlPlaceholder')}
                                 rows={6}
                               />
                               <div className="expectation-detail-save-row">
                                 {tlSaved && !tlSaveError && (
-                                  <span className="expectation-saved-label">保存しました</span>
+                                  <span className="expectation-saved-label">{t('memberDetail.expectation.savedLabel')}</span>
                                 )}
                                 {tlSaveError && <span className="error-text">{tlSaveError}</span>}
                                 <button
@@ -966,32 +964,31 @@ export default function MemberDetailPage() {
                                   onClick={handleSaveTl}
                                   disabled={tlSaving}
                                 >
-                                  {tlSaving ? '保存中...' : '保存'}
+                                  {tlSaving ? t('memberDetail.expectation.savingButton') : t('memberDetail.expectation.saveButton')}
                                 </button>
                               </div>
                             </>
                           ) : (
                             <div className="expectation-detail-readonly">
-                              {expectation?.tlExpectation || '（未入力）'}
+                              {expectation?.tlExpectation || t('memberDetail.expectation.noInput')}
                             </div>
                           )}
                         </div>
 
-                        {/* 会社が期待すること */}
                         <div className="expectation-detail-section">
-                          <h3 className="expectation-detail-title">会社が期待すること</h3>
+                          <h3 className="expectation-detail-title">{t('memberDetail.expectation.companyTitle')}</h3>
                           {user?.role === 'ADMIN' ? (
                             <>
                               <textarea
                                 className="expectation-detail-textarea"
                                 value={editCompany}
                                 onChange={e => { setEditCompany(e.target.value); setCompanySaved(false); }}
-                                placeholder="会社としての期待を入力してください"
+                                placeholder={t('memberDetail.expectation.companyPlaceholder')}
                                 rows={6}
                               />
                               <div className="expectation-detail-save-row">
                                 {companySaved && !companySaveError && (
-                                  <span className="expectation-saved-label">保存しました</span>
+                                  <span className="expectation-saved-label">{t('memberDetail.expectation.savedLabel')}</span>
                                 )}
                                 {companySaveError && <span className="error-text">{companySaveError}</span>}
                                 <button
@@ -999,13 +996,13 @@ export default function MemberDetailPage() {
                                   onClick={handleSaveCompany}
                                   disabled={companySaving}
                                 >
-                                  {companySaving ? '保存中...' : '保存'}
+                                  {companySaving ? t('memberDetail.expectation.savingButton') : t('memberDetail.expectation.saveButton')}
                                 </button>
                               </div>
                             </>
                           ) : (
                             <div className="expectation-detail-readonly">
-                              {expectation?.companyExpectation || '（未入力）'}
+                              {expectation?.companyExpectation || t('memberDetail.expectation.noInput')}
                             </div>
                           )}
                         </div>
@@ -1028,25 +1025,24 @@ export default function MemberDetailPage() {
               className="interview-float-panel"
               style={{ left: panelRect.left, top: panelRect.top, width: panelRect.width, height: panelRect.height }}
             >
-              {/* 8方向リサイズハンドル */}
               {(['n','s','e','w','nw','ne','sw','se'] as const).map(dir => (
                 <div key={dir} className={`ifp-resize ifp-resize--${dir}`} onMouseDown={e => startResize(e, dir)} />
               ))}
               <div className="interview-float-panel__header" onMouseDown={startMove}>
-                <span className="interview-float-panel__title">全体備忘録</span>
+                <span className="interview-float-panel__title">{t('memberDetail.interview.panelTitle')}</span>
                 <button
                   className="interview-float-panel__close"
                   onMouseDown={e => e.stopPropagation()}
                   onClick={() => setPanelOpen(false)}
-                  aria-label="閉じる"
+                  aria-label={t('memberDetail.interview.closeLabel')}
                 >×</button>
               </div>
               <div className="interview-float-panel__body">
                 {prevYearInterview && (
                   <div className="interview-float-prev-section">
-                    <div className="interview-float-prev-label">前年度備忘録</div>
+                    <div className="interview-float-prev-label">{t('memberDetail.interview.prevYearLabel')}</div>
                     <div className="interview-float-prev-text">
-                      {prevYearInterview.generalNote || '（なし）'}
+                      {prevYearInterview.generalNote || t('memberDetail.interview.noNote')}
                     </div>
                   </div>
                 )}
@@ -1054,19 +1050,19 @@ export default function MemberDetailPage() {
                   className="interview-float-panel__textarea"
                   value={generalNote}
                   onChange={e => setGeneralNote(e.target.value)}
-                  placeholder="面談全体のメモを入力してください"
+                  placeholder={t('memberDetail.interview.memoPlaceholder')}
                 />
                 {saveError && <p className="error-text">{saveError}</p>}
                 <div className="interview-float-panel__actions">
                   {interview && !saving && !saveError && (
-                    <span className="interview-panel__saved-label">保存済み</span>
+                    <span className="interview-panel__saved-label">{t('memberDetail.interview.savedLabel')}</span>
                   )}
                   <button
                     className="btn btn-submit interview-float-save-btn"
                     onClick={handleSave}
                     disabled={saving}
                   >
-                    {saving ? '保存中...' : '保存'}
+                    {saving ? t('memberDetail.interview.savingButton') : t('memberDetail.interview.saveButton')}
                   </button>
                 </div>
               </div>
@@ -1076,7 +1072,7 @@ export default function MemberDetailPage() {
             className={`interview-float-btn${panelOpen ? ' interview-float-btn--open' : ''}`}
             onClick={() => setPanelOpen(v => !v)}
           >
-            {panelOpen ? '✕ 閉じる' : '📝 備忘録'}
+            {panelOpen ? t('memberDetail.interview.closeButton') : t('memberDetail.interview.openButton')}
           </button>
         </>
       )}

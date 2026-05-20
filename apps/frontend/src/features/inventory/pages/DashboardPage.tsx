@@ -11,6 +11,7 @@ import GrowthChartCard from '../components/GrowthChartCard';
 import HeatmapChartCard from '../components/HeatmapChartCard';
 import TimelineChartCard from '../components/TimelineChartCard';
 import AiAnalysisCard from '../components/AiAnalysisCard';
+import { useTranslation } from 'react-i18next';
 
 interface ChartsState {
   radar: RadarResponse | null;
@@ -21,6 +22,7 @@ interface ChartsState {
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('inventory');
   const [dashboard, setDashboard] = useState<DashboardResponse | null>(null);
   const [charts, setCharts] = useState<ChartsState>({ radar: null, growth: null, heatmap: null, timeline: null });
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +100,7 @@ export default function DashboardPage() {
       const start = new Date(fy.inputStartDate);
       if (today < start) {
         const daysUntil = Math.ceil((start.getTime() - today.getTime()) / 86400000);
-        return { level: 'warning' as const, message: `入力期間は ${fy.inputStartDate} から開始します（あと ${daysUntil} 日）` };
+        return { level: 'warning' as const, message: t('dashboard.deadline.notStarted', { date: fy.inputStartDate, days: daysUntil }) };
       }
     }
 
@@ -107,18 +109,18 @@ export default function DashboardPage() {
     const end = new Date(fy.inputEndDate);
     const daysLeft = Math.ceil((end.getTime() - today.getTime()) / 86400000);
 
-    if (daysLeft < 0) return { level: 'error' as const, message: `入力期間が終了しました（締切：${fy.inputEndDate}）` };
-    if (daysLeft === 0) return { level: 'urgent' as const, message: `今日が入力締切日です（${fy.inputEndDate}）` };
-    if (daysLeft <= 3)  return { level: 'urgent' as const, message: `入力締切まであと ${daysLeft} 日です（締切：${fy.inputEndDate}）` };
-    if (daysLeft <= 7)  return { level: 'warning' as const, message: `入力締切まであと ${daysLeft} 日です（締切：${fy.inputEndDate}）` };
+    if (daysLeft < 0) return { level: 'error' as const, message: t('dashboard.deadline.expired', { date: fy.inputEndDate }) };
+    if (daysLeft === 0) return { level: 'urgent' as const, message: t('dashboard.deadline.today', { date: fy.inputEndDate }) };
+    if (daysLeft <= 3)  return { level: 'urgent' as const, message: t('dashboard.deadline.daysLeft', { days: daysLeft, date: fy.inputEndDate }) };
+    if (daysLeft <= 7)  return { level: 'warning' as const, message: t('dashboard.deadline.daysLeft', { days: daysLeft, date: fy.inputEndDate }) };
     return null;
   })();
 
   const statusLabel = (status: string) => {
     switch (status) {
-      case 'DRAFT': return '入力中（下書き）';
-      case 'PENDING_GOAL': return '提出済み・目標設定待ち';
-      case 'COMPLETED': return '完了';
+      case 'DRAFT': return t('dashboard.inventoryStatus.draft');
+      case 'PENDING_GOAL': return t('dashboard.inventoryStatus.pendingGoal');
+      case 'COMPLETED': return t('dashboard.inventoryStatus.completed');
       default: return status;
     }
   };
@@ -126,7 +128,7 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="dashboard-page">
-        <div className="loading">読み込み中...</div>
+        <div className="loading">{t('loading')}</div>
       </div>
     );
   }
@@ -137,7 +139,7 @@ export default function DashboardPage() {
     <div className="dashboard-page">
       <NavBar />
       <main className="dashboard-main">
-        <h1 className="dashboard-title">ダッシュボード</h1>
+        <h1 className="dashboard-title">{t('dashboard.title')}</h1>
 
         {deadlineBanner && (
           <div className={`deadline-banner deadline-banner--${deadlineBanner.level}`}>
@@ -148,7 +150,7 @@ export default function DashboardPage() {
 
         {dashboard?.currentFiscalYear && (
           <div className="dashboard-card">
-            <h2 className="card-title">当年度：{dashboard.currentFiscalYear.name}</h2>
+            <h2 className="card-title">{t('dashboard.currentFiscalYear', { name: dashboard.currentFiscalYear.name })}</h2>
 
             {inv ? (
               <div className="inventory-status">
@@ -156,37 +158,37 @@ export default function DashboardPage() {
                   {statusLabel(inv.status)}
                 </div>
                 <div className="inventory-counts">
-                  <span>ITスキル：{inv.itSkillCount}件</span>
-                  <span>資格：{inv.qualificationCount}件</span>
-                  <span>セミナー：{inv.seminarCount}件</span>
+                  <span>{t('dashboard.inventoryCount.itSkill', { count: inv.itSkillCount })}</span>
+                  <span>{t('dashboard.inventoryCount.qualification', { count: inv.qualificationCount })}</span>
+                  <span>{t('dashboard.inventoryCount.seminar', { count: inv.seminarCount })}</span>
                 </div>
                 {inv.submittedAt && (
                   <p className="submitted-at">
-                    提出日時：{new Date(inv.submittedAt).toLocaleString('ja-JP')}
+                    {t('dashboard.submittedAt')}{new Date(inv.submittedAt).toLocaleString('ja-JP')}
                   </p>
                 )}
                 {inv.goalCompletedAt && (
                   <p className="submitted-at">
-                    目標設定完了：{new Date(inv.goalCompletedAt).toLocaleString('ja-JP')}
+                    {t('dashboard.goalCompletedAt')}{new Date(inv.goalCompletedAt).toLocaleString('ja-JP')}
                   </p>
                 )}
                 <div className="action-buttons">
                   <button className="btn btn-primary" onClick={handleContinueInventory}>
                     {inv.status === 'COMPLETED' ? <IconEye size={15} /> : <IconEdit size={15} />}
-                    棚卸を{inv.status === 'COMPLETED' ? '確認する' : '続ける'}
+                    {inv.status === 'COMPLETED' ? t('dashboard.action.viewInventory') : t('dashboard.action.continueInventory')}
                   </button>
                 </div>
               </div>
             ) : (
               <div className="no-inventory">
-                <p>今年度の棚卸がまだ作成されていません。</p>
+                <p>{t('dashboard.noInventory')}</p>
                 <button
                   className="btn btn-primary"
                   onClick={handleStartInventory}
                   disabled={isCreating}
                 >
                   <IconPlay size={15} />
-                  {isCreating ? '作成中...' : '棚卸を開始する'}
+                  {isCreating ? t('dashboard.action.startingInventory') : t('dashboard.action.startInventory')}
                 </button>
               </div>
             )}
@@ -195,23 +197,23 @@ export default function DashboardPage() {
 
         {!dashboard?.currentFiscalYear && (
           <div className="dashboard-card">
-            <p>有効な年度が設定されていません。管理者にお問い合わせください。</p>
+            <p>{t('dashboard.noFiscalYear')}</p>
           </div>
         )}
 
         <div className="dashboard-nav">
           <button className="btn btn-secondary" onClick={() => navigate('/inventory/history')}>
             <IconHistory size={15} />
-            過去の棚卸を確認する
+            {t('dashboard.viewHistory')}
           </button>
         </div>
 
         {/* Charts section */}
         <section className="chart-section">
-          <h2 className="chart-section__title">スキル可視化</h2>
+          <h2 className="chart-section__title">{t('dashboard.chartsSection')}</h2>
 
           {chartsLoading ? (
-            <div className="chart-loading">グラフを読み込み中...</div>
+            <div className="chart-loading">{t('dashboard.chartsLoading')}</div>
           ) : (
             <>
               <div className="chart-grid">
@@ -227,7 +229,7 @@ export default function DashboardPage() {
         {/* AI Analysis section */}
         {dashboard?.currentFiscalYear && (
           <section className="ai-analysis-section">
-            <h2 className="chart-section__title">AIキャリア分析</h2>
+            <h2 className="chart-section__title">{t('dashboard.aiAnalysisSection')}</h2>
             {aiAnalyses.length > 0 ? (
               <AiAnalysisCard
                 analysis={aiAnalyses[0]}
@@ -240,7 +242,7 @@ export default function DashboardPage() {
             ) : (
               <div className="ai-analysis-card ai-analysis-card--none">
                 <p className="ai-no-analysis-text">
-                  棚卸を提出すると、AIによるキャリア分析が自動的に開始されます。
+                  {t('dashboard.aiAnalysisNone')}
                 </p>
               </div>
             )}

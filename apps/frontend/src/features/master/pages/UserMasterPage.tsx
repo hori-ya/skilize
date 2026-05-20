@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { UserAdmin, Role } from '../../auth/types/index';
 import { getUsers, createUser, updateUser, resetUserPassword } from '../../team/api/userApi';
@@ -7,13 +8,12 @@ import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type ModalMode = 'create' | 'edit';
 
-const ROLES: { value: Role; label: string }[] = [
-  { value: 'GENERAL', label: '一般' },
-  { value: 'TL',      label: 'TL' },
-  { value: 'ADMIN',   label: '管理者' },
-];
-
-const roleLabel = (role: string) => ROLES.find(r => r.value === role)?.label ?? role;
+const ROLE_KEY: Record<string, string> = {
+  GENERAL: 'user.role.general',
+  TL: 'user.role.tl',
+  ADMIN: 'user.role.admin',
+};
+const ROLE_VALUES: Role[] = ['GENERAL', 'TL', 'ADMIN'];
 
 interface CreateForm {
   userId: string;
@@ -32,6 +32,7 @@ interface EditForm {
 }
 
 export default function UserMasterPage() {
+  const { t } = useTranslation('master');
   const [users, setUsers] = useState<UserAdmin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,11 +56,13 @@ export default function UserMasterPage() {
   const [resetResult, setResetResult] = useState('');
   const [resetting, setResetting] = useState(false);
 
+  const getRoleLabel = (role: string) => t(ROLE_KEY[role] ?? role);
+
   const loadUsers = () => {
     setLoading(true);
     getUsers()
       .then(res => setUsers(res.data))
-      .catch(() => setError('ユーザー一覧の取得に失敗しました'))
+      .catch(() => setError(t('user.loadFailed')))
       .finally(() => setLoading(false));
   };
 
@@ -89,8 +92,8 @@ export default function UserMasterPage() {
   };
 
   const handleCreate = async () => {
-    if (!createForm.userId.trim()) { setFormError('ユーザーIDは必須です'); return; }
-    if (!createForm.name.trim())   { setFormError('名前は必須です'); return; }
+    if (!createForm.userId.trim()) { setFormError(t('user.validation.userIdRequired')); return; }
+    if (!createForm.name.trim())   { setFormError(t('user.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       await createUser({
@@ -104,12 +107,12 @@ export default function UserMasterPage() {
       loadUsers();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setFormError(msg ?? '作成に失敗しました');
+      setFormError(msg ?? t('common.createFailed'));
     } finally { setSaving(false); }
   };
 
   const handleEdit = async () => {
-    if (!editForm.name.trim()) { setFormError('名前は必須です'); return; }
+    if (!editForm.name.trim()) { setFormError(t('user.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       await updateUser(editingId!, {
@@ -123,7 +126,7 @@ export default function UserMasterPage() {
       loadUsers();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setFormError(msg ?? '更新に失敗しました');
+      setFormError(msg ?? t('common.updateFailed'));
     } finally { setSaving(false); }
   };
 
@@ -141,11 +144,11 @@ export default function UserMasterPage() {
       setResetResult(res.data.temporaryPassword);
       loadUsers();
     } catch {
-      setResetResult('エラーが発生しました');
+      setResetResult(t('user.resetPassword.errorMessage'));
     } finally { setResetting(false); }
   };
 
-  if (loading) return <div className="loading-screen"><span>読み込み中...</span></div>;
+  if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
   return (
     <div className="master-page">
@@ -156,27 +159,29 @@ export default function UserMasterPage() {
 
         <section className="master-card">
           <div className="master-card__header">
-            <h2 className="master-card__title">ユーザー一覧</h2>
-            <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />ユーザー追加</button>
+            <h2 className="master-card__title">{t('user.listTitle')}</h2>
+            <button className="btn btn--primary btn--sm" onClick={openCreate}>
+              <IconPlus size={12} />{t('user.addButton')}
+            </button>
           </div>
 
           <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
-                  <th>ユーザーID</th>
-                  <th>名前</th>
-                  <th>メール</th>
-                  <th style={{ width: 80 }}>権限</th>
-                  <th style={{ width: 120 }}>TL</th>
-                  <th style={{ width: 72 }}>状態</th>
-                  <th style={{ width: 72 }}>初期PW</th>
-                  <th style={{ width: 140 }}>操作</th>
+                  <th>{t('user.table.userId')}</th>
+                  <th>{t('user.table.name')}</th>
+                  <th>{t('user.table.email')}</th>
+                  <th style={{ width: 80 }}>{t('user.table.role')}</th>
+                  <th style={{ width: 120 }}>{t('user.table.tl')}</th>
+                  <th style={{ width: 72 }}>{t('common.status')}</th>
+                  <th style={{ width: 72 }}>{t('user.table.initialPw')}</th>
+                  <th style={{ width: 140 }}>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {users.length === 0 ? (
-                  <tr><td colSpan={8} className="master-table__empty">データがありません</td></tr>
+                  <tr><td colSpan={8} className="master-table__empty">{t('common.noData')}</td></tr>
                 ) : (
                   users.map(u => (
                     <tr key={u.id}>
@@ -185,21 +190,25 @@ export default function UserMasterPage() {
                       <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{u.email ?? '—'}</td>
                       <td>
                         <span className={`role-badge role-badge--${u.role.toLowerCase()}`}>
-                          {roleLabel(u.role)}
+                          {getRoleLabel(u.role)}
                         </span>
                       </td>
                       <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{u.tlName ?? '—'}</td>
                       <td>
                         <span className={u.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                          {u.isActive ? '有効' : '無効'}
+                          {u.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                         </span>
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        {u.isInitialPassword && <span className="fy-status fy-status--planned">未変更</span>}
+                        {u.isInitialPassword && (
+                          <span className="fy-status fy-status--planned">{t('user.table.pwNotChanged')}</span>
+                        )}
                       </td>
                       <td>
                         <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn--secondary btn--sm" onClick={() => openEdit(u)}><IconEdit size={12} />編集</button>
+                          <button className="btn btn--secondary btn--sm" onClick={() => openEdit(u)}>
+                            <IconEdit size={12} />{t('common.edit')}
+                          </button>
                           <button className="btn btn--secondary btn--sm" onClick={() => openReset(u)}>
                             <IconKey size={12} />PW reset
                           </button>
@@ -219,7 +228,7 @@ export default function UserMasterPage() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" style={{ width: 560 }} onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{modalMode === 'create' ? 'ユーザー追加' : 'ユーザー編集'}</h3>
+              <h3>{modalMode === 'create' ? t('user.modalCreate') : t('user.modalEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -228,39 +237,39 @@ export default function UserMasterPage() {
               {modalMode === 'create' ? (
                 <>
                   <div className="form-group">
-                    <label className="form-label">ユーザーID <span className="required">*</span></label>
+                    <label className="form-label">{t('user.form.userIdLabel')} <span className="required">*</span></label>
                     <input className="form-input" value={createForm.userId}
                       onChange={e => setCreateForm(f => ({ ...f, userId: e.target.value }))}
-                      placeholder="例: yamada_taro" maxLength={50} />
-                    <p className="form-hint">初期パスワードはユーザーIDと同じになります</p>
+                      placeholder={t('user.form.userIdPlaceholder')} maxLength={50} />
+                    <p className="form-hint">{t('user.form.initialPasswordHint')}</p>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">名前 <span className="required">*</span></label>
+                    <label className="form-label">{t('user.form.nameLabel')} <span className="required">*</span></label>
                     <input className="form-input" value={createForm.name}
                       onChange={e => setCreateForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="例: 山田 太郎" maxLength={100} />
+                      placeholder={t('user.form.namePlaceholder')} maxLength={100} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">メールアドレス</label>
+                    <label className="form-label">{t('user.form.emailLabel')}</label>
                     <input type="email" className="form-input" value={createForm.email}
                       onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))}
-                      placeholder="例: yamada@example.com" />
+                      placeholder={t('user.form.emailPlaceholder')} />
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">権限</label>
+                      <label className="form-label">{t('user.form.roleLabel')}</label>
                       <select className="master-select" style={{ width: '100%' }}
                         value={createForm.role}
                         onChange={e => setCreateForm(f => ({ ...f, role: e.target.value as Role }))}>
-                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        {ROLE_VALUES.map(r => <option key={r} value={r}>{t(ROLE_KEY[r])}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">TL（上長）</label>
+                      <label className="form-label">{t('user.form.tlLabel')}</label>
                       <select className="master-select" style={{ width: '100%' }}
                         value={createForm.tlUserId}
                         onChange={e => setCreateForm(f => ({ ...f, tlUserId: e.target.value }))}>
-                        <option value="">なし</option>
+                        <option value="">{t('user.form.tlNone')}</option>
                         {tlCandidates.map(u => (
                           <option key={u.id} value={u.id}>{u.name}（{u.userId}）</option>
                         ))}
@@ -271,31 +280,31 @@ export default function UserMasterPage() {
               ) : (
                 <>
                   <div className="form-group">
-                    <label className="form-label">名前 <span className="required">*</span></label>
+                    <label className="form-label">{t('user.form.nameLabel')} <span className="required">*</span></label>
                     <input className="form-input" value={editForm.name}
                       onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
                       maxLength={100} />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">メールアドレス</label>
+                    <label className="form-label">{t('user.form.emailLabel')}</label>
                     <input type="email" className="form-input" value={editForm.email}
                       onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
                   </div>
                   <div className="form-row">
                     <div className="form-group">
-                      <label className="form-label">権限</label>
+                      <label className="form-label">{t('user.form.roleLabel')}</label>
                       <select className="master-select" style={{ width: '100%' }}
                         value={editForm.role}
                         onChange={e => setEditForm(f => ({ ...f, role: e.target.value as Role }))}>
-                        {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                        {ROLE_VALUES.map(r => <option key={r} value={r}>{t(ROLE_KEY[r])}</option>)}
                       </select>
                     </div>
                     <div className="form-group">
-                      <label className="form-label">TL（上長）</label>
+                      <label className="form-label">{t('user.form.tlLabel')}</label>
                       <select className="master-select" style={{ width: '100%' }}
                         value={editForm.tlUserId}
                         onChange={e => setEditForm(f => ({ ...f, tlUserId: e.target.value }))}>
-                        <option value="">なし</option>
+                        <option value="">{t('user.form.tlNone')}</option>
                         {tlCandidates
                           .filter(u => u.id !== editingId)
                           .map(u => (
@@ -308,18 +317,20 @@ export default function UserMasterPage() {
                     <label className="form-check">
                       <input type="checkbox" checked={editForm.active}
                         onChange={e => setEditForm(f => ({ ...f, active: e.target.checked }))} />
-                      <span>有効</span>
+                      <span>{t('user.form.activeLabel')}</span>
                     </label>
                   </div>
                 </>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary"
                 onClick={modalMode === 'create' ? handleCreate : handleEdit}
                 disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -331,30 +342,29 @@ export default function UserMasterPage() {
         <div className="modal-overlay" onClick={() => { setResetTargetId(null); setResetResult(''); }}>
           <div className="modal" style={{ width: 420 }} onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>パスワードリセット</h3>
+              <h3>{t('user.resetPasswordTitle')}</h3>
               <button className="modal__close" onClick={() => { setResetTargetId(null); setResetResult(''); }}>×</button>
             </div>
             <div className="modal__body">
               {resetResult ? (
                 <div className="reset-result">
-                  <p>パスワードをリセットしました。</p>
-                  <p>仮パスワードをユーザーに通知してください：</p>
+                  <p>{t('user.resetPassword.successMessage')}</p>
+                  <p>{t('user.resetPassword.tempPasswordMessage')}</p>
                   <div className="reset-password-box">{resetResult}</div>
                 </div>
               ) : (
                 <p>
-                  <strong>{resetTargetName}</strong> のパスワードをリセットします。<br />
-                  ユーザーは次回ログイン時に新しいパスワードへ変更が必要になります。
+                  <strong>{resetTargetName}</strong>{t('user.resetPassword.confirmMessage')}
                 </p>
               )}
             </div>
             <div className="modal__footer">
               <button className="btn btn--secondary" onClick={() => { setResetTargetId(null); setResetResult(''); }}>
-                <IconX size={13} />{resetResult ? '閉じる' : 'キャンセル'}
+                <IconX size={13} />{resetResult ? t('user.resetPassword.closeButton') : t('common.cancel')}
               </button>
               {!resetResult && (
                 <button className="btn btn--danger" onClick={handleReset} disabled={resetting}>
-                  <IconReset size={13} />{resetting ? '処理中...' : 'リセットする'}
+                  <IconReset size={13} />{resetting ? t('user.resetPassword.resettingButton') : t('user.resetPassword.resetButton')}
                 </button>
               )}
             </div>

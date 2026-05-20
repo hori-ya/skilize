@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { AdSeminar, AdSeminarCategory } from '../../../shared/types/master';
 import {
@@ -16,6 +17,7 @@ type ModalMode = 'create' | 'edit';
 interface CatForm { name: string; sortOrder: string; active: boolean }
 
 function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]; onReload: () => void }) {
+  const { t } = useTranslation('master');
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>('create');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -40,7 +42,7 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setFormError('カテゴリ名は必須です'); return; }
+    if (!form.name.trim()) { setFormError(t('adSeminar.category.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       if (mode === 'create') {
@@ -51,30 +53,32 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
       setModalOpen(false);
       onReload();
     } catch {
-      setFormError('保存に失敗しました');
+      setFormError(t('common.saveFailed'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
-        <h3 className="master-card__title" style={{ marginBottom: 0 }}>ADカテゴリ一覧</h3>
-        <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />カテゴリ追加</button>
+        <h3 className="master-card__title" style={{ marginBottom: 0 }}>{t('adSeminar.category.listTitle')}</h3>
+        <button className="btn btn--primary btn--sm" onClick={openCreate}>
+          <IconPlus size={12} />{t('adSeminar.category.addButton')}
+        </button>
       </div>
 
       <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
-              <th>カテゴリ名</th>
-              <th style={{ width: 64 }}>並順</th>
-              <th style={{ width: 72 }}>状態</th>
-              <th style={{ width: 72 }}>操作</th>
+              <th>{t('adSeminar.category.table.name')}</th>
+              <th style={{ width: 64 }}>{t('common.sortOrder')}</th>
+              <th style={{ width: 72 }}>{t('common.status')}</th>
+              <th style={{ width: 72 }}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {categories.length === 0 ? (
-              <tr><td colSpan={4} className="master-table__empty">データがありません</td></tr>
+              <tr><td colSpan={4} className="master-table__empty">{t('common.noData')}</td></tr>
             ) : (
               categories.map(c => (
                 <tr key={c.id}>
@@ -82,11 +86,13 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
                   <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
                   <td>
                     <span className={c.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {c.isActive ? '有効' : '無効'}
+                      {c.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}><IconEdit size={12} />編集</button>
+                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
+                      <IconEdit size={12} />{t('common.edit')}
+                    </button>
                   </td>
                 </tr>
               ))
@@ -99,19 +105,19 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? 'カテゴリ追加' : 'カテゴリ編集'}</h3>
+              <h3>{mode === 'create' ? t('adSeminar.modalCategoryCreate') : t('adSeminar.modalCategoryEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
               <div className="form-group">
-                <label className="form-label">カテゴリ名 <span className="required">*</span></label>
+                <label className="form-label">{t('adSeminar.category.form.nameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: 外部研修" maxLength={100} />
+                  placeholder={t('adSeminar.category.form.namePlaceholder')} maxLength={100} />
               </div>
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
@@ -121,15 +127,17 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
                   <label className="form-check">
                     <input type="checkbox" checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
-                    <span>有効</span>
+                    <span>{t('common.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -155,6 +163,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
   categories: AdSeminarCategory[];
   onReload: () => void;
 }) {
+  const { t } = useTranslation('master');
   const [filterCatId, setFilterCatId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>('create');
@@ -190,7 +199,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setFormError('AD名は必須です'); return; }
+    if (!form.name.trim()) { setFormError(t('adSeminar.seminar.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       const payload = {
@@ -207,22 +216,22 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
       setModalOpen(false);
       onReload();
     } catch {
-      setFormError('保存に失敗しました');
+      setFormError(t('common.saveFailed'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <label className="master-label" style={{ minWidth: 'auto' }}>カテゴリフィルタ</label>
+        <label className="master-label" style={{ minWidth: 'auto' }}>{t('adSeminar.seminar.filterLabel')}</label>
         <select className="master-select"
           value={filterCatId ?? ''}
           onChange={e => setFilterCatId(e.target.value === '' ? null : Number(e.target.value))}>
-          <option value="">すべて</option>
+          <option value="">{t('common.allOption')}</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <button className="btn btn--primary btn--sm" onClick={openCreate} style={{ marginLeft: 'auto' }}>
-          <IconPlus size={12} />AD追加
+          <IconPlus size={12} />{t('adSeminar.seminar.addButton')}
         </button>
       </div>
 
@@ -230,17 +239,17 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
         <table className="master-table">
           <thead>
             <tr>
-              <th>AD名</th>
-              <th style={{ width: 160 }}>カテゴリ</th>
-              <th style={{ width: 200 }}>説明</th>
-              <th style={{ width: 56 }}>並順</th>
-              <th style={{ width: 72 }}>状態</th>
-              <th style={{ width: 72 }}>操作</th>
+              <th>{t('adSeminar.seminar.table.adName')}</th>
+              <th style={{ width: 160 }}>{t('adSeminar.table.category')}</th>
+              <th style={{ width: 200 }}>{t('adSeminar.table.description')}</th>
+              <th style={{ width: 56 }}>{t('common.sortOrder')}</th>
+              <th style={{ width: 72 }}>{t('common.status')}</th>
+              <th style={{ width: 72 }}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">データがありません</td></tr>
+              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
             ) : (
               filtered.map(a => (
                 <tr key={a.id}>
@@ -252,10 +261,14 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
                   <td style={{ textAlign: 'center' }}>{a.sortOrder}</td>
                   <td>
                     <span className={a.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {a.isActive ? '有効' : '無効'}
+                      {a.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                     </span>
                   </td>
-                  <td><button className="btn btn--secondary btn--sm" onClick={() => openEdit(a)}><IconEdit size={12} />編集</button></td>
+                  <td>
+                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(a)}>
+                      <IconEdit size={12} />{t('common.edit')}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -267,36 +280,36 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? 'AD追加' : 'AD編集'}</h3>
+              <h3>{mode === 'create' ? t('adSeminar.modalCreate') : t('adSeminar.modalEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
               <div className="form-group">
-                <label className="form-label">カテゴリ</label>
+                <label className="form-label">{t('adSeminar.form.categoryLabel')}</label>
                 <select className="master-select" style={{ width: '100%' }}
                   value={form.categoryId ?? ''}
                   onChange={e => setForm(f => ({ ...f, categoryId: e.target.value === '' ? null : Number(e.target.value) }))}>
-                  <option value="">カテゴリなし</option>
+                  <option value="">{t('common.noCategoryOption')}</option>
                   {categories.filter(c => c.isActive).map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">AD名 <span className="required">*</span></label>
+                <label className="form-label">{t('adSeminar.seminar.form.adNameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   placeholder="例: AWS研修" maxLength={200} />
               </div>
               <div className="form-group">
-                <label className="form-label">説明</label>
+                <label className="form-label">{t('adSeminar.form.descriptionLabel')}</label>
                 <textarea className="form-input" value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="ADの説明（任意）" style={{ resize: 'vertical' }} />
+                  rows={3} placeholder={t('adSeminar.seminar.form.descriptionPlaceholder')} style={{ resize: 'vertical' }} />
               </div>
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
@@ -306,15 +319,17 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
                   <label className="form-check">
                     <input type="checkbox" checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
-                    <span>有効</span>
+                    <span>{t('common.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -330,6 +345,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
 type TabKey = 'categories' | 'adSeminars';
 
 export default function AdSeminarMasterPage() {
+  const { t } = useTranslation('master');
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
   const [categories, setCategories] = useState<AdSeminarCategory[]>([]);
   const [adSeminars, setAdSeminars] = useState<AdSeminar[]>([]);
@@ -343,13 +359,13 @@ export default function AdSeminarMasterPage() {
         setCategories(catRes.data);
         setAdSeminars(adRes.data);
       })
-      .catch(() => setError('データの取得に失敗しました'))
+      .catch(() => setError(t('common.loadFailed')))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { loadAll(); }, []);
 
-  if (loading) return <div className="loading-screen"><span>読み込み中...</span></div>;
+  if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
   return (
     <div className="master-page">
@@ -361,11 +377,11 @@ export default function AdSeminarMasterPage() {
         <div className="tab-bar">
           <button className={`tab-btn${activeTab === 'categories' ? ' active' : ''}`}
             onClick={() => setActiveTab('categories')}>
-            カテゴリ管理
+            {t('adSeminar.tab.categories')}
           </button>
           <button className={`tab-btn${activeTab === 'adSeminars' ? ' active' : ''}`}
             onClick={() => setActiveTab('adSeminars')}>
-            AD管理
+            {t('adSeminar.tab.adSeminars')}
           </button>
         </div>
 

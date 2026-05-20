@@ -1,8 +1,8 @@
 # システム全体構成
 
-**バージョン**: 1.2.0  
+**バージョン**: 1.3.0  
 **作成日**: 2026-05-09  
-**更新日**: 2026-05-17
+**更新日**: 2026-05-21
 
 ---
 
@@ -27,7 +27,7 @@
   │  ┌───────────┐  ┌────────────┐  │
   │  │  Nginx    │  │  Frontend  │  │
   │  │ (reverse  │─▶│  (React)   │  │
-  │  │  proxy)   │  │  :3000     │  │
+  │  │  proxy)   │  │  :5173     │  │
   │  └─────┬─────┘  └────────────┘  │
   │        │ /api/*                 │
   │        ▼                        │
@@ -166,14 +166,14 @@ apps/backend/src/main/java/com/skilize/
 ├── charts/
 │   ├── presentation/               ← ChartController + Response DTO（4エンドポイント）
 │   └── application/                ← ChartService（radar/growth/heatmap/timeline 集計）
-├── interview/
-│   ├── presentation/               ← InterviewController + Request/Response DTO
-│   ├── application/                ← InterviewService（@Transactional）
-│   └── domain/                     ← InventoryInterview・InterviewDetailNote・DetailType・Repository
 ├── expectation/
 │   ├── presentation/               ← ExpectationController + Request/Response DTO
 │   ├── application/                ← ExpectationService（@Transactional）
 │   └── domain/                     ← UserExpectation・UserExpectationRepository
+├── interview/
+│   ├── presentation/               ← InterviewController + Request/Response DTO
+│   ├── application/                ← InterviewService（@Transactional）
+│   └── domain/                     ← InventoryInterview・InterviewDetailNote・DetailType・Repository
 └── ai/
     ├── presentation/               ← AiAnalysisController + Response DTO
     ├── application/                ← AiAnalysisService（@Async）・InventoryCompletedEventListener

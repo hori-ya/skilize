@@ -10,6 +10,7 @@ import type { InventoryDetail } from '../types/index';
 import type { ItSkill, SkillLevel, Qualification, AdSeminar } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
+import { useTranslation } from 'react-i18next';
 
 type Tab = 'itSkill' | 'qualification' | 'seminar';
 
@@ -48,6 +49,7 @@ interface SeminarRow {
 export default function InventoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('inventory');
   const inventoryId = Number(id);
 
   const [inventory, setInventory] = useState<InventoryDetail | null>(null);
@@ -280,9 +282,9 @@ export default function InventoryPage() {
     const emptyCustom = customSkillRows.filter(r => !r.customSkillName.trim()).length;
     if (missingCount > 0 || emptyCustom > 0) {
       const msgs: string[] = [];
-      if (missingCount > 0) msgs.push(`レベルが未入力のスキルが ${missingCount} 件`);
-      if (emptyCustom > 0) msgs.push(`スキル名が未入力のカスタムスキルが ${emptyCustom} 件`);
-      setErrorMessage(msgs.join('、') + 'あります。');
+      if (missingCount > 0) msgs.push(t('inventoryPage.validation.missingLevel', { count: missingCount }));
+      if (emptyCustom > 0) msgs.push(t('inventoryPage.validation.missingCustomName', { count: emptyCustom }));
+      setErrorMessage(msgs.join('、') + t('inventoryPage.validation.validationSuffix'));
       return;
     }
     setErrorMessage('');
@@ -307,13 +309,13 @@ export default function InventoryPage() {
         })),
       ];
       await saveItSkillDetails(inventoryId, items);
-      showMessage('ITスキルを保存しました');
+      showMessage(t('inventoryPage.message.itSkillSaved'));
     } catch {
-      showMessage('保存に失敗しました');
+      showMessage(t('inventoryPage.message.saveFailed'));
     } finally {
       setIsSaving(false);
     }
-  }, [inventoryId, itSkills, itSkillEntries, customSkillRows, isSaving]);
+  }, [inventoryId, itSkills, itSkillEntries, customSkillRows, isSaving, t]);
 
   const handleSaveQualifications = useCallback(async () => {
     if (isSaving) return;
@@ -323,7 +325,7 @@ export default function InventoryPage() {
       if (!r.acquiredYearMonth) return true;
       return false;
     });
-    if (hasError) { setErrorMessage('必須項目を入力してください。'); return; }
+    if (hasError) { setErrorMessage(t('inventoryPage.validation.requiredFields')); return; }
     setErrorMessage('');
     setIsSaving(true);
     try {
@@ -334,14 +336,14 @@ export default function InventoryPage() {
         acquiredYearMonth: r.acquiredYearMonth || null,
         remarks: r.remarks,
       })));
-      showMessage('資格を保存しました');
+      showMessage(t('inventoryPage.message.qualSaved'));
       setQualSaved(true);
     } catch {
-      showMessage('保存に失敗しました');
+      showMessage(t('inventoryPage.message.saveFailed'));
     } finally {
       setIsSaving(false);
     }
-  }, [inventoryId, qualificationRows, isSaving]);
+  }, [inventoryId, qualificationRows, isSaving, t]);
 
   const handleSaveSeminars = useCallback(async () => {
     if (isSaving) return;
@@ -351,7 +353,7 @@ export default function InventoryPage() {
       if (!r.attendedYearMonth) return true;
       return false;
     });
-    if (hasError) { setErrorMessage('必須項目を入力してください。'); return; }
+    if (hasError) { setErrorMessage(t('inventoryPage.validation.requiredFields')); return; }
     setErrorMessage('');
     setIsSaving(true);
     try {
@@ -363,14 +365,14 @@ export default function InventoryPage() {
         attendedYearMonth: r.attendedYearMonth || null,
         remarks: r.remarks,
       })));
-      showMessage('セミナーを保存しました');
+      showMessage(t('inventoryPage.message.seminarSaved'));
       setSemSaved(true);
     } catch {
-      showMessage('保存に失敗しました');
+      showMessage(t('inventoryPage.message.saveFailed'));
     } finally {
       setIsSaving(false);
     }
-  }, [inventoryId, seminarRows, isSaving]);
+  }, [inventoryId, seminarRows, isSaving, t]);
 
   const handleSubmit = () => setShowSubmitConfirm(true);
 
@@ -382,7 +384,7 @@ export default function InventoryPage() {
       localStorage.removeItem(`inventory-tab-${inventoryId}`);
       navigate(`/inventory/${inventoryId}/comparison`);
     } catch {
-      showMessage('提出に失敗しました');
+      showMessage(t('inventoryPage.message.submitFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -455,7 +457,7 @@ export default function InventoryPage() {
     });
   };
 
-  if (!inventory) return <div className="loading">読み込み中...</div>;
+  if (!inventory) return <div className="loading">{t('loading')}</div>;
 
   return (
     <div className="inventory-page">
@@ -463,10 +465,10 @@ export default function InventoryPage() {
 
       <main className="inventory-main">
         <div className="page-title-row">
-          <h1 className="page-title">棚卸入力 — {inventory.fiscalYear.name}</h1>
+          <h1 className="page-title">{t('inventoryPage.title', { fiscalYear: inventory.fiscalYear.name })}</h1>
           {tab === 'itSkill' && skillLevels.length > 0 && (
             <div className="level-legend">
-              <span className="level-legend-label">採点基準</span>
+              <span className="level-legend-label">{t('inventoryPage.levelLegendLabel')}</span>
               {skillLevels.map(lv => (
                 <span key={lv.id} className="level-legend-item">
                   <span className="level-legend-lv">{lv.levelValue}</span>
@@ -482,13 +484,13 @@ export default function InventoryPage() {
 
         <div className="tab-bar">
           <button className={`tab-btn${tab === 'itSkill' ? ' active' : ''}`} onClick={() => changeTab('itSkill')}>
-            ITスキル（{itSkillScoredCount}）
+            {t('inventoryPage.tab.itSkill', { count: itSkillScoredCount })}
           </button>
           <button className={`tab-btn${tab === 'qualification' ? ' active' : ''}`} onClick={() => changeTab('qualification')}>
-            資格（{qualificationRows.length}）
+            {t('inventoryPage.tab.qualification', { count: qualificationRows.length })}
           </button>
           <button className={`tab-btn${tab === 'seminar' ? ' active' : ''}`} onClick={() => changeTab('seminar')}>
-            セミナー（{seminarRows.length}）
+            {t('inventoryPage.tab.seminar', { count: seminarRows.length })}
           </button>
         </div>
 
@@ -500,13 +502,13 @@ export default function InventoryPage() {
                 <table className="scoring-table">
                   <thead>
                     <tr>
-                      <th className="col-skill-name">スキル名</th>
+                      <th className="col-skill-name">{t('inventoryPage.table.skillName')}</th>
                       {skillLevels.map(lv => (
                         <th key={lv.id} className="col-level" title={lv.description}>
                           {lv.levelValue}
                         </th>
                       ))}
-                      <th className="col-remarks">備考（採点根拠）</th>
+                      <th className="col-remarks">{t('inventoryPage.table.remarks')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -543,14 +545,14 @@ export default function InventoryPage() {
                                         className="remarks-input"
                                         rows={2}
                                         value={entry.remarks}
-                                        placeholder="任意"
+                                        placeholder={t('inventoryPage.table.optional')}
                                         onChange={e => setSkillRemarks(skill.id, e.target.value)}
                                       />
                                       {entry.levelId !== null && (
                                         <button
                                           className="clear-score-btn"
                                           onClick={() => clearSkillEntry(skill.id)}
-                                          title="採点をクリア"
+                                          title={t('inventoryPage.clearScoreTitle')}
                                         >×</button>
                                       )}
                                     </div>
@@ -564,7 +566,7 @@ export default function InventoryPage() {
                     ))}
                     {customSkillRows.length > 0 && (
                       <tr className="scoring-cat1-row">
-                        <td colSpan={skillLevels.length + 2}>カスタムスキル</td>
+                        <td colSpan={skillLevels.length + 2}>{t('inventoryPage.customSkillCategory')}</td>
                       </tr>
                     )}
                     {customSkillRows.map((row, idx) => (
@@ -573,7 +575,7 @@ export default function InventoryPage() {
                           <input
                             type="text"
                             className={`input custom-name-input${customSkillErrors.has(idx) ? ' input--error' : ''}`}
-                            placeholder="スキル名を入力"
+                            placeholder={t('inventoryPage.customSkillNamePlaceholder')}
                             value={row.customSkillName}
                             onChange={e => setCustomSkillRows(prev => prev.map((r, i) =>
                               i === idx ? { ...r, customSkillName: e.target.value } : r))}
@@ -588,14 +590,14 @@ export default function InventoryPage() {
                               className="remarks-input"
                               rows={2}
                               value={row.remarks}
-                              placeholder="任意"
+                              placeholder={t('inventoryPage.table.optional')}
                               onChange={e => setCustomSkillRows(prev => prev.map((r, i) =>
                                 i === idx ? { ...r, remarks: e.target.value } : r))}
                             />
                             <button
                               className="clear-score-btn"
                               onClick={() => setCustomSkillRows(prev => prev.filter((_, i) => i !== idx))}
-                              title="削除"
+                              title={t('common:button.delete')}
                             >×</button>
                           </div>
                         </td>
@@ -611,14 +613,14 @@ export default function InventoryPage() {
                     customSkillName: '', levelId: skillLevels[0]?.id ?? 1, remarks: '',
                   }])}
                 >
-                  + カスタムスキルを追加
+                  {t('inventoryPage.addCustomSkill')}
                 </button>
                 <button
                   className="btn btn-primary save-btn"
                   onClick={handleSaveItSkills}
                   disabled={isSaving}
                 >
-                  {isSaving ? '保存中...' : '一時保存'}
+                  {isSaving ? t('inventoryPage.savingButton') : t('inventoryPage.saveButton')}
                 </button>
               </div>
             </div>
@@ -630,11 +632,11 @@ export default function InventoryPage() {
           <div className="tab-content">
             <div className="skill-layout">
               <div className="skill-list-panel">
-                <h3>資格一覧から追加</h3>
+                <h3>{t('inventoryPage.qualSection.listTitle')}</h3>
                 <input
                   type="text"
                   className="skill-search"
-                  placeholder="資格名で絞り込み"
+                  placeholder={t('inventoryPage.qualSection.searchPlaceholder')}
                   value={qualSearch}
                   onChange={e => setQualSearch(e.target.value)}
                 />
@@ -662,15 +664,15 @@ export default function InventoryPage() {
                 </div>
                 <div className="skill-list-footer">
                   <button className="btn btn-secondary custom-add-btn" onClick={addCustomQualRow}>
-                    + カスタム資格を追加
+                    {t('inventoryPage.qualSection.addCustom')}
                   </button>
                 </div>
               </div>
 
               <div className="skill-input-panel">
-                <h3>入力済み資格</h3>
+                <h3>{t('inventoryPage.qualSection.inputTitle')}</h3>
                 {qualificationRows.length === 0 && (
-                  <p className="empty-note">左のリストから資格を選択してください</p>
+                  <p className="empty-note">{t('inventoryPage.qualSection.emptyNote')}</p>
                 )}
                 {qualificationRows.map((row, idx) => (
                   <div key={idx} className={`skill-row${qualErrors.has(idx) ? ' skill-row--error' : ''}`}>
@@ -678,7 +680,7 @@ export default function InventoryPage() {
                       {row.isCustom ? (
                         <input
                           className={`input skill-name-input${qualValidationAttempted && !row.customQualificationName?.trim() ? ' input--error' : ''}`}
-                          placeholder="資格名"
+                          placeholder={t('inventoryPage.qualSection.qualNamePlaceholder')}
                           value={row.customQualificationName ?? ''}
                           onChange={e => setQualificationRows(prev => prev.map((r, i) =>
                             i === idx ? { ...r, customQualificationName: e.target.value } : r))}
@@ -691,7 +693,7 @@ export default function InventoryPage() {
                       <button className="remove-btn" onClick={() => removeQualificationRow(idx)}>✕</button>
                     </div>
                     <div className="skill-row-body">
-                      <label className="form-label">取得年月</label>
+                      <label className="form-label">{t('inventoryPage.table.acquiredYearMonth')}</label>
                       <input
                         type="month"
                         className={`input${qualValidationAttempted && !row.acquiredYearMonth ? ' input--error' : ''}`}
@@ -699,11 +701,11 @@ export default function InventoryPage() {
                         onChange={e => setQualificationRows(prev => prev.map((r, i) =>
                           i === idx ? { ...r, acquiredYearMonth: e.target.value ? `${e.target.value}-01` : '' } : r))}
                       />
-                      <label className="form-label">備考</label>
+                      <label className="form-label">{t('inventoryPage.table.remarksShort')}</label>
                       <textarea
                         className="textarea"
                         value={row.remarks}
-                        placeholder="任意"
+                        placeholder={t('inventoryPage.table.optional')}
                         onChange={e => setQualificationRows(prev => prev.map((r, i) =>
                           i === idx ? { ...r, remarks: e.target.value } : r))}
                       />
@@ -715,7 +717,7 @@ export default function InventoryPage() {
                   onClick={handleSaveQualifications}
                   disabled={isSaving}
                 >
-                  {isSaving ? '保存中...' : '一時保存'}
+                  {isSaving ? t('inventoryPage.savingButton') : t('inventoryPage.saveButton')}
                 </button>
               </div>
             </div>
@@ -727,11 +729,11 @@ export default function InventoryPage() {
           <div className="tab-content">
             <div className="skill-layout">
               <div className="skill-list-panel">
-                <h3>AD一覧から追加</h3>
+                <h3>{t('inventoryPage.seminarSection.listTitle')}</h3>
                 <input
                   type="text"
                   className="skill-search"
-                  placeholder="セミナー名で絞り込み"
+                  placeholder={t('inventoryPage.seminarSection.searchPlaceholder')}
                   value={semSearch}
                   onChange={e => setSemSearch(e.target.value)}
                 />
@@ -759,27 +761,27 @@ export default function InventoryPage() {
                 </div>
                 <div className="skill-list-footer">
                   <button className="btn btn-secondary custom-add-btn" onClick={addCustomSeminarRow}>
-                    + 他のセミナーを追加
+                    {t('inventoryPage.seminarSection.addOther')}
                   </button>
                 </div>
               </div>
 
               <div className="skill-input-panel">
-                <h3>入力済みセミナー</h3>
+                <h3>{t('inventoryPage.seminarSection.inputTitle')}</h3>
                 {seminarRows.length === 0 && (
-                  <p className="empty-note">左のリストからADを選択するか、他のセミナーを追加してください</p>
+                  <p className="empty-note">{t('inventoryPage.seminarSection.emptyNote')}</p>
                 )}
                 {seminarRows.map((row, idx) => (
                   <div key={idx} className={`skill-row${seminarErrors.has(idx) ? ' skill-row--error' : ''}`}>
                     <div className="skill-row-header">
                       {row.isAd ? (
                         <span className="skill-name">
-                          【AD】{adSeminars.find(a => a.id === row.adSeminarId)?.name}
+                          {t('inventoryPage.seminarSection.adPrefix')}{adSeminars.find(a => a.id === row.adSeminarId)?.name}
                         </span>
                       ) : (
                         <input
                           className={`input skill-name-input${semValidationAttempted && !row.seminarName.trim() ? ' input--error' : ''}`}
-                          placeholder="セミナー名"
+                          placeholder={t('inventoryPage.seminarSection.seminarNamePlaceholder')}
                           value={row.seminarName}
                           onChange={e => setSeminarRows(prev => prev.map((r, i) =>
                             i === idx ? { ...r, seminarName: e.target.value } : r))}
@@ -788,7 +790,7 @@ export default function InventoryPage() {
                       <button className="remove-btn" onClick={() => removeSeminarRow(idx)}>✕</button>
                     </div>
                     <div className="skill-row-body">
-                      <label className="form-label">受講年月</label>
+                      <label className="form-label">{t('inventoryPage.table.attendedYearMonth')}</label>
                       <input
                         type="month"
                         className={`input${semValidationAttempted && !row.attendedYearMonth ? ' input--error' : ''}`}
@@ -796,11 +798,11 @@ export default function InventoryPage() {
                         onChange={e => setSeminarRows(prev => prev.map((r, i) =>
                           i === idx ? { ...r, attendedYearMonth: e.target.value ? `${e.target.value}-01` : '' } : r))}
                       />
-                      <label className="form-label">備考</label>
+                      <label className="form-label">{t('inventoryPage.table.remarksShort')}</label>
                       <textarea
                         className="textarea"
                         value={row.remarks}
-                        placeholder="任意"
+                        placeholder={t('inventoryPage.table.optional')}
                         onChange={e => setSeminarRows(prev => prev.map((r, i) =>
                           i === idx ? { ...r, remarks: e.target.value } : r))}
                       />
@@ -812,7 +814,7 @@ export default function InventoryPage() {
                   onClick={handleSaveSeminars}
                   disabled={isSaving}
                 >
-                  {isSaving ? '保存中...' : '一時保存'}
+                  {isSaving ? t('inventoryPage.savingButton') : t('inventoryPage.saveButton')}
                 </button>
               </div>
             </div>
@@ -821,29 +823,29 @@ export default function InventoryPage() {
 
         <div className="submit-section">
           {!allItSkillsScored && (
-            <p className="submit-hint">すべてのITスキルに採点を入力してください</p>
+            <p className="submit-hint">{t('inventoryPage.submitHint.itSkills')}</p>
           )}
           {!qualSaved && (
-            <p className="submit-hint">資格タブで「一時保存」を実行してください</p>
+            <p className="submit-hint">{t('inventoryPage.submitHint.qualification')}</p>
           )}
           {!semSaved && (
-            <p className="submit-hint">セミナータブで「一時保存」を実行してください</p>
+            <p className="submit-hint">{t('inventoryPage.submitHint.seminar')}</p>
           )}
           <button
             className="btn btn-submit"
             onClick={handleSubmit}
             disabled={isSubmitting || !allItSkillsScored || !qualSaved || !semSaved}
           >
-            {isSubmitting ? '提出中...' : '棚卸を提出する →'}
+            {isSubmitting ? t('inventoryPage.submittingButton') : t('inventoryPage.submitButton')}
           </button>
         </div>
       </main>
 
       {showSubmitConfirm && (
         <ConfirmDialog
-          title="棚卸の提出"
-          message="棚卸を提出しますか？提出後も再編集できます。"
-          confirmLabel="提出する"
+          title={t('inventoryPage.submitConfirm.title')}
+          message={t('inventoryPage.submitConfirm.message')}
+          confirmLabel={t('inventoryPage.submitConfirm.confirmLabel')}
           onConfirm={doSubmit}
           onCancel={() => setShowSubmitConfirm(false)}
         />

@@ -1,0 +1,25 @@
+{
+  "menu": {
+    "dashboard": "ダッシュボード",
+    "team": "チーム照会",
+    "admin": "管理"
+  },
+  "adminMenu": {
+    "allUsers": "全ユーザー照会",
+    "fiscalYear": "年度マスタ",
+    "skillLevel": "レベルマスタ",
+    "itSkill": "ITスキルマスタ",
+    "qualification": "参考資格マスタ",
+    "adSeminar": "ADマスタ",
+    "userManagement": "ユーザー管理"
+  },
+  "role": {
+    "admin": "管理者",
+    "tl": "TL",
+    "general": "一般"
+  },
+  "action": {
+    "changePassword": "パスワード変更",
+    "logout": "ログアウト"
+  }
+}

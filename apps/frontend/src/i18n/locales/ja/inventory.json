@@ -1,0 +1,290 @@
+{
+  "loading": "読み込み中...",
+  "dashboard": {
+    "title": "ダッシュボード",
+    "currentFiscalYear": "当年度：{{name}}",
+    "noFiscalYear": "有効な年度が設定されていません。管理者にお問い合わせください。",
+    "noInventory": "今年度の棚卸がまだ作成されていません。",
+    "chartsSection": "スキル可視化",
+    "chartsLoading": "グラフを読み込み中...",
+    "aiAnalysisSection": "AIキャリア分析",
+    "aiAnalysisNone": "棚卸を提出すると、AIによるキャリア分析が自動的に開始されます。",
+    "viewHistory": "過去の棚卸を確認する",
+    "inventoryCount": {
+      "itSkill": "ITスキル：{{count}}件",
+      "qualification": "資格：{{count}}件",
+      "seminar": "セミナー：{{count}}件"
+    },
+    "submittedAt": "提出日時：",
+    "goalCompletedAt": "目標設定完了：",
+    "inventoryStatus": {
+      "draft": "入力中（下書き）",
+      "pendingGoal": "提出済み・目標設定待ち",
+      "completed": "完了"
+    },
+    "action": {
+      "continueInventory": "棚卸を続ける",
+      "viewInventory": "棚卸を確認する",
+      "startInventory": "棚卸を開始する",
+      "startingInventory": "作成中..."
+    },
+    "deadline": {
+      "notStarted": "入力期間は {{date}} から開始します（あと {{days}} 日）",
+      "expired": "入力期間が終了しました（締切：{{date}}）",
+      "today": "今日が入力締切日です（{{date}}）",
+      "daysLeft": "入力締切まであと {{days}} 日です（締切：{{date}}）"
+    }
+  },
+  "inventoryPage": {
+    "title": "棚卸入力 — {{fiscalYear}}",
+    "levelLegendLabel": "採点基準",
+    "tab": {
+      "itSkill": "ITスキル（{{count}}）",
+      "qualification": "資格（{{count}}）",
+      "seminar": "セミナー（{{count}}）"
+    },
+    "table": {
+      "skillName": "スキル名",
+      "remarks": "備考（採点根拠）",
+      "remarksShort": "備考",
+      "optional": "任意",
+      "acquiredYearMonth": "取得年月",
+      "attendedYearMonth": "受講年月"
+    },
+    "customSkillCategory": "カスタムスキル",
+    "customSkillNamePlaceholder": "スキル名を入力",
+    "clearScoreTitle": "採点をクリア",
+    "addCustomSkill": "+ カスタムスキルを追加",
+    "qualSection": {
+      "listTitle": "資格一覧から追加",
+      "searchPlaceholder": "資格名で絞り込み",
+      "inputTitle": "入力済み資格",
+      "emptyNote": "左のリストから資格を選択してください",
+      "addCustom": "+ カスタム資格を追加",
+      "qualNamePlaceholder": "資格名"
+    },
+    "seminarSection": {
+      "listTitle": "AD一覧から追加",
+      "searchPlaceholder": "セミナー名で絞り込み",
+      "inputTitle": "入力済みセミナー",
+      "emptyNote": "左のリストからADを選択するか、他のセミナーを追加してください",
+      "addOther": "+ 他のセミナーを追加",
+      "seminarNamePlaceholder": "セミナー名",
+      "adPrefix": "【AD】"
+    },
+    "saveButton": "一時保存",
+    "savingButton": "保存中...",
+    "submitButton": "棚卸を提出する →",
+    "submittingButton": "提出中...",
+    "submitHint": {
+      "itSkills": "すべてのITスキルに採点を入力してください",
+      "qualification": "資格タブで「一時保存」を実行してください",
+      "seminar": "セミナータブで「一時保存」を実行してください"
+    },
+    "message": {
+      "itSkillSaved": "ITスキルを保存しました",
+      "qualSaved": "資格を保存しました",
+      "seminarSaved": "セミナーを保存しました",
+      "saveFailed": "保存に失敗しました",
+      "submitFailed": "提出に失敗しました"
+    },
+    "validation": {
+      "missingLevel": "レベルが未入力のスキルが {{count}} 件",
+      "missingCustomName": "スキル名が未入力のカスタムスキルが {{count}} 件",
+      "validationSuffix": "あります。",
+      "requiredFields": "必須項目を入力してください。"
+    },
+    "submitConfirm": {
+      "title": "棚卸の提出",
+      "message": "棚卸を提出しますか？提出後も再編集できます。",
+      "confirmLabel": "提出する"
+    }
+  },
+  "comparisonPage": {
+    "backButton": "← 棚卸入力に戻る",
+    "title": "前年度比較 — {{fiscalYear}}",
+    "subtitle": "前年度（{{prevYear}}）との比較",
+    "noPrevYear": "前年度の棚卸データがありません（初回）。",
+    "nextButton": "目標振り返りへ",
+    "remarksAlert": "採点が変化したスキルのうち、備考が未入力のものがあります。可能であれば採点根拠を記入してください（任意）。",
+    "table": {
+      "skillName": "スキル名",
+      "prevYear": "前年度",
+      "currentYear": "今年度",
+      "diff": "差分",
+      "remarks": "備考",
+      "changeRemarksPlaceholder": "変化の理由を記入（任意）"
+    },
+    "customSkillLabel": "カスタムスキル ※"
+  },
+  "goalReviewPage": {
+    "backButton": "← 前年度比較に戻る",
+    "title": "前回目標の振り返り",
+    "subtitle": "前年度（{{prevYear}}）に設定した目標を振り返ってください。入力は任意です。",
+    "goalPeriodLabel": "目標時期：",
+    "reasonPrefix": "理由：",
+    "achievementLabel": "達成状況",
+    "reviewNoteLabel": "振り返りコメント",
+    "achievement": {
+      "unselected": "（未選択）",
+      "achieved": "達成",
+      "partial": "一部達成",
+      "notAchieved": "未達成"
+    },
+    "goalCategory": {
+      "itSkill": "ITスキル",
+      "qualification": "資格",
+      "ad": "AD"
+    },
+    "saveButton": "一時保存",
+    "savingButton": "保存中...",
+    "completeButton": "振り返りを完了して目標設定へ",
+    "completingButton": "完了中...",
+    "completeConfirm": {
+      "title": "振り返りの完了",
+      "message": "振り返りを完了して目標設定画面へ進みますか？",
+      "confirmLabel": "完了する"
+    }
+  },
+  "goalPage": {
+    "backButton": "← 目標振り返りに戻る",
+    "title": "目標設定",
+    "subtitle": "ITスキル・資格の目標を1件以上、ADの目標を2件設定してください。",
+    "counter": {
+      "itQual": "ITスキル・資格：{{count}}件",
+      "ad": "AD：{{count}}件",
+      "itQualRequired": "（1件以上必要）",
+      "adRequired": "（2件必要）"
+    },
+    "goalCategory": {
+      "itSkill": "ITスキル",
+      "qualification": "資格",
+      "ad": "AD"
+    },
+    "form": {
+      "selectSkill": "スキルを選択",
+      "selectQualification": "資格を選択",
+      "selectAd": "ADを選択",
+      "customNamePlaceholder": "目標名（自由入力）",
+      "targetPeriodLabel": "達成・予定時期",
+      "reasonLabel": "理由・計画（任意）"
+    },
+    "addButton": {
+      "itSkill": "ITスキル目標",
+      "itSkillCustom": "ITスキル目標（自由入力）",
+      "qualification": "資格目標",
+      "qualificationCustom": "資格目標（自由入力）",
+      "ad": "AD目標"
+    },
+    "saveButton": "一時保存",
+    "savingButton": "保存中...",
+    "completeButton": "目標設定を完了してダッシュボードへ",
+    "completingButton": "完了中...",
+    "saveSuccess": "目標を保存しました",
+    "saveFailed": "保存に失敗しました",
+    "completeFailed": "完了処理に失敗しました",
+    "completeConfirm": {
+      "title": "目標設定の完了",
+      "message": "目標設定を完了してダッシュボードに戻りますか？",
+      "confirmLabel": "完了する"
+    }
+  },
+  "historyPage": {
+    "backButton": "← ダッシュボードに戻る",
+    "title": "棚卸照会",
+    "noData": "棚卸データがありません。",
+    "yearLabel": "年度",
+    "tab": {
+      "itSkills": "ITスキル",
+      "qualifications": "資格",
+      "seminars": "セミナー",
+      "goals": "目標",
+      "aiAnalysis": "AI分析"
+    },
+    "status": {
+      "draft": "入力中",
+      "pendingGoal": "提出済み・目標未設定",
+      "completed": "完了"
+    },
+    "filter": {
+      "skillSearch": "スキル名で検索",
+      "qualSearch": "資格名・分類で検索",
+      "seminarSearch": "セミナー名・分類で検索",
+      "goalSearch": "目標名で検索",
+      "category1All": "大分類：すべて",
+      "diffAll": "差分：すべて",
+      "diffUp": "上昇",
+      "diffDown": "下降",
+      "diffNew": "新規",
+      "seminarTypeAll": "区分：すべて",
+      "seminarTypeFree": "フリー",
+      "goalCategoryAll": "カテゴリ：すべて"
+    },
+    "table": {
+      "skillName": "スキル名",
+      "prevYear": "前年度",
+      "currentYear": "今年度",
+      "diff": "差分",
+      "remarks": "備考",
+      "category": "分類",
+      "qualName": "資格名",
+      "acquiredYearMonth": "取得年月",
+      "seminarType": "区分",
+      "seminarName": "セミナー名",
+      "attendedYearMonth": "受講年月",
+      "goalCategory": "カテゴリ",
+      "goalName": "目標名",
+      "targetPeriod": "達成予定時期",
+      "reasonPlan": "理由・計画",
+      "achievementStatus": "達成状況",
+      "reviewNote": "振り返りコメント"
+    },
+    "noDataCell": {
+      "itSkills": "ITスキルデータがありません",
+      "qualifications": "資格データがありません",
+      "seminars": "セミナーデータがありません",
+      "goals": "目標データがありません",
+      "aiAnalysis": "この年度のAI分析データはありません。目標設定完了後に自動生成されます。",
+      "noMatchSkills": "条件に一致するスキルがありません",
+      "noMatchQuals": "条件に一致する資格がありません",
+      "noMatchSeminars": "条件に一致するセミナーがありません",
+      "noMatchGoals": "条件に一致する目標がありません"
+    },
+    "customSkillLabel": "カスタムスキル ※",
+    "goalSection": {
+      "prevYear": "前年度目標",
+      "currentYear": "今年度目標"
+    },
+    "achievement": {
+      "achieved": "達成",
+      "partial": "一部達成",
+      "notAchieved": "未達成"
+    },
+    "goalCategory": {
+      "itSkill": "ITスキル",
+      "qualification": "資格",
+      "ad": "AD"
+    },
+    "diffNew": "新規"
+  },
+  "aiAnalysisCard": {
+    "status": {
+      "pending": "待機中",
+      "processing": "分析中",
+      "failed": "失敗"
+    },
+    "pendingText": "AI分析のリクエストを受け付けました。しばらくお待ちください。",
+    "processingText": "AIがキャリアデータを分析中です。完了すると自動的に表示されます。",
+    "failedText": "AI分析に失敗しました。",
+    "requestedAt": "リクエスト日時：",
+    "updatedAt": "更新日時：",
+    "analyzedAt": "分析日時：",
+    "section": {
+      "summary": "総括",
+      "strengths": "強み・得意領域",
+      "growthAreas": "成長が期待される領域",
+      "expectationFit": "目標・期待とのフィット感",
+      "recommendedActions": "ネクストステップの提案"
+    }
+  }
+}

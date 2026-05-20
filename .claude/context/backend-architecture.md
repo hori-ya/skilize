@@ -74,9 +74,24 @@ src/main/java/com/skilize
 ├── dashboard
 │   └── presentation/            ← DashboardController + Response DTO
 │
-└── charts
-    ├── presentation/            ← ChartController + Response DTO（radar/growth/heatmap/timeline）
-    └── application/             ← ChartService (@Transactional readOnly)
+├── charts
+│   ├── presentation/            ← ChartController + Response DTO（radar/growth/heatmap/timeline）
+│   └── application/             ← ChartService (@Transactional readOnly)
+│
+├── expectation
+│   ├── presentation/            ← ExpectationController + Request/Response DTO
+│   ├── application/             ← ExpectationService（@Transactional）
+│   └── domain/                  ← UserExpectation・UserExpectationRepository
+│
+├── interview
+│   ├── presentation/            ← InterviewController + Request/Response DTO
+│   ├── application/             ← InterviewService（@Transactional）
+│   └── domain/                  ← InventoryInterview・InterviewDetailNote・DetailType・Repository
+│
+└── ai
+    ├── presentation/            ← AiAnalysisController + Response DTO
+    ├── application/             ← AiAnalysisService（@Async）・InventoryCompletedEventListener
+    └── domain/                  ← AiCareerAnalysis・AiAnalysisStatus・AiCareerAnalysisRepository
 ```
 
 ---
@@ -283,18 +298,19 @@ common/service/CommonService
 ## 配置ルール
 
 * DTO は必ず独立したファイルとして作成する（Controller・Service クラス内への record 定義禁止）
-* HTTP リクエスト・レスポンス DTO は `feature/presentation/` に配置する
-* Service が返す中間データ型（Controller との橋渡し用）も `feature/presentation/` に配置する
+* HTTP リクエスト・レスポンス DTO は `feature/dto/` に独立ファイルとして配置する（`feature/presentation/` には Controller のみ）
 * Entity を API へ直接返さない
 
 ## ファイル構成例
 
 ```text
-feature/presentation/
-  FeatureController.java
-  XxxRequest.java      ← リクエスト DTO
-  XxxResponse.java     ← レスポンス DTO
-  XxxDto.java          ← 共有・ネスト用 DTO
+feature/
+├── presentation/
+│   └── FeatureController.java
+└── dto/
+    ├── XxxRequest.java      ← リクエスト DTO
+    ├── XxxResponse.java     ← レスポンス DTO
+    └── XxxDto.java          ← 共有・ネスト用 DTO
 ```
 
 ## 命名規則

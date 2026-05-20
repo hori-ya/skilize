@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { Qualification, QualificationCategory, CustomUnregisteredItem } from '../../../shared/types/master';
 import {
@@ -17,6 +18,7 @@ type ModalMode = 'create' | 'edit';
 interface CatForm { name: string; sortOrder: string; active: boolean }
 
 function CategoryTab({ categories, onReload }: { categories: QualificationCategory[]; onReload: () => void }) {
+  const { t } = useTranslation('master');
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>('create');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -41,7 +43,7 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setFormError('カテゴリ名は必須です'); return; }
+    if (!form.name.trim()) { setFormError(t('qualification.category.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       if (mode === 'create') {
@@ -52,30 +54,32 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
       setModalOpen(false);
       onReload();
     } catch {
-      setFormError('保存に失敗しました');
+      setFormError(t('common.saveFailed'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
-        <h3 className="master-card__title" style={{ marginBottom: 0 }}>資格カテゴリ一覧</h3>
-        <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />カテゴリ追加</button>
+        <h3 className="master-card__title" style={{ marginBottom: 0 }}>{t('qualification.category.listTitle')}</h3>
+        <button className="btn btn--primary btn--sm" onClick={openCreate}>
+          <IconPlus size={12} />{t('qualification.category.addButton')}
+        </button>
       </div>
 
       <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
-              <th>カテゴリ名</th>
-              <th style={{ width: 64 }}>並順</th>
-              <th style={{ width: 72 }}>状態</th>
-              <th style={{ width: 72 }}>操作</th>
+              <th>{t('qualification.category.table.name')}</th>
+              <th style={{ width: 64 }}>{t('common.sortOrder')}</th>
+              <th style={{ width: 72 }}>{t('common.status')}</th>
+              <th style={{ width: 72 }}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {categories.length === 0 ? (
-              <tr><td colSpan={4} className="master-table__empty">データがありません</td></tr>
+              <tr><td colSpan={4} className="master-table__empty">{t('common.noData')}</td></tr>
             ) : (
               categories.map(c => (
                 <tr key={c.id}>
@@ -83,11 +87,13 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
                   <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
                   <td>
                     <span className={c.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {c.isActive ? '有効' : '無効'}
+                      {c.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}><IconEdit size={12} />編集</button>
+                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
+                      <IconEdit size={12} />{t('common.edit')}
+                    </button>
                   </td>
                 </tr>
               ))
@@ -100,19 +106,19 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? 'カテゴリ追加' : 'カテゴリ編集'}</h3>
+              <h3>{mode === 'create' ? t('qualification.modalCategoryCreate') : t('qualification.modalCategoryEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
               <div className="form-group">
-                <label className="form-label">カテゴリ名 <span className="required">*</span></label>
+                <label className="form-label">{t('qualification.category.form.nameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: ベンダー資格" maxLength={100} />
+                  placeholder={t('qualification.category.form.namePlaceholder')} maxLength={100} />
               </div>
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
@@ -122,15 +128,17 @@ function CategoryTab({ categories, onReload }: { categories: QualificationCatego
                   <label className="form-check">
                     <input type="checkbox" checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
-                    <span>有効</span>
+                    <span>{t('common.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -156,6 +164,7 @@ function QualificationTab({ qualifications, categories, onReload }: {
   categories: QualificationCategory[];
   onReload: () => void;
 }) {
+  const { t } = useTranslation('master');
   const [filterCatId, setFilterCatId] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<ModalMode>('create');
@@ -191,7 +200,7 @@ function QualificationTab({ qualifications, categories, onReload }: {
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setFormError('資格名は必須です'); return; }
+    if (!form.name.trim()) { setFormError(t('qualification.qual.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       const payload = {
@@ -208,22 +217,22 @@ function QualificationTab({ qualifications, categories, onReload }: {
       setModalOpen(false);
       onReload();
     } catch {
-      setFormError('保存に失敗しました');
+      setFormError(t('common.saveFailed'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <label className="master-label" style={{ minWidth: 'auto' }}>カテゴリフィルタ</label>
+        <label className="master-label" style={{ minWidth: 'auto' }}>{t('common.categoryFilterLabel')}</label>
         <select className="master-select"
           value={filterCatId ?? ''}
           onChange={e => setFilterCatId(e.target.value === '' ? null : Number(e.target.value))}>
-          <option value="">すべて</option>
+          <option value="">{t('common.allOption')}</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <button className="btn btn--primary btn--sm" onClick={openCreate} style={{ marginLeft: 'auto' }}>
-          <IconPlus size={12} />資格追加
+          <IconPlus size={12} />{t('qualification.addButton')}
         </button>
       </div>
 
@@ -231,17 +240,17 @@ function QualificationTab({ qualifications, categories, onReload }: {
         <table className="master-table">
           <thead>
             <tr>
-              <th>資格名</th>
-              <th style={{ width: 160 }}>カテゴリ</th>
-              <th style={{ width: 200 }}>説明</th>
-              <th style={{ width: 56 }}>並順</th>
-              <th style={{ width: 72 }}>状態</th>
-              <th style={{ width: 72 }}>操作</th>
+              <th>{t('qualification.table.name')}</th>
+              <th style={{ width: 160 }}>{t('qualification.table.category')}</th>
+              <th style={{ width: 200 }}>{t('qualification.table.description')}</th>
+              <th style={{ width: 56 }}>{t('common.sortOrder')}</th>
+              <th style={{ width: 72 }}>{t('common.status')}</th>
+              <th style={{ width: 72 }}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">データがありません</td></tr>
+              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
             ) : (
               filtered.map(q => (
                 <tr key={q.id}>
@@ -253,10 +262,14 @@ function QualificationTab({ qualifications, categories, onReload }: {
                   <td style={{ textAlign: 'center' }}>{q.sortOrder}</td>
                   <td>
                     <span className={q.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {q.isActive ? '有効' : '無効'}
+                      {q.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                     </span>
                   </td>
-                  <td><button className="btn btn--secondary btn--sm" onClick={() => openEdit(q)}><IconEdit size={12} />編集</button></td>
+                  <td>
+                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(q)}>
+                      <IconEdit size={12} />{t('common.edit')}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -268,36 +281,36 @@ function QualificationTab({ qualifications, categories, onReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? '資格追加' : '資格編集'}</h3>
+              <h3>{mode === 'create' ? t('qualification.modalCreate') : t('qualification.modalEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
               <div className="form-group">
-                <label className="form-label">カテゴリ</label>
+                <label className="form-label">{t('qualification.form.categoryLabel')}</label>
                 <select className="master-select" style={{ width: '100%' }}
                   value={form.categoryId ?? ''}
                   onChange={e => setForm(f => ({ ...f, categoryId: e.target.value === '' ? null : Number(e.target.value) }))}>
-                  <option value="">カテゴリなし</option>
+                  <option value="">{t('common.noCategoryOption')}</option>
                   {categories.filter(c => c.isActive).map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">資格名 <span className="required">*</span></label>
+                <label className="form-label">{t('qualification.form.nameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: 応用情報技術者" maxLength={200} />
+                  placeholder={t('qualification.qual.form.namePlaceholder')} maxLength={200} />
               </div>
               <div className="form-group">
-                <label className="form-label">説明</label>
+                <label className="form-label">{t('qualification.form.descriptionLabel')}</label>
                 <textarea className="form-input" value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="資格の説明（任意）" style={{ resize: 'vertical' }} />
+                  rows={3} placeholder={t('qualification.qual.form.descriptionPlaceholder')} style={{ resize: 'vertical' }} />
               </div>
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
@@ -307,15 +320,17 @@ function QualificationTab({ qualifications, categories, onReload }: {
                   <label className="form-check">
                     <input type="checkbox" checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
-                    <span>有効</span>
+                    <span>{t('common.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -339,6 +354,7 @@ function QualPromotionTab({ categories, onQualReload }: {
   categories: QualificationCategory[];
   onQualReload: () => void;
 }) {
+  const { t } = useTranslation('master');
   const [items, setItems] = useState<CustomUnregisteredItem[]>([]);
   const [tabLoading, setTabLoading] = useState(true);
   const [tabError, setTabError] = useState('');
@@ -352,7 +368,7 @@ function QualPromotionTab({ categories, onQualReload }: {
     setTabLoading(true);
     getCustomUnregisteredQualifications()
       .then(res => setItems(res.data))
-      .catch(() => setTabError('取得に失敗しました'))
+      .catch(() => setTabError(t('common.loadFetchFailed')))
       .finally(() => setTabLoading(false));
   };
 
@@ -366,7 +382,7 @@ function QualPromotionTab({ categories, onQualReload }: {
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setFormError('資格名は必須です'); return; }
+    if (!form.name.trim()) { setFormError(t('qualification.promotion.validation.nameRequired')); return; }
     if (!promoting) return;
     setSaving(true); setFormError('');
     try {
@@ -381,43 +397,45 @@ function QualPromotionTab({ categories, onQualReload }: {
       loadItems();
       onQualReload();
     } catch {
-      setFormError('昇格に失敗しました');
+      setFormError(t('common.promoteFailed'));
     } finally { setSaving(false); }
   };
 
-  if (tabLoading) return <div className="chart-loading">読み込み中...</div>;
+  if (tabLoading) return <div className="chart-loading">{t('loading')}</div>;
   if (tabError) return <div className="alert alert--error">{tabError}</div>;
 
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
-        <h3 className="master-card__title" style={{ marginBottom: 0 }}>カスタム資格昇格</h3>
+        <h3 className="master-card__title" style={{ marginBottom: 0 }}>{t('qualification.promotion.tabTitle')}</h3>
         <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-          ユーザーが入力したカスタム資格をマスタに登録できます
+          {t('qualification.promotion.hint')}
         </span>
       </div>
 
       {items.length === 0 ? (
         <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>
-          昇格待ちのカスタム資格はありません
+          {t('qualification.promotion.emptyMessage')}
         </div>
       ) : (
         <StickyHorizontalScroll className="master-table-wrap">
           <table className="master-table">
             <thead>
               <tr>
-                <th>カスタム資格名</th>
-                <th style={{ width: 110 }}>使用件数</th>
-                <th style={{ width: 80 }}>操作</th>
+                <th>{t('qualification.promotion.table.customName')}</th>
+                <th style={{ width: 110 }}>{t('qualification.table.usageCount')}</th>
+                <th style={{ width: 80 }}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.customName}>
                   <td>{item.customName}</td>
-                  <td style={{ textAlign: 'center' }}>{item.usageCount}件</td>
+                  <td style={{ textAlign: 'center' }}>{item.usageCount}{t('common.usageCountSuffix')}</td>
                   <td>
-                    <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>昇格</button>
+                    <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>
+                      {t('common.promoteButton')}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -430,23 +448,23 @@ function QualPromotionTab({ categories, onQualReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>カスタム資格昇格</h3>
+              <h3>{t('qualification.modalPromote')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
 
               <div className="form-group">
-                <label className="form-label">カスタム資格名（元）</label>
+                <label className="form-label">{t('qualification.promotion.form.originalNameLabel')}</label>
                 <div style={{ padding: '6px 0', fontWeight: 500 }}>{promoting?.customName}</div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">カテゴリ</label>
+                <label className="form-label">{t('qualification.form.categoryLabel')}</label>
                 <select className="master-select" style={{ width: '100%' }}
                   value={form.categoryId ?? ''}
                   onChange={e => setForm(f => ({ ...f, categoryId: e.target.value === '' ? null : Number(e.target.value) }))}>
-                  <option value="">カテゴリなし</option>
+                  <option value="">{t('common.noCategoryOption')}</option>
                   {categories.filter(c => c.isActive).map(c => (
                     <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
@@ -454,31 +472,33 @@ function QualPromotionTab({ categories, onQualReload }: {
               </div>
 
               <div className="form-group">
-                <label className="form-label">マスタ登録名 <span className="required">*</span></label>
+                <label className="form-label">{t('qualification.form.nameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   maxLength={200} />
-                <span className="form-hint">カスタム名から変更して正式名称に統一できます</span>
+                <span className="form-hint">{t('qualification.promotion.form.masterNameHint')}</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">説明</label>
+                <label className="form-label">{t('qualification.form.descriptionLabel')}</label>
                 <textarea className="form-input" value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   rows={3} style={{ resize: 'vertical' }} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
               </div>
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '登録中...' : 'マスタに登録'}
+                <IconCheck size={13} />{saving ? t('common.registeringButton') : t('common.registerButton')}
               </button>
             </div>
           </div>
@@ -494,6 +514,7 @@ function QualPromotionTab({ categories, onQualReload }: {
 type TabKey = 'categories' | 'qualifications' | 'promote';
 
 export default function QualificationMasterPage() {
+  const { t } = useTranslation('master');
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
   const [categories, setCategories] = useState<QualificationCategory[]>([]);
   const [qualifications, setQualifications] = useState<Qualification[]>([]);
@@ -507,13 +528,13 @@ export default function QualificationMasterPage() {
         setCategories(catRes.data);
         setQualifications(qualRes.data);
       })
-      .catch(() => setError('データの取得に失敗しました'))
+      .catch(() => setError(t('common.loadFailed')))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { loadAll(); }, []);
 
-  if (loading) return <div className="loading-screen"><span>読み込み中...</span></div>;
+  if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
   return (
     <div className="master-page">
@@ -525,15 +546,15 @@ export default function QualificationMasterPage() {
         <div className="tab-bar">
           <button className={`tab-btn${activeTab === 'categories' ? ' active' : ''}`}
             onClick={() => setActiveTab('categories')}>
-            カテゴリ管理
+            {t('qualification.tab.categories')}
           </button>
           <button className={`tab-btn${activeTab === 'qualifications' ? ' active' : ''}`}
             onClick={() => setActiveTab('qualifications')}>
-            資格管理
+            {t('qualification.tab.qualifications')}
           </button>
           <button className={`tab-btn${activeTab === 'promote' ? ' active' : ''}`}
             onClick={() => setActiveTab('promote')}>
-            カスタム昇格
+            {t('qualification.tab.promote')}
           </button>
         </div>
 

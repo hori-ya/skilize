@@ -5,28 +5,23 @@ import type { GoalReviewResponse, AchievementStatus } from '../types/index';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconSave, IconCheck } from '../../../shared/ui/Icons';
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
+import { useTranslation } from 'react-i18next';
 
-const ACHIEVEMENT_OPTIONS: { value: AchievementStatus | ''; label: string }[] = [
-  { value: '', label: '（未選択）' },
-  { value: 'ACHIEVED', label: '達成' },
-  { value: 'PARTIAL', label: '一部達成' },
-  { value: 'NOT_ACHIEVED', label: '未達成' },
-];
-
-const GOAL_CATEGORY_LABEL: Record<string, string> = {
-  IT_SKILL: 'ITスキル',
-  QUALIFICATION: '資格',
-  AD: 'AD',
-};
-
-interface ReviewState {
+type ReviewState = {
   achievementStatus: AchievementStatus | '';
   reviewNote: string;
-}
+};
+
+const GOAL_CATEGORY_KEY: Record<string, string> = {
+  IT_SKILL: 'goalReviewPage.goalCategory.itSkill',
+  QUALIFICATION: 'goalReviewPage.goalCategory.qualification',
+  AD: 'goalReviewPage.goalCategory.ad',
+};
 
 export default function GoalReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('inventory');
   const inventoryId = Number(id);
 
   const [goalReview, setGoalReview] = useState<GoalReviewResponse | null>(null);
@@ -34,6 +29,13 @@ export default function GoalReviewPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+
+  const ACHIEVEMENT_OPTIONS: { value: AchievementStatus | ''; label: string }[] = [
+    { value: '', label: t('goalReviewPage.achievement.unselected') },
+    { value: 'ACHIEVED', label: t('goalReviewPage.achievement.achieved') },
+    { value: 'PARTIAL', label: t('goalReviewPage.achievement.partial') },
+    { value: 'NOT_ACHIEVED', label: t('goalReviewPage.achievement.notAchieved') },
+  ];
 
   useEffect(() => {
     getGoalReview(inventoryId).then(res => {
@@ -70,7 +72,6 @@ export default function GoalReviewPage() {
     setShowCompleteConfirm(false);
     setIsCompleting(true);
     try {
-      // Save first
       const items = Object.entries(reviewState).map(([prevGoalId, state]) => ({
         prevGoalId: Number(prevGoalId),
         achievementStatus: state.achievementStatus || null,
@@ -84,7 +85,7 @@ export default function GoalReviewPage() {
     }
   };
 
-  if (!goalReview) return <div className="loading">読み込み中...</div>;
+  if (!goalReview) return <div className="loading">{t('loading')}</div>;
 
   if (!goalReview.hasPrevGoals) {
     navigate(`/inventory/${inventoryId}/goals`);
@@ -95,9 +96,9 @@ export default function GoalReviewPage() {
     <div className="goal-review-page">
       <NavBar />
       <main className="goal-review-main">
-        <button className="page-back-btn" onClick={() => navigate(`/inventory/${inventoryId}/comparison`)}>← 前年度比較に戻る</button>
-        <h1 className="page-title">前回目標の振り返り</h1>
-        <p className="page-subtitle">前年度（{goalReview.prevFiscalYear}）に設定した目標を振り返ってください。入力は任意です。</p>
+        <button className="page-back-btn" onClick={() => navigate(`/inventory/${inventoryId}/comparison`)}>{t('goalReviewPage.backButton')}</button>
+        <h1 className="page-title">{t('goalReviewPage.title')}</h1>
+        <p className="page-subtitle">{t('goalReviewPage.subtitle', { prevYear: goalReview.prevFiscalYear })}</p>
 
         <div className="goal-review-list">
           {goalReview.items.map(item => {
@@ -105,13 +106,13 @@ export default function GoalReviewPage() {
             return (
               <div key={item.prevGoalId} className="goal-review-card">
                 <div className="goal-review-header">
-                  <span className="goal-category-badge">{GOAL_CATEGORY_LABEL[item.goalCategory]}</span>
+                  <span className="goal-category-badge">{t(GOAL_CATEGORY_KEY[item.goalCategory] ?? item.goalCategory)}</span>
                   <span className="goal-name">{item.goalName}</span>
-                  <span className="goal-period">目標時期：{item.targetPeriod?.slice(0, 7)}</span>
+                  <span className="goal-period">{t('goalReviewPage.goalPeriodLabel')}{item.targetPeriod?.slice(0, 7)}</span>
                 </div>
-                {item.reason && <p className="goal-reason">理由：{item.reason}</p>}
+                {item.reason && <p className="goal-reason">{t('goalReviewPage.reasonPrefix')}{item.reason}</p>}
                 <div className="goal-review-inputs">
-                  <label className="form-label">達成状況</label>
+                  <label className="form-label">{t('goalReviewPage.achievementLabel')}</label>
                   <select
                     className="select"
                     value={state.achievementStatus}
@@ -124,10 +125,10 @@ export default function GoalReviewPage() {
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
                     ))}
                   </select>
-                  <label className="form-label">振り返りコメント</label>
+                  <label className="form-label">{t('goalReviewPage.reviewNoteLabel')}</label>
                   <textarea
                     className="textarea"
-                    placeholder="任意"
+                    placeholder={t('inventoryPage.table.optional')}
                     value={state.reviewNote}
                     onChange={e => setReviewState(prev => ({
                       ...prev,
@@ -143,20 +144,20 @@ export default function GoalReviewPage() {
         <div className="action-row">
           <button className="btn btn-secondary" onClick={handleSave} disabled={isSaving}>
             <IconSave size={15} />
-            {isSaving ? '保存中...' : '一時保存'}
+            {isSaving ? t('inventoryPage.savingButton') : t('inventoryPage.saveButton')}
           </button>
           <button className="btn btn-primary" onClick={handleCompleteClick} disabled={isCompleting}>
             <IconCheck size={15} />
-            {isCompleting ? '完了中...' : '振り返りを完了して目標設定へ'}
+            {isCompleting ? t('goalReviewPage.completingButton') : t('goalReviewPage.completeButton')}
           </button>
         </div>
       </main>
 
       {showCompleteConfirm && (
         <ConfirmDialog
-          title="振り返りの完了"
-          message="振り返りを完了して目標設定画面へ進みますか？"
-          confirmLabel="完了する"
+          title={t('goalReviewPage.completeConfirm.title')}
+          message={t('goalReviewPage.completeConfirm.message')}
+          confirmLabel={t('goalReviewPage.completeConfirm.confirmLabel')}
           onConfirm={handleComplete}
           onCancel={() => setShowCompleteConfirm(false)}
         />

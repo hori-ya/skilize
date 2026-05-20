@@ -3,11 +3,13 @@ import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import SkilizeLogo from '../../../shared/ui/SkilizeLogo';
 import { IconLogin } from '../../../shared/ui/Icons';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation('auth');
   const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -32,12 +34,12 @@ export default function LoginPage() {
       if (axios.isAxiosError(err)) {
         const code = err.response?.data?.code;
         if (code === 'FORBIDDEN') {
-          setError('このアカウントは無効化されています');
+          setError(t('error.accountDisabled'));
         } else {
-          setError('ユーザーIDまたはパスワードが正しくありません');
+          setError(t('error.invalidCredentials'));
         }
       } else {
-        setError('通信エラーが発生しました');
+        setError(t('error.networkError'));
       }
     } finally {
       setIsSubmitting(false);
@@ -52,7 +54,7 @@ export default function LoginPage() {
             <SkilizeLogo size={30} />
             <h1 className="auth-title">Skilize</h1>
           </div>
-          <p className="auth-subtitle">スキル棚卸管理システム</p>
+          <p className="auth-subtitle">{t('appSubtitle')}</p>
         </div>
         <form onSubmit={handleSubmit} noValidate>
           {error && (
@@ -62,7 +64,7 @@ export default function LoginPage() {
             </div>
           )}
           <div className="form-group">
-            <label htmlFor="userId" className="form-label">ユーザーID</label>
+            <label htmlFor="userId" className="form-label">{t('loginForm.userIdLabel')}</label>
             <input
               id="userId"
               type="text"
@@ -75,7 +77,7 @@ export default function LoginPage() {
             />
           </div>
           <div className="form-group">
-            <label htmlFor="password" className="form-label">パスワード</label>
+            <label htmlFor="password" className="form-label">{t('loginForm.passwordLabel')}</label>
             <input
               id="password"
               type="password"
@@ -88,7 +90,7 @@ export default function LoginPage() {
           </div>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
             <IconLogin size={15} />
-            {isSubmitting ? 'ログイン中...' : 'ログイン'}
+            {isSubmitting ? t('loginForm.submittingButton') : t('loginForm.submitButton')}
           </button>
         </form>
       </div>

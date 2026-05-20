@@ -36,7 +36,7 @@
 |------|-----|
 | 署名アルゴリズム | HS256（HMAC-SHA256）|
 | 署名キー | 256 bit 以上のランダム文字列（環境変数 `JWT_SECRET` で管理）|
-| 有効期限 | 8 時間（環境変数 `JWT_EXPIRATION_HOURS` で変更可）|
+| 有効期限 | 8 時間（環境変数 `JWT_EXPIRATION_MS` で変更可。デフォルト 28800000ms）|
 | ライブラリ | jjwt（io.jsonwebtoken）|
 
 #### JWT ペイロード
@@ -144,6 +144,11 @@ REST API はステートレスのためサーバー側でトークンを破棄�
 | GET /api/qualifications/custom-unregistered | — | ○ | ○ |
 | POST /api/qualifications/promote | — | ○ | ○ |
 | GET /api/it-skill-categories | — | ○ | ○ |
+| GET /api/ad-seminars | ○ | ○ | ○ |
+| POST /api/ad-seminars | — | ○ | ○ |
+| PUT /api/ad-seminars/{id} | — | ○ | ○ |
+| DELETE /api/ad-seminars/{id} | — | ○ | ○ |
+| PATCH /api/ad-seminars/{id}/restore | — | ○ | ○ |
 
 #### マスタ管理（ADMIN のみ）
 
@@ -156,11 +161,6 @@ REST API はステートレスのためサーバー側でトークンを破棄�
 | POST /api/skill-levels | — | — | ○ |
 | PUT /api/skill-levels/{id} | — | — | ○ |
 | DELETE /api/skill-levels/{id} | — | — | ○ |
-| GET /api/ad-seminars | ○ | ○ | ○ |
-| POST /api/ad-seminars | — | — | ○ |
-| PUT /api/ad-seminars/{id} | — | — | ○ |
-| DELETE /api/ad-seminars/{id} | — | — | ○ |
-| PATCH /api/ad-seminars/{id}/restore | — | — | ○ |
 | POST /api/users | — | — | ○ |
 | PUT /api/users/{id} | — | — | ○ |
 | PATCH /api/users/{id}/deactivate | — | — | ○ |
@@ -387,8 +387,8 @@ VALUES (
 | 変数名 | 説明 | 例 |
 |--------|------|-----|
 | `JWT_SECRET` | JWT 署名キー（256 bit 以上のランダム文字列）| `your-very-long-random-secret` |
-| `JWT_EXPIRATION_HOURS` | JWT 有効期限（時間）| `8` |
-| `FRONTEND_ORIGIN` | CORS 許可オリジン | `http://localhost:3000` |
+| `JWT_EXPIRATION_MS` | JWT 有効期限（ミリ秒）| `28800000`（8時間）|
+| `FRONTEND_ORIGIN` | CORS 許可オリジン | `http://localhost:5173,http://localhost:8081` |
 | `BCRYPT_STRENGTH` | BCrypt コストファクター | `12` |
 
 `.env.example` に変数名とダミー値を記載し、`.env` は `.gitignore` で管理する。

@@ -34,48 +34,49 @@
 ```text
 src/
 
-├── app
-│   ├── router
-│   ├── providers
-│   ├── layouts
-│   └── store
+├── app/
+│   ├── providers/
+│   │   └── AuthProvider.tsx     ← 認証状態の全体共有（React Context + useAuth hook）
+│   └── layouts/
+│       └── NavBar.tsx           ← グローバルナビゲーションバー
 │
-├── shared
-│   ├── ui
-│   ├── api
-│   ├── hooks
-│   ├── lib
-│   ├── types
-│   └── constants
+├── shared/
+│   ├── api/
+│   │   ├── client.ts            ← Axios インスタンス（JWT インターセプター）
+│   │   └── masterApi.ts         ← マスタデータ API（複数 feature で共有）
+│   ├── types/
+│   │   └── master.ts            ← マスタデータ型定義
+│   └── ui/
+│       ├── PrivateRoute.tsx     ← 認証ガード
+│       ├── AdminRoute.tsx       ← ADMIN ロールガード
+│       ├── TlAdminRoute.tsx     ← TL/ADMIN ロールガード
+│       └── ScrollToTopButton.tsx
 │
-├── features
-│   ├── auth
-│   ├── user
-│   ├── order
-│   └── billing
+├── features/
+│   ├── auth/                    ← ログイン・パスワード変更
+│   ├── inventory/               ← ダッシュボード・棚卸・グラフ
+│   ├── team/                    ← チーム照会・メンバー詳細
+│   ├── master/                  ← マスタ管理ページ群
+│   └── interview/               ← 面談メモ API・型（UI は team に統合）
 │
-├── pages
-│
-└── main.tsx
+└── i18n/
+    ├── index.ts                 ← i18next 初期化
+    └── locales/ja/              ← 翻訳 JSON（namespace 別）
 ```
 
 ---
 
 # Feature Structure
 
-各 feature は以下の構成を持つ。
+各 feature は以下の構成を持つ（必要なものだけ作成する）。
 
 ```text
-features/user
+features/inventory
 
-├── api
-├── components
-├── hooks
-├── pages
-├── state
-├── types
-├── schemas
-└── utils
+├── api/          ← Axios を使った API 呼び出し関数
+├── types/        ← 型定義（index.ts / charts.ts 等）
+├── components/   ← feature 内の再利用コンポーネント（任意）
+└── pages/        ← ページコンポーネント（useTranslation を含む）
 ```
 
 ---
@@ -188,54 +189,42 @@ orderApi.ts
 
 stateは種類ごとに分離する。
 
-## Server State
-
-APIデータ。
+## Server State（API データ）
 
 推奨:
 
-* TanStack Query (React Query)
-
-例:
-
 ```text
-useQuery
-useMutation
+useEffect + useState + Axios
 ```
+
+外部ライブラリ（TanStack Query 等）は**使用しない**。
 
 ---
 
-## UI State
-
-ローカル状態。
+## UI State（ローカル状態）
 
 推奨:
 
 ```text
 useState
-useReducer
+useReducer（複雑な場合のみ）
 ```
 
 ---
 
 ## Global State
 
-必要最小限のみ。
+必要最小限のみ。**認証状態のみ** グローバル管理する。
 
-例:
-
-* auth session
-* theme
-* sidebar state
-
-推奨:
-
-* Zustand
+```text
+AuthContext（app/providers/AuthProvider.tsx）
+  └── useAuth() hook でアクセス
+```
 
 禁止:
 
-* API response全保存
-* 巨大Redux store
+* Zustand・Redux 等の外部状態管理ライブラリ
+* API response の全保存
 
 ---
 
@@ -402,10 +391,12 @@ export async function fetchUsers() {}
 
 推奨:
 
-* React Hook Form
-* Zod validation
+* `useState` でフォーム状態を管理する
+* 送信時に手動でバリデーションを行う（必須チェック等）
 
-validationはschema化する。
+禁止:
+
+* React Hook Form・Zod 等の外部ライブラリ（このプロジェクトでは使用しない）
 
 ---
 
@@ -453,18 +444,93 @@ billingApi.ts
 
 ---
 
+# i18n Rules (国際化)
+
+ライブラリ: **i18next + react-i18next**
+
+## ファイル構成
+
+```text
+src/
+├── i18n/
+│   ├── index.ts          ← i18next 初期化（main.tsx でインポート）
+│   └── locales/
+│       └── ja/
+│           ├── common.json     ← ボタン・ラベル・ステータス等の共通文字列
+│           ├── nav.json        ← ナビゲーション
+│           ├── auth.json       ← ログイン・パスワード変更
+│           ├── inventory.json  ← ダッシュボード・棚卸入力・グラフ等
+│           ├── team.json       ← チーム照会・メンバー詳細
+│           └── master.json     ← マスタ管理全般
+```
+
+## Namespace 割り当て
+
+| Namespace | 対象 feature / ファイル |
+|---|---|
+| `common` | ボタン名・共通ラベル・エラーメッセージ・ステータス表示 |
+| `nav` | NavBar |
+| `auth` | LoginPage, ChangePasswordPage, MyPasswordPage |
+| `inventory` | DashboardPage, InventoryPage, ComparisonPage, GoalPage, GoalReviewPage, InventoryHistoryPage, 各 ChartCard |
+| `team` | TeamMemberListPage, AllUserListPage, MemberDetailPage |
+| `master` | FiscalYearMasterPage, SkillLevelMasterPage, ItSkillMasterPage, QualificationMasterPage, AdSeminarMasterPage, UserMasterPage |
+
+## 使用ルール
+
+```tsx
+// 単一 namespace
+const { t } = useTranslation('inventory');
+
+// 複数 namespace（共通も使う場合）
+const { t } = useTranslation(['inventory', 'common']);
+
+// 変数補間
+t('table.rowCount', { count: 5 })  // "5件"
+
+// ネスト取得
+t('form.submitButton')  // "保存"
+```
+
+## キー命名規則
+
+- **ネスト階層 2〜3 段**（`section.element` または `section.subsection.element`）
+- camelCase のみ（スネークケース・ドット区切り以外禁止）
+- 意味が自明なキー名にする（`btn1` などの略称禁止）
+
+```json
+{
+  "loginForm": {
+    "title": "ログイン",
+    "userIdLabel": "ユーザーID",
+    "passwordLabel": "パスワード",
+    "submitButton": "ログイン"
+  },
+  "error": {
+    "invalidCredentials": "ユーザーIDまたはパスワードが正しくありません"
+  }
+}
+```
+
+## 禁止事項
+
+- コンポーネント内にハードコードされた日本語文字列（`className` 値・コメントを除く）
+- `any` でのキャスト回避
+- 翻訳ファイルへのロジック記述
+- 動的キー生成（`t('status.' + code)` → `t(`status.${code}`)` は許容するが過剰な動的化は禁止）
+
+---
+
 # Styling Rules
 
 推奨:
 
-* Tailwind CSS
-* CSS Modules
-* styled-components (必要時のみ)
+* `src/index.css` に定義された BEM ライクなクラス名を使用する（例: `.btn`, `.btn--primary`, `.master-card__header`）
+* inline style は例外的な微調整（width・gap 等）のみ許容
 
 禁止:
 
-* global CSS乱立
-* inline style乱用
+* Tailwind CSS・CSS Modules・styled-components（このプロジェクトでは使用しない）
+* 新しい CSS ファイルを feature ごとに乱立させる（`index.css` に追記する）
 
 ---
 
@@ -473,14 +539,13 @@ billingApi.ts
 推奨:
 
 * memoization必要時のみ
-* lazy loading
-* route split
-* query cache利用
+* lazy loading（必要に応じて）
 
 禁止:
 
 * premature optimization
 * 全component memo化
+* query cache（使用しない）
 
 ---
 

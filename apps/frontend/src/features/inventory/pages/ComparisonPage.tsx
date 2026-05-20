@@ -7,10 +7,12 @@ import type { ItSkill } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconArrowRight } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
+import { useTranslation } from 'react-i18next';
 
 export default function ComparisonPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('inventory');
   const inventoryId = Number(id);
 
   const [comparison, setComparison] = useState<ComparisonResponse | null>(null);
@@ -83,7 +85,7 @@ export default function ComparisonPage() {
     navigate(`/inventory/${inventoryId}/goal-review`);
   };
 
-  if (!comparison) return <div className="loading">読み込み中...</div>;
+  if (!comparison) return <div className="loading">{t('loading')}</div>;
 
   const changedItems = comparison.items.filter(i => i.diff !== null && i.diff !== 0);
   const changedWithNoRemarks = changedItems.filter(i => !editingRemarks[i.currentDetailId]);
@@ -101,7 +103,7 @@ export default function ComparisonPage() {
           className="remarks-input"
           rows={2}
           value={editingRemarks[item.currentDetailId] ?? ''}
-          placeholder={item.diff !== 0 && item.diff !== null ? '変化の理由を記入（任意）' : '任意'}
+          placeholder={item.diff !== 0 && item.diff !== null ? t('comparisonPage.table.changeRemarksPlaceholder') : t('inventoryPage.table.optional')}
           onChange={e => setEditingRemarks(prev => ({
             ...prev, [item.currentDetailId]: e.target.value,
           }))}
@@ -113,7 +115,7 @@ export default function ComparisonPage() {
           onClick={() => handleSaveRemarks(item)}
           disabled={savingId === item.currentDetailId}
         >
-          {savingId === item.currentDetailId ? '...' : '保存'}
+          {savingId === item.currentDetailId ? '...' : t('inventoryPage.saveButton')}
         </button>
       </td>
     </tr>
@@ -124,24 +126,23 @@ export default function ComparisonPage() {
       <NavBar />
 
       <main className="comparison-main">
-        <button className="page-back-btn" onClick={() => navigate(`/inventory/${inventoryId}`)}>← 棚卸入力に戻る</button>
-        <h1 className="page-title">前年度比較 — {comparison.currentFiscalYear}</h1>
+        <button className="page-back-btn" onClick={() => navigate(`/inventory/${inventoryId}`)}>{t('comparisonPage.backButton')}</button>
+        <h1 className="page-title">{t('comparisonPage.title', { fiscalYear: comparison.currentFiscalYear })}</h1>
 
         {!comparison.hasPrevYear ? (
           <div className="info-card">
-            <p>前年度の棚卸データがありません（初回）。</p>
-            <button className="btn btn-primary" onClick={handleNext}><IconArrowRight size={15} />目標振り返りへ</button>
+            <p>{t('comparisonPage.noPrevYear')}</p>
+            <button className="btn btn-primary" onClick={handleNext}><IconArrowRight size={15} />{t('comparisonPage.nextButton')}</button>
           </div>
         ) : (
           <>
             <p className="comparison-subtitle">
-              前年度（{comparison.prevFiscalYear}）との比較
+              {t('comparisonPage.subtitle', { prevYear: comparison.prevFiscalYear })}
             </p>
 
             {changedWithNoRemarks.length > 0 && (
               <div className="alert alert-info">
-                採点が変化したスキルのうち、備考が未入力のものがあります。
-                可能であれば採点根拠を記入してください（任意）。
+                {t('comparisonPage.remarksAlert')}
               </div>
             )}
 
@@ -149,11 +150,11 @@ export default function ComparisonPage() {
               <table className="comparison-table">
                 <thead>
                   <tr>
-                    <th>スキル名</th>
-                    <th>前年度</th>
-                    <th>今年度</th>
-                    <th>差分</th>
-                    <th>備考</th>
+                    <th>{t('comparisonPage.table.skillName')}</th>
+                    <th>{t('comparisonPage.table.prevYear')}</th>
+                    <th>{t('comparisonPage.table.currentYear')}</th>
+                    <th>{t('comparisonPage.table.diff')}</th>
+                    <th>{t('comparisonPage.table.remarks')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -178,7 +179,7 @@ export default function ComparisonPage() {
                   {comparisonTree.customItems.length > 0 && (
                     <Fragment key="__custom__">
                       <tr className="scoring-cat1-row">
-                        <td colSpan={6}>カスタムスキル ※</td>
+                        <td colSpan={6}>{t('comparisonPage.customSkillLabel')}</td>
                       </tr>
                       {comparisonTree.customItems.map(renderRow)}
                     </Fragment>
@@ -190,7 +191,7 @@ export default function ComparisonPage() {
             <div className="action-row">
               <button className="btn btn-primary" onClick={handleNext}>
                 <IconArrowRight size={15} />
-                目標振り返りへ
+                {t('comparisonPage.nextButton')}
               </button>
             </div>
           </>

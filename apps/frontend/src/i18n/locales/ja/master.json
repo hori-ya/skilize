@@ -1,0 +1,385 @@
+{
+  "loading": "読み込み中...",
+  "common": {
+    "add": "追加",
+    "edit": "編集",
+    "save": "保存",
+    "saving": "保存中...",
+    "cancel": "キャンセル",
+    "active": "有効",
+    "inactive": "無効",
+    "status": "状態",
+    "actions": "操作",
+    "noData": "データがありません",
+    "loadFailed": "データの取得に失敗しました",
+    "saveFailed": "保存に失敗しました",
+    "createFailed": "作成に失敗しました",
+    "updateFailed": "更新に失敗しました",
+    "activeLabel": "有効",
+    "inactiveLabel": "無効",
+    "filterAll": "全件",
+    "filterActive": "有効のみ",
+    "filterInactive": "無効のみ",
+    "filterLabel": "表示：",
+    "sortOrder": "並順",
+    "allOption": "すべて",
+    "categoryFilterLabel": "カテゴリフィルタ",
+    "noCategoryOption": "カテゴリなし",
+    "promoteButton": "昇格",
+    "registeringButton": "登録中...",
+    "registerButton": "マスタに登録",
+    "usageCountSuffix": "件",
+    "loadFetchFailed": "取得に失敗しました",
+    "promoteFailed": "昇格に失敗しました"
+  },
+  "fiscalYear": {
+    "pageTitle": "年度マスタ",
+    "listTitle": "年度一覧",
+    "addButton": "年度追加",
+    "settingsTitle": "設定",
+    "settingsCardTitle": "会計年度設定",
+    "startMonthLabel": "年度開始月",
+    "settingsStartMonthLabel": "会計年度開始月",
+    "month": "{{n}}月",
+    "currentSettingHint": "現在の設定: {{month}}月始まり",
+    "emptyData": "年度データがありません",
+    "saveSettingsButton": "保存",
+    "settingsSaved": "保存しました",
+    "modalCreate": "年度追加",
+    "modalEdit": "年度編集",
+    "table": {
+      "name": "年度名",
+      "startDate": "開始日",
+      "endDate": "終了日",
+      "inputStartDate": "入力開始日",
+      "inputEndDate": "入力締切日",
+      "status": "状態"
+    },
+    "status": {
+      "active": "進行中",
+      "planned": "予定",
+      "done": "完了",
+      "inactive": "無効"
+    },
+    "form": {
+      "nameLabel": "年度名",
+      "namePlaceholder": "例: 2025年度",
+      "startDateLabel": "開始日",
+      "endDateLabel": "終了日",
+      "inputStartDateLabel": "入力開始日",
+      "inputEndDateLabel": "入力締切日",
+      "activeLabel": "有効"
+    },
+    "validation": {
+      "nameRequired": "年度名は必須です",
+      "requiredFields": "年度名・開始日・終了日は必須です",
+      "endDateAfterStart": "終了日は開始日より後の日付を指定してください",
+      "settingsSaveFailed": "設定の保存に失敗しました"
+    }
+  },
+  "skillLevel": {
+    "pageTitle": "レベルマスタ",
+    "listTitle": "スキルレベル一覧",
+    "addButton": "レベル追加",
+    "modalCreate": "レベル追加",
+    "modalEdit": "レベル編集",
+    "table": {
+      "levelValue": "レベル値",
+      "description": "説明",
+      "scoreWeight": "スコア重み",
+      "status": "状態"
+    },
+    "form": {
+      "levelValueLabel": "レベル値",
+      "descriptionLabel": "説明",
+      "descriptionPlaceholder": "例: 独力で実務に適用できる",
+      "scoreWeightLabel": "スコア重み",
+      "scoreWeightHint": "グラフのスコア計算に使う重み。0 にするとスコアに寄与しません。",
+      "activeLabel": "有効"
+    },
+    "validation": {
+      "levelValueRequired": "レベル値は必須です",
+      "levelValueRange": "レベル値は1以上の整数を入力してください",
+      "descriptionRequired": "説明は必須です",
+      "scoreWeightRange": "スコア重みは0以上の整数を入力してください"
+    }
+  },
+  "itSkill": {
+    "pageTitle": "ITスキルマスタ",
+    "listTitle": "ITスキル一覧",
+    "addButton": "スキル追加",
+    "categoryTitle": "ITスキル分類",
+    "addCategoryButton": "分類追加",
+    "promoteTitle": "カスタムスキルの昇格",
+    "promoteButton": "マスタに昇格",
+    "customUnregisteredEmpty": "未登録のカスタムスキルはありません",
+    "modalCreate": "ITスキル追加",
+    "modalEdit": "ITスキル編集",
+    "modalCategoryCreate": "分類追加",
+    "modalCategoryEdit": "分類編集",
+    "modalPromote": "マスタ昇格",
+    "tab": {
+      "categories": "IT分類管理（SCR-012）",
+      "skills": "ITスキル管理（SCR-009）",
+      "promote": "カスタム昇格"
+    },
+    "category": {
+      "listTitle": "IT分類一覧",
+      "table": {
+        "level": "階層",
+        "parent": "親分類",
+        "name": "分類名"
+      },
+      "form": {
+        "parentNone": "なし（第1階層）",
+        "lv1Group": "第1階層（Lv2の親として追加）",
+        "lv2Group": "第2階層（Lv3の親として追加）",
+        "parentHint": "未選択 = 第1階層、Lv1選択 = 第2階層、Lv2選択 = 第3階層",
+        "namePlaceholder": "例: プログラミング言語"
+      },
+      "validation": {
+        "nameRequired": "分類名は必須です"
+      }
+    },
+    "skill": {
+      "filterLabel": "分類フィルタ",
+      "form": {
+        "lv1Select": "第1階層を選択",
+        "lv2Select": "第2階層を選択（任意）",
+        "lv3Select": "第3階層を選択（任意）",
+        "namePlaceholder": "例: Spring Boot",
+        "descriptionPlaceholder": "スキルの説明（任意）"
+      },
+      "validation": {
+        "categoryRequired": "分類を選択してください",
+        "nameRequired": "スキル名は必須です"
+      }
+    },
+    "promotion": {
+      "tabTitle": "カスタムスキル昇格",
+      "hint": "ユーザーが入力したカスタムスキルをマスタに登録できます",
+      "emptyMessage": "昇格待ちのカスタムスキルはありません",
+      "table": {
+        "customName": "カスタムスキル名"
+      },
+      "form": {
+        "originalNameLabel": "カスタムスキル名（元）",
+        "masterNameHint": "カスタム名から変更して正式名称に統一できます"
+      },
+      "validation": {
+        "categoryRequired": "分類を選択してください",
+        "nameRequired": "スキル名は必須です"
+      }
+    },
+    "table": {
+      "category1": "大分類",
+      "category2": "中分類",
+      "name": "スキル名",
+      "description": "説明",
+      "sortOrder": "表示順",
+      "status": "状態",
+      "usageCount": "使用件数"
+    },
+    "form": {
+      "categoryLabel": "分類",
+      "nameLabel": "スキル名",
+      "descriptionLabel": "説明",
+      "sortOrderLabel": "表示順",
+      "activeLabel": "有効",
+      "parentCategoryLabel": "親分類",
+      "selectCategory": "分類を選択",
+      "categoryNameLabel": "分類名"
+    },
+    "promote": {
+      "customNameLabel": "カスタム名",
+      "categoryLabel": "登録先分類",
+      "masterNameLabel": "マスタ登録名",
+      "descriptionLabel": "説明",
+      "sortOrderLabel": "表示順"
+    }
+  },
+  "qualification": {
+    "pageTitle": "参考資格マスタ",
+    "listTitle": "資格一覧",
+    "addButton": "資格追加",
+    "categoryTitle": "資格分類",
+    "addCategoryButton": "分類追加",
+    "promoteTitle": "カスタム資格の昇格",
+    "promoteButton": "マスタに昇格",
+    "customUnregisteredEmpty": "未登録のカスタム資格はありません",
+    "modalCreate": "資格追加",
+    "modalEdit": "資格編集",
+    "modalCategoryCreate": "資格分類追加",
+    "modalCategoryEdit": "資格分類編集",
+    "modalPromote": "マスタ昇格",
+    "tab": {
+      "categories": "カテゴリ管理",
+      "qualifications": "資格管理",
+      "promote": "カスタム昇格"
+    },
+    "category": {
+      "listTitle": "資格カテゴリ一覧",
+      "addButton": "カテゴリ追加",
+      "table": {
+        "name": "カテゴリ名"
+      },
+      "form": {
+        "nameLabel": "カテゴリ名",
+        "namePlaceholder": "例: ベンダー資格"
+      },
+      "validation": {
+        "nameRequired": "カテゴリ名は必須です"
+      }
+    },
+    "qual": {
+      "filterLabel": "カテゴリフィルタ",
+      "form": {
+        "namePlaceholder": "例: 応用情報技術者",
+        "descriptionPlaceholder": "資格の説明（任意）"
+      },
+      "validation": {
+        "nameRequired": "資格名は必須です"
+      }
+    },
+    "promotion": {
+      "tabTitle": "カスタム資格昇格",
+      "hint": "ユーザーが入力したカスタム資格をマスタに登録できます",
+      "emptyMessage": "昇格待ちのカスタム資格はありません",
+      "table": {
+        "customName": "カスタム資格名"
+      },
+      "form": {
+        "originalNameLabel": "カスタム資格名（元）",
+        "masterNameHint": "カスタム名から変更して正式名称に統一できます"
+      },
+      "validation": {
+        "nameRequired": "資格名は必須です"
+      }
+    },
+    "table": {
+      "category": "分類",
+      "name": "資格名",
+      "description": "説明",
+      "sortOrder": "表示順",
+      "status": "状態",
+      "usageCount": "使用件数"
+    },
+    "form": {
+      "categoryLabel": "分類",
+      "nameLabel": "資格名",
+      "descriptionLabel": "説明",
+      "sortOrderLabel": "表示順",
+      "activeLabel": "有効",
+      "categoryNameLabel": "分類名"
+    }
+  },
+  "adSeminar": {
+    "pageTitle": "ADマスタ",
+    "listTitle": "ADセミナー一覧",
+    "addButton": "AD追加",
+    "categoryTitle": "ADセミナー分類",
+    "addCategoryButton": "分類追加",
+    "modalCreate": "AD追加",
+    "modalEdit": "AD編集",
+    "modalCategoryCreate": "分類追加",
+    "modalCategoryEdit": "分類編集",
+    "tab": {
+      "categories": "カテゴリ管理",
+      "adSeminars": "AD管理"
+    },
+    "category": {
+      "listTitle": "ADカテゴリ一覧",
+      "addButton": "カテゴリ追加",
+      "table": {
+        "name": "カテゴリ名"
+      },
+      "form": {
+        "nameLabel": "カテゴリ名",
+        "namePlaceholder": "例: 外部研修"
+      },
+      "validation": {
+        "nameRequired": "カテゴリ名は必須です"
+      }
+    },
+    "seminar": {
+      "addButton": "AD追加",
+      "filterLabel": "カテゴリフィルタ",
+      "table": {
+        "adName": "AD名"
+      },
+      "form": {
+        "adNameLabel": "AD名",
+        "descriptionPlaceholder": "ADの説明（任意）"
+      },
+      "validation": {
+        "nameRequired": "AD名は必須です"
+      }
+    },
+    "table": {
+      "category": "分類",
+      "name": "ADセミナー名",
+      "description": "説明",
+      "sortOrder": "表示順",
+      "status": "状態"
+    },
+    "form": {
+      "categoryLabel": "分類",
+      "nameLabel": "ADセミナー名",
+      "descriptionLabel": "説明",
+      "sortOrderLabel": "表示順",
+      "activeLabel": "有効",
+      "categoryNameLabel": "分類名"
+    }
+  },
+  "user": {
+    "pageTitle": "ユーザー管理",
+    "listTitle": "ユーザー一覧",
+    "addButton": "ユーザー追加",
+    "modalCreate": "ユーザー追加",
+    "modalEdit": "ユーザー編集",
+    "resetPasswordTitle": "パスワードリセット",
+    "table": {
+      "userId": "ユーザーID",
+      "name": "名前",
+      "email": "メール",
+      "role": "権限",
+      "tl": "TL",
+      "status": "状態",
+      "initialPw": "初期PW",
+      "pwNotChanged": "未変更"
+    },
+    "form": {
+      "userIdLabel": "ユーザーID",
+      "nameLabel": "名前",
+      "emailLabel": "メールアドレス",
+      "roleLabel": "権限",
+      "tlLabel": "TL（上長）",
+      "tlNone": "なし",
+      "activeLabel": "有効",
+      "userIdPlaceholder": "例: yamada_taro",
+      "namePlaceholder": "例: 山田 太郎",
+      "emailPlaceholder": "例: yamada@example.com",
+      "initialPasswordHint": "初期パスワードはユーザーIDと同じになります",
+      "required": "*"
+    },
+    "role": {
+      "general": "一般",
+      "tl": "TL",
+      "admin": "管理者"
+    },
+    "resetPassword": {
+      "confirmMessage": "のパスワードをリセットします。ユーザーは次回ログイン時に新しいパスワードへ変更が必要になります。",
+      "resetButton": "リセットする",
+      "resettingButton": "処理中...",
+      "successMessage": "パスワードをリセットしました。",
+      "tempPasswordMessage": "仮パスワードをユーザーに通知してください：",
+      "errorMessage": "エラーが発生しました",
+      "closeButton": "閉じる"
+    },
+    "validation": {
+      "userIdRequired": "ユーザーIDは必須です",
+      "nameRequired": "名前は必須です"
+    },
+    "loadFailed": "ユーザー一覧の取得に失敗しました"
+  }
+}

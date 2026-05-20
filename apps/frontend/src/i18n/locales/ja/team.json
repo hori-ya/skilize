@@ -1,0 +1,155 @@
+{
+  "loading": "読み込み中...",
+  "teamMemberList": {
+    "backButton": "← ダッシュボードに戻る",
+    "title": "チームメンバー照会",
+    "noMembers": "チームメンバーがいません。",
+    "table": {
+      "name": "名前",
+      "role": "ロール",
+      "currentStatus": "当年度ステータス",
+      "fiscalYear": "年度",
+      "detailButton": "詳細を見る"
+    },
+    "noInventory": "— 未作成"
+  },
+  "allUserList": {
+    "backButton": "← ダッシュボードに戻る",
+    "title": "全ユーザー照会",
+    "noUsers": "該当するユーザーがいません",
+    "filter": {
+      "namePlaceholder": "名前で検索",
+      "teamAll": "チーム（全て）",
+      "teamNone": "チームなし",
+      "teamSuffix": " チーム",
+      "roleAll": "ロール（全て）",
+      "statusAll": "ステータス（全て）",
+      "statusNone": "未作成",
+      "clearButton": "クリア"
+    },
+    "table": {
+      "name": "名前",
+      "role": "ロール",
+      "team": "チーム（TL）",
+      "currentStatus": "当年度ステータス",
+      "fiscalYear": "年度",
+      "detailButton": "詳細を見る"
+    },
+    "noInventory": "— 未作成",
+    "countSuffix": " 件"
+  },
+  "memberDetail": {
+    "title": "メンバー詳細照会",
+    "backButton": "← {{label}}に戻る",
+    "defaultBackLabel": "チーム照会",
+    "readOnly": "読み取り専用表示",
+    "noData": "棚卸データがありません。",
+    "yearLabel": "年度",
+    "tab": {
+      "itSkills": "ITスキル",
+      "qualifications": "資格",
+      "seminars": "セミナー",
+      "goals": "目標",
+      "expectations": "期待",
+      "aiAnalysis": "AI分析"
+    },
+    "filter": {
+      "skillSearch": "スキル名で検索",
+      "qualSearch": "資格名・分類で検索",
+      "seminarSearch": "セミナー名・分類で検索",
+      "goalSearch": "目標名で検索",
+      "category1All": "大分類：すべて",
+      "diffAll": "差分：すべて",
+      "diffUp": "上昇",
+      "diffDown": "下降",
+      "diffNew": "新規",
+      "seminarTypeAll": "区分：すべて",
+      "seminarTypeFree": "フリー",
+      "goalCategoryAll": "カテゴリ：すべて"
+    },
+    "table": {
+      "skillName": "スキル名",
+      "prevYear": "前年度",
+      "currentYear": "今年度",
+      "diff": "差分",
+      "remarks": "備考",
+      "interviewNote": "面談メモ",
+      "category": "分類",
+      "qualName": "資格名",
+      "acquiredYearMonth": "取得年月",
+      "seminarType": "区分",
+      "seminarName": "セミナー名",
+      "attendedYearMonth": "受講年月",
+      "goalCategory": "カテゴリ",
+      "goalName": "目標名",
+      "targetPeriod": "達成予定時期",
+      "reasonPlan": "理由・計画",
+      "achievementStatus": "達成状況",
+      "reviewNote": "振り返りコメント",
+      "prevYearInterviewNote": "面談メモ（前年度）"
+    },
+    "noDataCell": {
+      "itSkills": "ITスキルデータがありません",
+      "qualifications": "資格データがありません",
+      "seminars": "セミナーデータがありません",
+      "goals": "目標データがありません",
+      "aiAnalysis": "この年度のAI分析データはありません。",
+      "noMatchSkills": "条件に一致するスキルがありません",
+      "noMatchQuals": "条件に一致する資格がありません",
+      "noMatchSeminars": "条件に一致するセミナーがありません",
+      "noMatchGoals": "条件に一致する目標がありません"
+    },
+    "goalSection": {
+      "prevYear": "前年度目標",
+      "currentYear": "今年度目標"
+    },
+    "expectation": {
+      "tlTitle": "TLが期待すること",
+      "companyTitle": "会社が期待すること",
+      "tlPlaceholder": "このメンバーへの期待を入力してください",
+      "companyPlaceholder": "会社としての期待を入力してください",
+      "noInput": "（未入力）",
+      "savedLabel": "保存しました",
+      "saveButton": "保存",
+      "savingButton": "保存中...",
+      "saveFailed": "保存に失敗しました"
+    },
+    "interview": {
+      "panelTitle": "全体備忘録",
+      "openButton": "📝 備忘録",
+      "closeButton": "✕ 閉じる",
+      "prevYearLabel": "前年度備忘録",
+      "noNote": "（なし）",
+      "memoPlaceholder": "面談全体のメモを入力してください",
+      "noteInputPlaceholder": "メモ",
+      "prevNotePrefix": "前年: ",
+      "savedLabel": "保存済み",
+      "saveButton": "保存",
+      "savingButton": "保存中...",
+      "saveFailed": "保存に失敗しました",
+      "closeLabel": "閉じる"
+    }
+  },
+  "status": {
+    "completed": "完了",
+    "pendingGoal": "提出済み・目標未設定",
+    "draft": "入力中"
+  },
+  "role": {
+    "general": "一般",
+    "tl": "TL",
+    "admin": "管理者"
+  },
+  "achievement": {
+    "achieved": "達成",
+    "partial": "一部達成",
+    "notAchieved": "未達成"
+  },
+  "goalCategory": {
+    "itSkill": "ITスキル",
+    "qualification": "資格",
+    "ad": "AD"
+  },
+  "customSkillLabel": "カスタムスキル ※",
+  "diffNew": "新規"
+}

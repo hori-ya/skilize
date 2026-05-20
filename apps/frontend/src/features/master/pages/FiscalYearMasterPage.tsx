@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { FiscalYear, FiscalYearSettings } from '../../../shared/types/master';
 import {
@@ -12,6 +13,7 @@ import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
 type ModalMode = 'create' | 'edit';
+type FiscalYearStatusKey = 'active' | 'planned' | 'done' | 'inactive';
 
 interface FormState {
   name: string;
@@ -31,22 +33,23 @@ const emptyForm = (): FormState => ({
   active: true,
 });
 
-function fiscalYearStatus(fy: FiscalYear): string {
+function fiscalYearStatusKey(fy: FiscalYear): FiscalYearStatusKey {
   const today = new Date().toISOString().slice(0, 10);
-  if (!fy.isActive) return '無効';
-  if (today < fy.startDate) return '予定';
-  if (today > fy.endDate) return '完了';
-  return '進行中';
+  if (!fy.isActive) return 'inactive';
+  if (today < fy.startDate) return 'planned';
+  if (today > fy.endDate) return 'done';
+  return 'active';
 }
 
-function statusClass(status: string) {
-  if (status === '進行中') return 'fy-status fy-status--active';
-  if (status === '予定') return 'fy-status fy-status--planned';
-  if (status === '完了') return 'fy-status fy-status--done';
-  return 'fy-status fy-status--inactive';
-}
+const STATUS_CLASS: Record<FiscalYearStatusKey, string> = {
+  active: 'fy-status fy-status--active',
+  planned: 'fy-status fy-status--planned',
+  done: 'fy-status fy-status--done',
+  inactive: 'fy-status fy-status--inactive',
+};
 
 export default function FiscalYearMasterPage() {
+  const { t } = useTranslation('master');
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
   const [settings, setSettings] = useState<FiscalYearSettings | null>(null);
   const [startMonth, setStartMonth] = useState<number>(4);
@@ -68,7 +71,7 @@ export default function FiscalYearMasterPage() {
         setSettings(sRes.data);
         setStartMonth(sRes.data.fiscalYearStartMonth);
       })
-      .catch(() => setError('データの取得に失敗しました'))
+      .catch(() => setError(t('common.loadFailed')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -79,7 +82,7 @@ export default function FiscalYearMasterPage() {
       setSettingsSaved(true);
       setTimeout(() => setSettingsSaved(false), 2000);
     } catch {
-      setError('設定の保存に失敗しました');
+      setError(t('fiscalYear.validation.settingsSaveFailed'));
     }
   };
 
@@ -108,11 +111,11 @@ export default function FiscalYearMasterPage() {
 
   const handleSubmit = async () => {
     if (!form.name || !form.startDate || !form.endDate) {
-      setFormError('年度名・開始日・終了日は必須です');
+      setFormError(t('fiscalYear.validation.requiredFields'));
       return;
     }
     if (form.startDate >= form.endDate) {
-      setFormError('終了日は開始日より後の日付を指定してください');
+      setFormError(t('fiscalYear.validation.endDateAfterStart'));
       return;
     }
 
@@ -143,13 +146,13 @@ export default function FiscalYearMasterPage() {
       setModalOpen(false);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setFormError(msg ?? '保存に失敗しました');
+      setFormError(msg ?? t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="loading-screen"><span>読み込み中...</span></div>;
+  if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
   return (
     <div className="master-page">
@@ -160,26 +163,26 @@ export default function FiscalYearMasterPage() {
 
         {/* Settings card */}
         <section className="master-card">
-          <h2 className="master-card__title">会計年度設定</h2>
+          <h2 className="master-card__title">{t('fiscalYear.settingsCardTitle')}</h2>
           <div className="master-card__row">
-            <label className="master-label">会計年度開始月</label>
+            <label className="master-label">{t('fiscalYear.settingsStartMonthLabel')}</label>
             <select
               className="master-select"
               value={startMonth}
               onChange={e => setStartMonth(Number(e.target.value))}
             >
               {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m}>{m}月</option>
+                <option key={m} value={m}>{t('fiscalYear.month', { n: m })}</option>
               ))}
             </select>
             <button className="btn btn--primary btn--sm" onClick={handleSaveSettings}>
-              <IconCheck size={12} />保存
+              <IconCheck size={12} />{t('common.save')}
             </button>
-            {settingsSaved && <span className="master-saved">保存しました</span>}
+            {settingsSaved && <span className="master-saved">{t('fiscalYear.settingsSaved')}</span>}
           </div>
           {settings && (
             <p className="master-card__hint">
-              現在の設定: {settings.fiscalYearStartMonth}月始まり
+              {t('fiscalYear.currentSettingHint', { month: settings.fiscalYearStartMonth })}
             </p>
           )}
         </section>
@@ -187,31 +190,33 @@ export default function FiscalYearMasterPage() {
         {/* Fiscal years list */}
         <section className="master-card">
           <div className="master-card__header">
-            <h2 className="master-card__title">年度一覧</h2>
-            <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />年度追加</button>
+            <h2 className="master-card__title">{t('fiscalYear.listTitle')}</h2>
+            <button className="btn btn--primary btn--sm" onClick={openCreate}>
+              <IconPlus size={12} />{t('fiscalYear.addButton')}
+            </button>
           </div>
 
           <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
-                  <th>年度名</th>
-                  <th>開始日</th>
-                  <th>終了日</th>
-                  <th>入力開始日</th>
-                  <th>入力締切日</th>
-                  <th>状態</th>
-                  <th>操作</th>
+                  <th>{t('fiscalYear.table.name')}</th>
+                  <th>{t('fiscalYear.table.startDate')}</th>
+                  <th>{t('fiscalYear.table.endDate')}</th>
+                  <th>{t('fiscalYear.table.inputStartDate')}</th>
+                  <th>{t('fiscalYear.table.inputEndDate')}</th>
+                  <th>{t('fiscalYear.table.status')}</th>
+                  <th>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {fiscalYears.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="master-table__empty">年度データがありません</td>
+                    <td colSpan={7} className="master-table__empty">{t('fiscalYear.emptyData')}</td>
                   </tr>
                 ) : (
                   fiscalYears.map(fy => {
-                    const status = fiscalYearStatus(fy);
+                    const sKey = fiscalYearStatusKey(fy);
                     return (
                       <tr key={fy.id}>
                         <td>{fy.name}</td>
@@ -219,10 +224,10 @@ export default function FiscalYearMasterPage() {
                         <td>{fy.endDate}</td>
                         <td>{fy.inputStartDate ?? '—'}</td>
                         <td>{fy.inputEndDate ?? '—'}</td>
-                        <td><span className={statusClass(status)}>{status}</span></td>
+                        <td><span className={STATUS_CLASS[sKey]}>{t(`fiscalYear.status.${sKey}`)}</span></td>
                         <td>
                           <button className="btn btn--secondary btn--sm" onClick={() => openEdit(fy)}>
-                            <IconEdit size={12} />編集
+                            <IconEdit size={12} />{t('common.edit')}
                           </button>
                         </td>
                       </tr>
@@ -240,26 +245,26 @@ export default function FiscalYearMasterPage() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{modalMode === 'create' ? '年度追加' : '年度編集'}</h3>
+              <h3>{modalMode === 'create' ? t('fiscalYear.modalCreate') : t('fiscalYear.modalEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
 
               <div className="form-group">
-                <label className="form-label">年度名 <span className="required">*</span></label>
+                <label className="form-label">{t('fiscalYear.form.nameLabel')} <span className="required">*</span></label>
                 <input
                   className="form-input"
                   value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: 2025年度"
+                  placeholder={t('fiscalYear.form.namePlaceholder')}
                   maxLength={20}
                 />
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">開始日 <span className="required">*</span></label>
+                  <label className="form-label">{t('fiscalYear.form.startDateLabel')} <span className="required">*</span></label>
                   <input
                     type="date"
                     className="form-input"
@@ -268,7 +273,7 @@ export default function FiscalYearMasterPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">終了日 <span className="required">*</span></label>
+                  <label className="form-label">{t('fiscalYear.form.endDateLabel')} <span className="required">*</span></label>
                   <input
                     type="date"
                     className="form-input"
@@ -280,7 +285,7 @@ export default function FiscalYearMasterPage() {
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">入力開始日</label>
+                  <label className="form-label">{t('fiscalYear.form.inputStartDateLabel')}</label>
                   <input
                     type="date"
                     className="form-input"
@@ -289,7 +294,7 @@ export default function FiscalYearMasterPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">入力締切日</label>
+                  <label className="form-label">{t('fiscalYear.form.inputEndDateLabel')}</label>
                   <input
                     type="date"
                     className="form-input"
@@ -307,17 +312,17 @@ export default function FiscalYearMasterPage() {
                       checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))}
                     />
-                    <span>有効</span>
+                    <span>{t('fiscalYear.form.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
               <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
-                <IconX size={13} />キャンセル
+                <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>

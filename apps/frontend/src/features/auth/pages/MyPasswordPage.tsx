@@ -2,10 +2,12 @@ import { useState, type FormEvent } from 'react';
 import NavBar from '../../../app/layouts/NavBar';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import { IconLock } from '../../../shared/ui/Icons';
+import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
 export default function MyPasswordPage() {
   const { changePassword } = useAuth();
+  const { t } = useTranslation('auth');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,9 +18,9 @@ export default function MyPasswordPage() {
 
   const validate = () => {
     const errs: typeof errors = {};
-    if (!currentPassword) errs.currentPassword = '現在のパスワードを入力してください';
-    if (newPassword.length < 8) errs.newPassword = '8文字以上で入力してください';
-    if (newPassword !== confirmPassword) errs.confirmPassword = 'パスワードが一致しません';
+    if (!currentPassword) errs.currentPassword = t('validation.currentPasswordRequired');
+    if (newPassword.length < 8) errs.newPassword = t('validation.minLength');
+    if (newPassword !== confirmPassword) errs.confirmPassword = t('validation.passwordMismatch');
     return errs;
   };
 
@@ -43,9 +45,9 @@ export default function MyPasswordPage() {
       if (axios.isAxiosError(err)) {
         const code = err.response?.data?.code;
         if (code === 'AUTH_FAILED') {
-          setFormError('現在のパスワードが正しくありません');
+          setFormError(t('error.currentPasswordWrong'));
         } else {
-          setFormError('パスワードの変更に失敗しました。もう一度お試しください。');
+          setFormError(t('error.changeFailed'));
         }
       }
     } finally {
@@ -58,11 +60,11 @@ export default function MyPasswordPage() {
       <NavBar />
       <div className="my-password-page__body">
         <div className="auth-card">
-          <p className="my-password-page__title">パスワード変更</p>
+          <p className="my-password-page__title">{t('myPasswordPage.title')}</p>
           {success && (
             <div className="alert alert-success">
               <span className="alert-icon">✓</span>
-              パスワードを変更しました
+              {t('myPasswordPage.successMessage')}
             </div>
           )}
           {formError && (
@@ -73,7 +75,7 @@ export default function MyPasswordPage() {
           )}
           <form onSubmit={handleSubmit} noValidate>
             <div className="form-group">
-              <label htmlFor="currentPassword" className="form-label">現在のパスワード</label>
+              <label htmlFor="currentPassword" className="form-label">{t('myPasswordPage.currentPasswordLabel')}</label>
               <input
                 id="currentPassword"
                 type="password"
@@ -87,7 +89,7 @@ export default function MyPasswordPage() {
               {errors.currentPassword && <p className="form-error-text">※ {errors.currentPassword}</p>}
             </div>
             <div className="form-group">
-              <label htmlFor="newPassword" className="form-label">新しいパスワード</label>
+              <label htmlFor="newPassword" className="form-label">{t('myPasswordPage.newPasswordLabel')}</label>
               <input
                 id="newPassword"
                 type="password"
@@ -100,7 +102,7 @@ export default function MyPasswordPage() {
               {errors.newPassword && <p className="form-error-text">※ {errors.newPassword}</p>}
             </div>
             <div className="form-group">
-              <label htmlFor="confirmPassword" className="form-label">新しいパスワード（確認）</label>
+              <label htmlFor="confirmPassword" className="form-label">{t('myPasswordPage.confirmPasswordLabel')}</label>
               <input
                 id="confirmPassword"
                 type="password"
@@ -112,10 +114,10 @@ export default function MyPasswordPage() {
               />
               {errors.confirmPassword && <p className="form-error-text">※ {errors.confirmPassword}</p>}
             </div>
-            <p className="form-hint">※ 8文字以上で入力してください</p>
+            <p className="form-hint">{t('myPasswordPage.minLengthHint')}</p>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               <IconLock size={15} />
-              {isSubmitting ? '変更中...' : 'パスワードを変更する'}
+              {isSubmitting ? t('myPasswordPage.submittingButton') : t('myPasswordPage.submitButton')}
             </button>
           </form>
         </div>

@@ -1,32 +1,34 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
+import { useTranslation } from 'react-i18next';
 import SkilizeLogo from '../../shared/ui/SkilizeLogo';
-
-const ADMIN_MENU = [
-  { label: '全ユーザー照会', path: '/admin/users-inquiry' },
-  { label: '年度マスタ',     path: '/master/fiscal-years' },
-  { label: 'レベルマスタ',   path: '/master/skill-levels' },
-  { label: 'ITスキルマスタ', path: '/master/it-skills' },
-  { label: '参考資格マスタ', path: '/master/qualifications' },
-  { label: 'ADマスタ',       path: '/master/ad-seminars' },
-  { label: 'ユーザー管理',   path: '/master/users' },
-];
-
-const roleLabel = (role: string) => {
-  if (role === 'ADMIN') return '管理者';
-  if (role === 'TL') return 'TL';
-  return '一般';
-};
 
 export default function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation('nav');
   const [adminOpen, setAdminOpen] = useState(false);
   // useRef: DOM 要素への参照を保持する。useState と異なり値変更時に再レンダリングを起こさない。
   // ドロップダウンの div 要素を参照し、クリックが要素の外側かどうかを判定するために使う。
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const ADMIN_MENU = [
+    { label: t('adminMenu.allUsers'),     path: '/admin/users-inquiry' },
+    { label: t('adminMenu.fiscalYear'),   path: '/master/fiscal-years' },
+    { label: t('adminMenu.skillLevel'),   path: '/master/skill-levels' },
+    { label: t('adminMenu.itSkill'),      path: '/master/it-skills' },
+    { label: t('adminMenu.qualification'), path: '/master/qualifications' },
+    { label: t('adminMenu.adSeminar'),    path: '/master/ad-seminars' },
+    { label: t('adminMenu.userManagement'), path: '/master/users' },
+  ];
+
+  const roleLabel = (role: string) => {
+    if (role === 'ADMIN') return t('role.admin');
+    if (role === 'TL') return t('role.tl');
+    return t('role.general');
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -64,7 +66,7 @@ export default function NavBar() {
           className={`navbar__link${location.pathname === '/' ? ' active' : ''}`}
           onClick={() => navigate('/')}
         >
-          ダッシュボード
+          {t('menu.dashboard')}
         </button>
 
         {(user?.role === 'TL' || user?.role === 'ADMIN') && (
@@ -72,7 +74,7 @@ export default function NavBar() {
             className={`navbar__link${location.pathname.startsWith('/team') ? ' active' : ''}`}
             onClick={() => navigate('/team')}
           >
-            チーム照会
+            {t('menu.team')}
           </button>
         )}
 
@@ -82,7 +84,7 @@ export default function NavBar() {
               className={`navbar__link navbar__link--has-arrow${isAdminActive ? ' active' : ''}${adminOpen ? ' open' : ''}`}
               onClick={() => setAdminOpen(v => !v)}
             >
-              管理
+              {t('menu.admin')}
               <span className="navbar__arrow">▾</span>
             </button>
             {adminOpen && (
@@ -108,10 +110,10 @@ export default function NavBar() {
         </span>
         {user?.userId !== 'admin' && (
           <button className="navbar__logout-btn" onClick={() => navigate('/settings/password')}>
-            パスワード変更
+            {t('action.changePassword')}
           </button>
         )}
-        <button className="navbar__logout-btn" onClick={handleLogout}>ログアウト</button>
+        <button className="navbar__logout-btn" onClick={handleLogout}>{t('action.logout')}</button>
       </div>
     </nav>
   );

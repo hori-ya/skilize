@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { SkillLevel } from '../../../shared/types/master';
 import { getSkillLevels, createSkillLevel, updateSkillLevel } from '../../../shared/api/masterApi';
@@ -17,6 +18,7 @@ interface FormState {
 const emptyForm = (): FormState => ({ levelValue: '', description: '', scoreWeight: '0', active: true });
 
 export default function SkillLevelMasterPage() {
+  const { t } = useTranslation('master');
   const [levels, setLevels] = useState<SkillLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,7 +33,7 @@ export default function SkillLevelMasterPage() {
   useEffect(() => {
     getSkillLevels()
       .then(res => setLevels(res.data))
-      .catch(() => setError('データの取得に失敗しました'))
+      .catch(() => setError(t('common.loadFailed')))
       .finally(() => setLoading(false));
   }, []);
 
@@ -59,17 +61,17 @@ export default function SkillLevelMasterPage() {
   const handleSubmit = async () => {
     const lv = Number(form.levelValue);
     if (!form.levelValue || isNaN(lv) || lv < 1) {
-      setFormError('レベル値は1以上の整数を入力してください');
+      setFormError(t('skillLevel.validation.levelValueRange'));
       return;
     }
     if (!form.description.trim()) {
-      setFormError('説明は必須です');
+      setFormError(t('skillLevel.validation.descriptionRequired'));
       return;
     }
 
     const sw = Number(form.scoreWeight);
     if (form.scoreWeight === '' || isNaN(sw) || sw < 0) {
-      setFormError('スコア重みは0以上の整数を入力してください');
+      setFormError(t('skillLevel.validation.scoreWeightRange'));
       return;
     }
 
@@ -94,13 +96,13 @@ export default function SkillLevelMasterPage() {
       setModalOpen(false);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setFormError(msg ?? '保存に失敗しました');
+      setFormError(msg ?? t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <div className="loading-screen"><span>読み込み中...</span></div>;
+  if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
   return (
     <div className="master-page">
@@ -111,25 +113,27 @@ export default function SkillLevelMasterPage() {
 
         <section className="master-card">
           <div className="master-card__header">
-            <h2 className="master-card__title">スキルレベル一覧</h2>
-            <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />レベル追加</button>
+            <h2 className="master-card__title">{t('skillLevel.listTitle')}</h2>
+            <button className="btn btn--primary btn--sm" onClick={openCreate}>
+              <IconPlus size={12} />{t('skillLevel.addButton')}
+            </button>
           </div>
 
           <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
-                  <th style={{ width: 100 }}>レベル値</th>
-                  <th>説明</th>
-                  <th style={{ width: 100 }}>スコア重み</th>
-                  <th style={{ width: 80 }}>状態</th>
-                  <th style={{ width: 80 }}>操作</th>
+                  <th style={{ width: 100 }}>{t('skillLevel.table.levelValue')}</th>
+                  <th>{t('skillLevel.table.description')}</th>
+                  <th style={{ width: 100 }}>{t('skillLevel.table.scoreWeight')}</th>
+                  <th style={{ width: 80 }}>{t('common.status')}</th>
+                  <th style={{ width: 80 }}>{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody>
                 {levels.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="master-table__empty">データがありません</td>
+                    <td colSpan={5} className="master-table__empty">{t('common.noData')}</td>
                   </tr>
                 ) : (
                   levels.map(level => (
@@ -139,12 +143,12 @@ export default function SkillLevelMasterPage() {
                       <td style={{ textAlign: 'center' }}>{level.scoreWeight}</td>
                       <td>
                         <span className={level.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                          {level.isActive ? '有効' : '無効'}
+                          {level.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                         </span>
                       </td>
                       <td>
                         <button className="btn btn--secondary btn--sm" onClick={() => openEdit(level)}>
-                          <IconEdit size={12} />編集
+                          <IconEdit size={12} />{t('common.edit')}
                         </button>
                       </td>
                     </tr>
@@ -160,14 +164,14 @@ export default function SkillLevelMasterPage() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{modalMode === 'create' ? 'レベル追加' : 'レベル編集'}</h3>
+              <h3>{modalMode === 'create' ? t('skillLevel.modalCreate') : t('skillLevel.modalEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
 
               <div className="form-group">
-                <label className="form-label">レベル値 <span className="required">*</span></label>
+                <label className="form-label">{t('skillLevel.form.levelValueLabel')} <span className="required">*</span></label>
                 <input
                   type="number"
                   className="form-input"
@@ -180,18 +184,18 @@ export default function SkillLevelMasterPage() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">説明 <span className="required">*</span></label>
+                <label className="form-label">{t('skillLevel.form.descriptionLabel')} <span className="required">*</span></label>
                 <input
                   className="form-input"
                   value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  placeholder="例: 独力で実務に適用できる"
+                  placeholder={t('skillLevel.form.descriptionPlaceholder')}
                   maxLength={200}
                 />
               </div>
 
               <div className="form-group">
-                <label className="form-label">スコア重み <span className="required">*</span></label>
+                <label className="form-label">{t('skillLevel.form.scoreWeightLabel')} <span className="required">*</span></label>
                 <input
                   type="number"
                   className="form-input"
@@ -200,7 +204,7 @@ export default function SkillLevelMasterPage() {
                   min={0}
                   style={{ width: 120 }}
                 />
-                <p className="form-hint">グラフのスコア計算に使う重み。0 にするとスコアに寄与しません。</p>
+                <p className="form-hint">{t('skillLevel.form.scoreWeightHint')}</p>
               </div>
 
               {modalMode === 'edit' && (
@@ -211,17 +215,17 @@ export default function SkillLevelMasterPage() {
                       checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))}
                     />
-                    <span>有効</span>
+                    <span>{t('skillLevel.form.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
               <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
-                <IconX size={13} />キャンセル
+                <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>

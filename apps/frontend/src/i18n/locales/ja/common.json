@@ -1,0 +1,44 @@
+{
+  "button": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "add": "追加",
+    "edit": "編集",
+    "close": "閉じる",
+    "back": "戻る",
+    "confirm": "確認",
+    "restore": "復活"
+  },
+  "status": {
+    "active": "有効",
+    "inactive": "無効",
+    "all": "全件"
+  },
+  "label": {
+    "name": "名前",
+    "description": "説明",
+    "sortOrder": "表示順",
+    "actions": "操作",
+    "loading": "読み込み中..."
+  },
+  "filter": {
+    "label": "表示:",
+    "all": "全件",
+    "active": "有効のみ",
+    "inactive": "無効のみ"
+  },
+  "error": {
+    "networkError": "通信エラーが発生しました",
+    "loadFailed": "データの取得に失敗しました",
+    "saveFailed": "保存に失敗しました"
+  },
+  "validation": {
+    "required": "入力してください",
+    "minLength": "{{min}}文字以上で入力してください"
+  },
+  "confirm": {
+    "delete": "削除してもよいですか？",
+    "deactivate": "無効化してもよいですか？"
+  }
+}

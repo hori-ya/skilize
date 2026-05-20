@@ -6,6 +6,7 @@ import type { ItSkill, Qualification, AdSeminar } from '../../../shared/types/ma
 import NavBar from '../../../app/layouts/NavBar';
 import { IconSave, IconCheck, IconPlus } from '../../../shared/ui/Icons';
 import ConfirmDialog from '../../../shared/ui/ConfirmDialog';
+import { useTranslation } from 'react-i18next';
 
 type GoalCategory = 'IT_SKILL' | 'QUALIFICATION' | 'AD';
 
@@ -21,15 +22,16 @@ interface GoalRow {
   isCustom: boolean;
 }
 
-const CATEGORY_LABEL: Record<GoalCategory, string> = {
-  IT_SKILL: 'ITスキル',
-  QUALIFICATION: '資格',
-  AD: 'AD',
+const CATEGORY_KEY: Record<GoalCategory, string> = {
+  IT_SKILL: 'goalPage.goalCategory.itSkill',
+  QUALIFICATION: 'goalPage.goalCategory.qualification',
+  AD: 'goalPage.goalCategory.ad',
 };
 
 export default function GoalPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('inventory');
   const inventoryId = Number(id);
 
   const [goalRows, setGoalRows] = useState<GoalRow[]>([]);
@@ -86,9 +88,9 @@ export default function GoalPage() {
     setIsSaving(true);
     try {
       await saveGoals(inventoryId, toApiItems(goalRows));
-      showMessage('目標を保存しました');
+      showMessage(t('goalPage.saveSuccess'));
     } catch {
-      showMessage('保存に失敗しました');
+      showMessage(t('goalPage.saveFailed'));
     } finally {
       setIsSaving(false);
     }
@@ -110,7 +112,7 @@ export default function GoalPage() {
       if (errData?.errors && errData.errors.length > 0) {
         setError(errData.errors.map((e: { message: string }) => e.message).join('\n'));
       } else {
-        setError(errData?.message ?? '完了処理に失敗しました');
+        setError(errData?.message ?? t('goalPage.completeFailed'));
       }
     } finally {
       setIsCompleting(false);
@@ -150,18 +152,18 @@ export default function GoalPage() {
     <div className="goal-page">
       <NavBar />
       <main className="goal-main">
-        <button className="page-back-btn" onClick={() => navigate(`/inventory/${inventoryId}/goal-review`)}>← 目標振り返りに戻る</button>
-        <h1 className="page-title">目標設定</h1>
+        <button className="page-back-btn" onClick={() => navigate(`/inventory/${inventoryId}/goal-review`)}>{t('goalPage.backButton')}</button>
+        <h1 className="page-title">{t('goalPage.title')}</h1>
         <p className="page-subtitle">
-          ITスキル・資格の目標を1件以上、ADの目標を2件設定してください。
+          {t('goalPage.subtitle')}
         </p>
 
         <div className="goal-counter">
           <span className={itOrQualCount >= 1 ? 'counter-ok' : 'counter-ng'}>
-            ITスキル・資格：{itOrQualCount}件 {itOrQualCount >= 1 ? '✓' : '（1件以上必要）'}
+            {t('goalPage.counter.itQual', { count: itOrQualCount })} {itOrQualCount >= 1 ? '✓' : t('goalPage.counter.itQualRequired')}
           </span>
           <span className={adCount >= 2 ? 'counter-ok' : 'counter-ng'}>
-            AD：{adCount}件 {adCount >= 2 ? '✓' : '（2件必要）'}
+            {t('goalPage.counter.ad', { count: adCount })} {adCount >= 2 ? '✓' : t('goalPage.counter.adRequired')}
           </span>
         </div>
 
@@ -172,44 +174,43 @@ export default function GoalPage() {
           {goalRows.map((row, idx) => (
             <div key={idx} className="goal-card">
               <div className="goal-card-header">
-                <span className="goal-category-badge">{CATEGORY_LABEL[row.goalCategory]}</span>
+                <span className="goal-category-badge">{t(CATEGORY_KEY[row.goalCategory])}</span>
                 <button className="remove-btn" onClick={() => removeRow(idx)}>✕</button>
               </div>
               <div className="goal-card-body">
-                {/* Target selection */}
                 {row.goalCategory === 'IT_SKILL' && !row.isCustom && (
                   <select className="select" value={row.itSkillId ?? ''}
                     onChange={e => updateRow(idx, { itSkillId: Number(e.target.value) || null })}>
-                    <option value="">スキルを選択</option>
+                    <option value="">{t('goalPage.form.selectSkill')}</option>
                     {itSkills.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
                 )}
                 {row.goalCategory === 'QUALIFICATION' && !row.isCustom && (
                   <select className="select" value={row.qualificationId ?? ''}
                     onChange={e => updateRow(idx, { qualificationId: Number(e.target.value) || null })}>
-                    <option value="">資格を選択</option>
+                    <option value="">{t('goalPage.form.selectQualification')}</option>
                     {qualifications.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
                   </select>
                 )}
                 {row.goalCategory === 'AD' && (
                   <select className="select" value={row.adSeminarId ?? ''}
                     onChange={e => updateRow(idx, { adSeminarId: Number(e.target.value) || null })}>
-                    <option value="">ADを選択</option>
+                    <option value="">{t('goalPage.form.selectAd')}</option>
                     {adSeminars.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 )}
                 {row.isCustom && (
-                  <input className="input" placeholder="目標名（自由入力）"
+                  <input className="input" placeholder={t('goalPage.form.customNamePlaceholder')}
                     value={row.customName}
                     onChange={e => updateRow(idx, { customName: e.target.value })} />
                 )}
 
-                <label className="form-label">達成・予定時期</label>
+                <label className="form-label">{t('goalPage.form.targetPeriodLabel')}</label>
                 <input type="month" className="input" value={row.targetPeriod}
                   onChange={e => updateRow(idx, { targetPeriod: e.target.value })} />
 
-                <label className="form-label">理由・計画（任意）</label>
-                <textarea className="textarea" placeholder="任意" value={row.reason}
+                <label className="form-label">{t('goalPage.form.reasonLabel')}</label>
+                <textarea className="textarea" placeholder={t('inventoryPage.table.optional')} value={row.reason}
                   onChange={e => updateRow(idx, { reason: e.target.value })} />
               </div>
             </div>
@@ -217,30 +218,30 @@ export default function GoalPage() {
         </div>
 
         <div className="goal-add-buttons">
-          <button className="btn btn-secondary" onClick={() => addItSkillGoal(false)}><IconPlus size={13} />ITスキル目標</button>
-          <button className="btn btn-secondary" onClick={() => addItSkillGoal(true)}><IconPlus size={13} />ITスキル目標（自由入力）</button>
-          <button className="btn btn-secondary" onClick={() => addQualificationGoal(false)}><IconPlus size={13} />資格目標</button>
-          <button className="btn btn-secondary" onClick={() => addQualificationGoal(true)}><IconPlus size={13} />資格目標（自由入力）</button>
-          <button className="btn btn-secondary" onClick={addAdGoal}><IconPlus size={13} />AD目標</button>
+          <button className="btn btn-secondary" onClick={() => addItSkillGoal(false)}><IconPlus size={13} />{t('goalPage.addButton.itSkill')}</button>
+          <button className="btn btn-secondary" onClick={() => addItSkillGoal(true)}><IconPlus size={13} />{t('goalPage.addButton.itSkillCustom')}</button>
+          <button className="btn btn-secondary" onClick={() => addQualificationGoal(false)}><IconPlus size={13} />{t('goalPage.addButton.qualification')}</button>
+          <button className="btn btn-secondary" onClick={() => addQualificationGoal(true)}><IconPlus size={13} />{t('goalPage.addButton.qualificationCustom')}</button>
+          <button className="btn btn-secondary" onClick={addAdGoal}><IconPlus size={13} />{t('goalPage.addButton.ad')}</button>
         </div>
 
         <div className="action-row">
           <button className="btn btn-secondary" onClick={handleSave} disabled={isSaving}>
             <IconSave size={15} />
-            {isSaving ? '保存中...' : '一時保存'}
+            {isSaving ? t('inventoryPage.savingButton') : t('inventoryPage.saveButton')}
           </button>
           <button className="btn btn-primary" onClick={handleCompleteClick} disabled={isCompleting}>
             <IconCheck size={15} />
-            {isCompleting ? '完了中...' : '目標設定を完了してダッシュボードへ'}
+            {isCompleting ? t('goalPage.completingButton') : t('goalPage.completeButton')}
           </button>
         </div>
       </main>
 
       {showCompleteConfirm && (
         <ConfirmDialog
-          title="目標設定の完了"
-          message="目標設定を完了してダッシュボードに戻りますか？"
-          confirmLabel="完了する"
+          title={t('goalPage.completeConfirm.title')}
+          message={t('goalPage.completeConfirm.message')}
+          confirmLabel={t('goalPage.completeConfirm.confirmLabel')}
           onConfirm={handleComplete}
           onCancel={() => setShowCompleteConfirm(false)}
         />

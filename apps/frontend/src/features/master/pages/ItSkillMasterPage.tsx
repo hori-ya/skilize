@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { ItSkillCategory, ItSkill, CustomUnregisteredItem } from '../../../shared/types/master';
 import {
@@ -22,6 +23,7 @@ interface CatForm {
 type CatModalMode = 'create' | 'edit';
 
 function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; onReload: () => void }) {
+  const { t } = useTranslation('master');
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<CatModalMode>('create');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -61,7 +63,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
   };
 
   const handleSubmit = async () => {
-    if (!form.name.trim()) { setFormError('分類名は必須です'); return; }
+    if (!form.name.trim()) { setFormError(t('itSkill.category.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       if (mode === 'create') {
@@ -73,32 +75,34 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
       onReload();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setFormError(msg ?? '保存に失敗しました');
+      setFormError(msg ?? t('common.saveFailed'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
-        <h3 className="master-card__title" style={{ marginBottom: 0 }}>IT分類一覧</h3>
-        <button className="btn btn--primary btn--sm" onClick={openCreate}><IconPlus size={12} />分類追加</button>
+        <h3 className="master-card__title" style={{ marginBottom: 0 }}>{t('itSkill.category.listTitle')}</h3>
+        <button className="btn btn--primary btn--sm" onClick={openCreate}>
+          <IconPlus size={12} />{t('itSkill.addCategoryButton')}
+        </button>
       </div>
 
       <StickyHorizontalScroll className="master-table-wrap">
         <table className="master-table">
           <thead>
             <tr>
-              <th style={{ width: 64 }}>階層</th>
-              <th>親分類</th>
-              <th>分類名</th>
-              <th style={{ width: 64 }}>並順</th>
-              <th style={{ width: 72 }}>状態</th>
-              <th style={{ width: 72 }}>操作</th>
+              <th style={{ width: 64 }}>{t('itSkill.category.table.level')}</th>
+              <th>{t('itSkill.category.table.parent')}</th>
+              <th>{t('itSkill.category.table.name')}</th>
+              <th style={{ width: 64 }}>{t('common.sortOrder')}</th>
+              <th style={{ width: 72 }}>{t('common.status')}</th>
+              <th style={{ width: 72 }}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {categories.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">データがありません</td></tr>
+              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
             ) : (
               categories.map(c => (
                 <tr key={c.id}>
@@ -108,11 +112,13 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
                   <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
                   <td>
                     <span className={c.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {c.isActive ? '有効' : '無効'}
+                      {c.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                     </span>
                   </td>
                   <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}><IconEdit size={12} />編集</button>
+                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
+                      <IconEdit size={12} />{t('common.edit')}
+                    </button>
                   </td>
                 </tr>
               ))
@@ -125,7 +131,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? '分類追加' : '分類編集'}</h3>
+              <h3>{mode === 'create' ? t('itSkill.modalCategoryCreate') : t('itSkill.modalCategoryEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -133,35 +139,35 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
 
               {mode === 'create' && (
                 <div className="form-group">
-                  <label className="form-label">親分類</label>
+                  <label className="form-label">{t('itSkill.form.parentCategoryLabel')}</label>
                   <select
                     className="master-select" style={{ width: '100%' }}
                     value={form.parentId ?? ''}
                     onChange={e => setForm(f => ({ ...f, parentId: e.target.value === '' ? null : Number(e.target.value) }))}
                   >
-                    <option value="">なし（第1階層）</option>
-                    <optgroup label="第1階層（Lv2の親として追加）">
+                    <option value="">{t('itSkill.category.form.parentNone')}</option>
+                    <optgroup label={t('itSkill.category.form.lv1Group')}>
                       {lv1.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </optgroup>
-                    <optgroup label="第2階層（Lv3の親として追加）">
+                    <optgroup label={t('itSkill.category.form.lv2Group')}>
                       {lv2.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </optgroup>
                   </select>
                   <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                    未選択 = 第1階層、Lv1選択 = 第2階層、Lv2選択 = 第3階層
+                    {t('itSkill.category.form.parentHint')}
                   </span>
                 </div>
               )}
 
               <div className="form-group">
-                <label className="form-label">分類名 <span className="required">*</span></label>
+                <label className="form-label">{t('itSkill.form.categoryNameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: プログラミング言語" maxLength={100} />
+                  placeholder={t('itSkill.category.form.namePlaceholder')} maxLength={100} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
@@ -172,15 +178,17 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
                   <label className="form-check">
                     <input type="checkbox" checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
-                    <span>有効</span>
+                    <span>{t('common.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -210,6 +218,7 @@ function SkillTab({ skills, categories, onReload }: {
   categories: ItSkillCategory[];
   onReload: () => void;
 }) {
+  const { t } = useTranslation('master');
   const [filterLv1, setFilterLv1] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<SkillModalMode>('create');
@@ -266,8 +275,8 @@ function SkillTab({ skills, categories, onReload }: {
 
   const handleSubmit = async () => {
     const catId = selectedCategoryId();
-    if (!catId) { setFormError('分類を選択してください'); return; }
-    if (!form.name.trim()) { setFormError('スキル名は必須です'); return; }
+    if (!catId) { setFormError(t('itSkill.skill.validation.categoryRequired')); return; }
+    if (!form.name.trim()) { setFormError(t('itSkill.skill.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
     try {
       const payload = {
@@ -285,22 +294,22 @@ function SkillTab({ skills, categories, onReload }: {
       onReload();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setFormError(msg ?? '保存に失敗しました');
+      setFormError(msg ?? t('common.saveFailed'));
     } finally { setSaving(false); }
   };
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <label className="master-label" style={{ minWidth: 'auto' }}>分類フィルタ</label>
+        <label className="master-label" style={{ minWidth: 'auto' }}>{t('itSkill.skill.filterLabel')}</label>
         <select className="master-select"
           value={filterLv1 ?? ''}
           onChange={e => setFilterLv1(e.target.value === '' ? null : Number(e.target.value))}>
-          <option value="">すべて</option>
+          <option value="">{t('common.allOption')}</option>
           {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
         <button className="btn btn--primary btn--sm" onClick={openCreate} style={{ marginLeft: 'auto' }}>
-          <IconPlus size={12} />スキル追加
+          <IconPlus size={12} />{t('itSkill.addButton')}
         </button>
       </div>
 
@@ -308,17 +317,17 @@ function SkillTab({ skills, categories, onReload }: {
         <table className="master-table">
           <thead>
             <tr>
-              <th>スキル名</th>
-              <th>分類</th>
-              <th style={{ width: 200 }}>説明</th>
-              <th style={{ width: 56 }}>並順</th>
-              <th style={{ width: 72 }}>状態</th>
-              <th style={{ width: 72 }}>操作</th>
+              <th>{t('itSkill.table.name')}</th>
+              <th>{t('itSkill.form.categoryLabel')}</th>
+              <th style={{ width: 200 }}>{t('itSkill.table.description')}</th>
+              <th style={{ width: 56 }}>{t('common.sortOrder')}</th>
+              <th style={{ width: 72 }}>{t('common.status')}</th>
+              <th style={{ width: 72 }}>{t('common.actions')}</th>
             </tr>
           </thead>
           <tbody>
             {filteredSkills.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">データがありません</td></tr>
+              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
             ) : (
               filteredSkills.map(s => (
                 <tr key={s.id}>
@@ -330,10 +339,14 @@ function SkillTab({ skills, categories, onReload }: {
                   <td style={{ textAlign: 'center' }}>{s.sortOrder}</td>
                   <td>
                     <span className={s.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {s.isActive ? '有効' : '無効'}
+                      {s.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
                     </span>
                   </td>
-                  <td><button className="btn btn--secondary btn--sm" onClick={() => openEdit(s)}><IconEdit size={12} />編集</button></td>
+                  <td>
+                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(s)}>
+                      <IconEdit size={12} />{t('common.edit')}
+                    </button>
+                  </td>
                 </tr>
               ))
             )}
@@ -345,14 +358,14 @@ function SkillTab({ skills, categories, onReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? 'スキル追加' : 'スキル編集'}</h3>
+              <h3>{mode === 'create' ? t('itSkill.modalCreate') : t('itSkill.modalEdit')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
 
               <div className="form-group">
-                <label className="form-label">分類 <span className="required">*</span></label>
+                <label className="form-label">{t('itSkill.form.categoryLabel')} <span className="required">*</span></label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <select className="master-select" style={{ width: '100%' }}
                     value={form.lv1Id ?? ''}
@@ -360,7 +373,7 @@ function SkillTab({ skills, categories, onReload }: {
                       const v = e.target.value === '' ? null : Number(e.target.value);
                       setForm(f => ({ ...f, lv1Id: v, lv2Id: null, lv3Id: null }));
                     }}>
-                    <option value="">第1階層を選択</option>
+                    <option value="">{t('itSkill.skill.form.lv1Select')}</option>
                     {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   {form.lv1Id && lv2Cats(form.lv1Id).length > 0 && (
@@ -370,7 +383,7 @@ function SkillTab({ skills, categories, onReload }: {
                         const v = e.target.value === '' ? null : Number(e.target.value);
                         setForm(f => ({ ...f, lv2Id: v, lv3Id: null }));
                       }}>
-                      <option value="">第2階層を選択（任意）</option>
+                      <option value="">{t('itSkill.skill.form.lv2Select')}</option>
                       {lv2Cats(form.lv1Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
@@ -381,7 +394,7 @@ function SkillTab({ skills, categories, onReload }: {
                         const v = e.target.value === '' ? null : Number(e.target.value);
                         setForm(f => ({ ...f, lv3Id: v }));
                       }}>
-                      <option value="">第3階層を選択（任意）</option>
+                      <option value="">{t('itSkill.skill.form.lv3Select')}</option>
                       {lv3Cats(form.lv2Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
@@ -389,21 +402,21 @@ function SkillTab({ skills, categories, onReload }: {
               </div>
 
               <div className="form-group">
-                <label className="form-label">スキル名 <span className="required">*</span></label>
+                <label className="form-label">{t('itSkill.form.nameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                  placeholder="例: Spring Boot" maxLength={200} />
+                  placeholder={t('itSkill.skill.form.namePlaceholder')} maxLength={200} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">説明</label>
+                <label className="form-label">{t('itSkill.form.descriptionLabel')}</label>
                 <textarea className="form-input" value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  rows={3} placeholder="スキルの説明（任意）" style={{ resize: 'vertical' }} />
+                  rows={3} placeholder={t('itSkill.skill.form.descriptionPlaceholder')} style={{ resize: 'vertical' }} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
@@ -414,15 +427,17 @@ function SkillTab({ skills, categories, onReload }: {
                   <label className="form-check">
                     <input type="checkbox" checked={form.active}
                       onChange={e => setForm(f => ({ ...f, active: e.target.checked }))} />
-                    <span>有効</span>
+                    <span>{t('common.activeLabel')}</span>
                   </label>
                 </div>
               )}
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '保存中...' : '保存'}
+                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
               </button>
             </div>
           </div>
@@ -448,6 +463,7 @@ function PromotionTab({ categories, onSkillsReload }: {
   categories: ItSkillCategory[];
   onSkillsReload: () => void;
 }) {
+  const { t } = useTranslation('master');
   const [items, setItems] = useState<CustomUnregisteredItem[]>([]);
   const [tabLoading, setTabLoading] = useState(true);
   const [tabError, setTabError] = useState('');
@@ -466,7 +482,7 @@ function PromotionTab({ categories, onSkillsReload }: {
     setTabLoading(true);
     getCustomUnregisteredItSkills()
       .then(res => setItems(res.data))
-      .catch(() => setTabError('取得に失敗しました'))
+      .catch(() => setTabError(t('common.loadFetchFailed')))
       .finally(() => setTabLoading(false));
   };
 
@@ -481,8 +497,8 @@ function PromotionTab({ categories, onSkillsReload }: {
 
   const handleSubmit = async () => {
     const catId = selectedCategoryId();
-    if (!catId) { setFormError('分類を選択してください'); return; }
-    if (!form.name.trim()) { setFormError('スキル名は必須です'); return; }
+    if (!catId) { setFormError(t('itSkill.promotion.validation.categoryRequired')); return; }
+    if (!form.name.trim()) { setFormError(t('itSkill.promotion.validation.nameRequired')); return; }
     if (!promoting) return;
     setSaving(true); setFormError('');
     try {
@@ -497,43 +513,45 @@ function PromotionTab({ categories, onSkillsReload }: {
       loadItems();
       onSkillsReload();
     } catch {
-      setFormError('昇格に失敗しました');
+      setFormError(t('common.promoteFailed'));
     } finally { setSaving(false); }
   };
 
-  if (tabLoading) return <div className="chart-loading">読み込み中...</div>;
+  if (tabLoading) return <div className="chart-loading">{t('loading')}</div>;
   if (tabError) return <div className="alert alert--error">{tabError}</div>;
 
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
-        <h3 className="master-card__title" style={{ marginBottom: 0 }}>カスタムスキル昇格</h3>
+        <h3 className="master-card__title" style={{ marginBottom: 0 }}>{t('itSkill.promotion.tabTitle')}</h3>
         <span style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>
-          ユーザーが入力したカスタムスキルをマスタに登録できます
+          {t('itSkill.promotion.hint')}
         </span>
       </div>
 
       {items.length === 0 ? (
         <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>
-          昇格待ちのカスタムスキルはありません
+          {t('itSkill.promotion.emptyMessage')}
         </div>
       ) : (
         <StickyHorizontalScroll className="master-table-wrap">
           <table className="master-table">
             <thead>
               <tr>
-                <th>カスタムスキル名</th>
-                <th style={{ width: 110 }}>使用件数</th>
-                <th style={{ width: 80 }}>操作</th>
+                <th>{t('itSkill.promotion.table.customName')}</th>
+                <th style={{ width: 110 }}>{t('itSkill.table.usageCount')}</th>
+                <th style={{ width: 80 }}>{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {items.map(item => (
                 <tr key={item.customName}>
                   <td>{item.customName}</td>
-                  <td style={{ textAlign: 'center' }}>{item.usageCount}件</td>
+                  <td style={{ textAlign: 'center' }}>{item.usageCount}{t('common.usageCountSuffix')}</td>
                   <td>
-                    <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>昇格</button>
+                    <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>
+                      {t('common.promoteButton')}
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -546,19 +564,19 @@ function PromotionTab({ categories, onSkillsReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>カスタムスキル昇格</h3>
+              <h3>{t('itSkill.promotion.tabTitle')}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
               {formError && <div className="alert alert--error">{formError}</div>}
 
               <div className="form-group">
-                <label className="form-label">カスタムスキル名（元）</label>
+                <label className="form-label">{t('itSkill.promotion.form.originalNameLabel')}</label>
                 <div style={{ padding: '6px 0', fontWeight: 500 }}>{promoting?.customName}</div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">分類 <span className="required">*</span></label>
+                <label className="form-label">{t('itSkill.form.categoryLabel')} <span className="required">*</span></label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <select className="master-select" style={{ width: '100%' }}
                     value={form.lv1Id ?? ''}
@@ -566,7 +584,7 @@ function PromotionTab({ categories, onSkillsReload }: {
                       const v = e.target.value === '' ? null : Number(e.target.value);
                       setForm(f => ({ ...f, lv1Id: v, lv2Id: null, lv3Id: null }));
                     }}>
-                    <option value="">第1階層を選択</option>
+                    <option value="">{t('itSkill.skill.form.lv1Select')}</option>
                     {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   {form.lv1Id && lv2Cats(form.lv1Id).length > 0 && (
@@ -576,7 +594,7 @@ function PromotionTab({ categories, onSkillsReload }: {
                         const v = e.target.value === '' ? null : Number(e.target.value);
                         setForm(f => ({ ...f, lv2Id: v, lv3Id: null }));
                       }}>
-                      <option value="">第2階層を選択（任意）</option>
+                      <option value="">{t('itSkill.skill.form.lv2Select')}</option>
                       {lv2Cats(form.lv1Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
@@ -587,7 +605,7 @@ function PromotionTab({ categories, onSkillsReload }: {
                         const v = e.target.value === '' ? null : Number(e.target.value);
                         setForm(f => ({ ...f, lv3Id: v }));
                       }}>
-                      <option value="">第3階層を選択（任意）</option>
+                      <option value="">{t('itSkill.skill.form.lv3Select')}</option>
                       {lv3Cats(form.lv2Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   )}
@@ -595,31 +613,33 @@ function PromotionTab({ categories, onSkillsReload }: {
               </div>
 
               <div className="form-group">
-                <label className="form-label">マスタ登録名 <span className="required">*</span></label>
+                <label className="form-label">{t('itSkill.promote.masterNameLabel')} <span className="required">*</span></label>
                 <input className="form-input" value={form.name}
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                   maxLength={200} />
-                <span className="form-hint">カスタム名から変更して正式名称に統一できます</span>
+                <span className="form-hint">{t('itSkill.promotion.form.masterNameHint')}</span>
               </div>
 
               <div className="form-group">
-                <label className="form-label">説明</label>
+                <label className="form-label">{t('itSkill.form.descriptionLabel')}</label>
                 <textarea className="form-input" value={form.description}
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                   rows={3} style={{ resize: 'vertical' }} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">並順</label>
+                <label className="form-label">{t('common.sortOrder')}</label>
                 <input type="number" className="form-input" value={form.sortOrder}
                   onChange={e => setForm(f => ({ ...f, sortOrder: e.target.value }))}
                   style={{ width: 100 }} />
               </div>
             </div>
             <div className="modal__footer">
-              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}><IconX size={13} />キャンセル</button>
+              <button className="btn btn--secondary" onClick={() => setModalOpen(false)}>
+                <IconX size={13} />{t('common.cancel')}
+              </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? '登録中...' : 'マスタに登録'}
+                <IconCheck size={13} />{saving ? t('common.registeringButton') : t('common.registerButton')}
               </button>
             </div>
           </div>
@@ -635,6 +655,7 @@ function PromotionTab({ categories, onSkillsReload }: {
 type TabKey = 'categories' | 'skills' | 'promote';
 
 export default function ItSkillMasterPage() {
+  const { t } = useTranslation('master');
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
   const [categories, setCategories] = useState<ItSkillCategory[]>([]);
   const [skills, setSkills] = useState<ItSkill[]>([]);
@@ -648,13 +669,13 @@ export default function ItSkillMasterPage() {
         setCategories(catRes.data);
         setSkills(skillRes.data);
       })
-      .catch(() => setError('データの取得に失敗しました'))
+      .catch(() => setError(t('common.loadFailed')))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => { loadAll(); }, []);
 
-  if (loading) return <div className="loading-screen"><span>読み込み中...</span></div>;
+  if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
   return (
     <div className="master-page">
@@ -666,15 +687,15 @@ export default function ItSkillMasterPage() {
         <div className="tab-bar">
           <button className={`tab-btn${activeTab === 'categories' ? ' active' : ''}`}
             onClick={() => setActiveTab('categories')}>
-            IT分類管理（SCR-012）
+            {t('itSkill.tab.categories')}
           </button>
           <button className={`tab-btn${activeTab === 'skills' ? ' active' : ''}`}
             onClick={() => setActiveTab('skills')}>
-            ITスキル管理（SCR-009）
+            {t('itSkill.tab.skills')}
           </button>
           <button className={`tab-btn${activeTab === 'promote' ? ' active' : ''}`}
             onClick={() => setActiveTab('promote')}>
-            カスタム昇格
+            {t('itSkill.tab.promote')}
           </button>
         </div>
 

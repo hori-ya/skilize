@@ -5,12 +5,7 @@ import type { TeamMember } from '../types/index';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconX, IconArrowRight } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
-
-const STATUS_LABEL: Record<string, string> = {
-  COMPLETED: '完了',
-  PENDING_GOAL: '提出済み・目標未設定',
-  DRAFT: '入力中',
-};
+import { useTranslation } from 'react-i18next';
 
 const STATUS_ICON: Record<string, string> = {
   COMPLETED: '●',
@@ -18,14 +13,21 @@ const STATUS_ICON: Record<string, string> = {
   DRAFT: '△',
 };
 
-const ROLE_LABEL: Record<string, string> = {
-  GENERAL: '一般',
-  TL: 'TL',
-  ADMIN: '管理者',
+const STATUS_KEY: Record<string, string> = {
+  COMPLETED: 'status.completed',
+  PENDING_GOAL: 'status.pendingGoal',
+  DRAFT: 'status.draft',
+};
+
+const ROLE_KEY: Record<string, string> = {
+  GENERAL: 'role.general',
+  TL: 'role.tl',
+  ADMIN: 'role.admin',
 };
 
 export default function AllUserListPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('team');
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,7 @@ export default function AllUserListPage() {
 
   const handleDetail = (member: TeamMember) => {
     navigate(`/team/${member.id}`, {
-      state: { from: '/admin/users-inquiry', fromLabel: '全ユーザー照会' },
+      state: { from: '/admin/users-inquiry', fromLabel: t('allUserList.title') },
     });
   };
 
@@ -87,14 +89,14 @@ export default function AllUserListPage() {
     <div className="team-page">
       <NavBar />
       <main className="team-main">
-        <button className="page-back-btn" onClick={() => navigate('/')}>← ダッシュボードに戻る</button>
-        <h1 className="page-title">全ユーザー照会</h1>
+        <button className="page-back-btn" onClick={() => navigate('/')}>{t('allUserList.backButton')}</button>
+        <h1 className="page-title">{t('allUserList.title')}</h1>
 
         {/* ─── Search / Filter ─── */}
         <div className="all-user-filters">
           <input
             className="input all-user-filter-input"
-            placeholder="名前で検索"
+            placeholder={t('allUserList.filter.namePlaceholder')}
             value={filterName}
             onChange={e => setFilterName(e.target.value)}
           />
@@ -103,10 +105,10 @@ export default function AllUserListPage() {
             value={filterTlId}
             onChange={e => setFilterTlId(e.target.value === '' ? '' : Number(e.target.value))}
           >
-            <option value="">チーム（全て）</option>
-            <option value={-1}>チームなし</option>
+            <option value="">{t('allUserList.filter.teamAll')}</option>
+            <option value={-1}>{t('allUserList.filter.teamNone')}</option>
             {tlOptions.map(([id, name]) => (
-              <option key={id} value={id}>{name} チーム</option>
+              <option key={id} value={id}>{name}{t('allUserList.filter.teamSuffix')}</option>
             ))}
           </select>
           <select
@@ -114,42 +116,42 @@ export default function AllUserListPage() {
             value={filterRole}
             onChange={e => setFilterRole(e.target.value)}
           >
-            <option value="">ロール（全て）</option>
-            <option value="GENERAL">一般</option>
-            <option value="TL">TL</option>
-            <option value="ADMIN">管理者</option>
+            <option value="">{t('allUserList.filter.roleAll')}</option>
+            <option value="GENERAL">{t('role.general')}</option>
+            <option value="TL">{t('role.tl')}</option>
+            <option value="ADMIN">{t('role.admin')}</option>
           </select>
           <select
             className="select all-user-filter-select"
             value={filterStatus}
             onChange={e => setFilterStatus(e.target.value)}
           >
-            <option value="">ステータス（全て）</option>
-            <option value="COMPLETED">完了</option>
-            <option value="PENDING_GOAL">提出済み・目標未設定</option>
-            <option value="DRAFT">入力中</option>
-            <option value="NONE">未作成</option>
+            <option value="">{t('allUserList.filter.statusAll')}</option>
+            <option value="COMPLETED">{t('status.completed')}</option>
+            <option value="PENDING_GOAL">{t('status.pendingGoal')}</option>
+            <option value="DRAFT">{t('status.draft')}</option>
+            <option value="NONE">{t('allUserList.filter.statusNone')}</option>
           </select>
-          <button className="btn btn-secondary" onClick={handleClear}><IconX size={13} />クリア</button>
+          <button className="btn btn-secondary" onClick={handleClear}><IconX size={13} />{t('allUserList.filter.clearButton')}</button>
         </div>
 
         {loading ? (
-          <div className="loading">読み込み中...</div>
+          <div className="loading">{t('loading')}</div>
         ) : (
           <>
-            <p className="all-user-count">{filtered.length} 件</p>
+            <p className="all-user-count">{filtered.length}{t('allUserList.countSuffix')}</p>
             {filtered.length === 0 ? (
-              <p className="no-data">該当するユーザーがいません</p>
+              <p className="no-data">{t('allUserList.noUsers')}</p>
             ) : (
               <StickyHorizontalScroll className="master-table-wrap">
                 <table className="master-table">
                   <thead>
                     <tr>
-                      <th>名前</th>
-                      <th>ロール</th>
-                      <th>チーム（TL）</th>
-                      <th>当年度ステータス</th>
-                      <th>年度</th>
+                      <th>{t('allUserList.table.name')}</th>
+                      <th>{t('allUserList.table.role')}</th>
+                      <th>{t('allUserList.table.team')}</th>
+                      <th>{t('allUserList.table.currentStatus')}</th>
+                      <th>{t('allUserList.table.fiscalYear')}</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -157,16 +159,16 @@ export default function AllUserListPage() {
                     {filtered.map(member => (
                       <tr key={member.id}>
                         <td>{member.name}</td>
-                        <td>{ROLE_LABEL[member.role] ?? member.role}</td>
+                        <td>{t(ROLE_KEY[member.role] ?? member.role)}</td>
                         <td>{member.tlName ?? '—'}</td>
                         <td>
                           {member.currentInventory ? (
                             <span className={`team-status team-status--${member.currentInventory.status.toLowerCase()}`}>
                               {STATUS_ICON[member.currentInventory.status]}{' '}
-                              {STATUS_LABEL[member.currentInventory.status]}
+                              {t(STATUS_KEY[member.currentInventory.status] ?? member.currentInventory.status)}
                             </span>
                           ) : (
-                            <span className="team-status team-status--none">— 未作成</span>
+                            <span className="team-status team-status--none">{t('allUserList.noInventory')}</span>
                           )}
                         </td>
                         <td>{member.currentInventory?.fiscalYear.name ?? '—'}</td>
@@ -176,7 +178,7 @@ export default function AllUserListPage() {
                             onClick={() => handleDetail(member)}
                           >
                             <IconArrowRight size={12} />
-                            詳細を見る
+                            {t('allUserList.table.detailButton')}
                           </button>
                         </td>
                       </tr>

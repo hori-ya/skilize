@@ -5,12 +5,7 @@ import type { TeamMember } from '../types/index';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconArrowRight } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
-
-const STATUS_LABEL: Record<string, string> = {
-  COMPLETED: '完了',
-  PENDING_GOAL: '提出済み・目標未設定',
-  DRAFT: '入力中',
-};
+import { useTranslation } from 'react-i18next';
 
 const STATUS_ICON: Record<string, string> = {
   COMPLETED: '●',
@@ -18,14 +13,21 @@ const STATUS_ICON: Record<string, string> = {
   DRAFT: '△',
 };
 
-const ROLE_LABEL: Record<string, string> = {
-  GENERAL: '一般',
-  TL: 'TL',
-  ADMIN: '管理者',
+const STATUS_KEY: Record<string, string> = {
+  COMPLETED: 'status.completed',
+  PENDING_GOAL: 'status.pendingGoal',
+  DRAFT: 'status.draft',
+};
+
+const ROLE_KEY: Record<string, string> = {
+  GENERAL: 'role.general',
+  TL: 'role.tl',
+  ADMIN: 'role.admin',
 };
 
 export default function TeamMemberListPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation('team');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,22 +41,22 @@ export default function TeamMemberListPage() {
     <div className="team-page">
       <NavBar />
       <main className="team-main">
-        <button className="page-back-btn" onClick={() => navigate('/')}>← ダッシュボードに戻る</button>
-        <h1 className="page-title">チームメンバー照会</h1>
+        <button className="page-back-btn" onClick={() => navigate('/')}>{t('teamMemberList.backButton')}</button>
+        <h1 className="page-title">{t('teamMemberList.title')}</h1>
 
         {loading ? (
-          <div className="loading">読み込み中...</div>
+          <div className="loading">{t('loading')}</div>
         ) : members.length === 0 ? (
-          <div className="info-card"><p>チームメンバーがいません。</p></div>
+          <div className="info-card"><p>{t('teamMemberList.noMembers')}</p></div>
         ) : (
           <StickyHorizontalScroll className="master-table-wrap">
             <table className="master-table">
               <thead>
                 <tr>
-                  <th>名前</th>
-                  <th>ロール</th>
-                  <th>当年度ステータス</th>
-                  <th>年度</th>
+                  <th>{t('teamMemberList.table.name')}</th>
+                  <th>{t('teamMemberList.table.role')}</th>
+                  <th>{t('teamMemberList.table.currentStatus')}</th>
+                  <th>{t('teamMemberList.table.fiscalYear')}</th>
                   <th></th>
                 </tr>
               </thead>
@@ -62,15 +64,15 @@ export default function TeamMemberListPage() {
                 {members.map(member => (
                   <tr key={member.id}>
                     <td>{member.name}</td>
-                    <td>{ROLE_LABEL[member.role] ?? member.role}</td>
+                    <td>{t(ROLE_KEY[member.role] ?? member.role)}</td>
                     <td>
                       {member.currentInventory ? (
                         <span className={`team-status team-status--${member.currentInventory.status.toLowerCase()}`}>
                           {STATUS_ICON[member.currentInventory.status]}{' '}
-                          {STATUS_LABEL[member.currentInventory.status]}
+                          {t(STATUS_KEY[member.currentInventory.status] ?? member.currentInventory.status)}
                         </span>
                       ) : (
-                        <span className="team-status team-status--none">— 未作成</span>
+                        <span className="team-status team-status--none">{t('teamMemberList.noInventory')}</span>
                       )}
                     </td>
                     <td>{member.currentInventory?.fiscalYear.name ?? '—'}</td>
@@ -80,7 +82,7 @@ export default function TeamMemberListPage() {
                         onClick={() => navigate(`/team/${member.id}`)}
                       >
                         <IconArrowRight size={12} />
-                        詳細を見る
+                        {t('teamMemberList.table.detailButton')}
                       </button>
                     </td>
                   </tr>
