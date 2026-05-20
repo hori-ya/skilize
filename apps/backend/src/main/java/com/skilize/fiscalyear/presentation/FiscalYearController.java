@@ -1,15 +1,12 @@
 package com.skilize.fiscalyear.presentation;
 
 import com.skilize.fiscalyear.application.FiscalYearService;
+import com.skilize.fiscalyear.dto.*;
 import com.skilize.fiscalyear.domain.FiscalYear;
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.fiscalyear.domain.FiscalYearSettings;
 import com.skilize.fiscalyear.domain.FiscalYearSettingsRepository;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -108,30 +105,4 @@ public class FiscalYearController {
         return new FiscalYearSettingsDto(s.getFiscalYearStartMonth());
     }
 
-    public record FiscalYearDto(int id, String name, String startDate, String endDate,
-                                String inputStartDate, String inputEndDate, boolean isActive) {
-        static FiscalYearDto from(FiscalYear f) {
-            return new FiscalYearDto(f.getId(), f.getName(),
-                    f.getStartDate().toString(),
-                    f.getEndDate().toString(),
-                    f.getInputStartDate() != null ? f.getInputStartDate().toString() : null,
-                    f.getInputEndDate() != null ? f.getInputEndDate().toString() : null,
-                    f.isActive());
-        }
-    }
-
-    public record FiscalYearRequest(
-            @NotBlank String name,
-            @NotBlank String startDate,
-            @NotBlank String endDate,
-            String inputStartDate,
-            String inputEndDate,
-            Boolean active
-    ) {}
-
-    public record FiscalYearSettingsDto(short fiscalYearStartMonth) {}
-
-    public record FiscalYearSettingsRequest(
-            @NotNull @Min(1) @Max(12) Short fiscalYearStartMonth
-    ) {}
 }

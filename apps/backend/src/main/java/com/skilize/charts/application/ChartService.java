@@ -1,5 +1,12 @@
 package com.skilize.charts.application;
 
+import com.skilize.charts.dto.*;
+import com.skilize.charts.dto.GrowthResponse.GrowthSeries;
+import com.skilize.charts.dto.HeatmapResponse.HeatmapCell;
+import com.skilize.charts.dto.HeatmapResponse.HeatmapRow;
+import com.skilize.charts.dto.HeatmapResponse.HeatmapSkill;
+import com.skilize.charts.dto.RadarResponse.RadarAxis;
+import com.skilize.charts.dto.TimelineResponse.TimelineEvent;
 import com.skilize.fiscalyear.domain.FiscalYear;
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.inventory.domain.*;
@@ -405,36 +412,6 @@ public class ChartService {
         if (g.getAdSeminar() != null) return g.getAdSeminar().getName();
         return g.getCustomName();
     }
-
-    // ===== Response DTOs =====
-
-    public record RadarResponse(String currentFiscalYear, String prevFiscalYear,
-                                 boolean hasCurrentYearData, int maxScoreWeight,
-                                 List<RadarAxis> axes) {}
-
-    public record RadarAxis(int category1Id, String category1Name,
-                             double currentAvgScore, Double prevAvgScore) {}
-
-    public record GrowthResponse(List<String> fiscalYears, List<GrowthSeries> series) {}
-
-    public record GrowthSeries(int category1Id, String category1Name,
-                                List<Integer> yearlyTotalScores) {}
-
-    public record HeatmapResponse(String currentFiscalYear, boolean hasCurrentYearData,
-                                   int maxLevelValue, List<HeatmapRow> rows) {}
-
-    public record HeatmapRow(int category1Id, String category1Name, List<HeatmapCell> cells) {}
-
-    public record HeatmapCell(Integer category2Id, String category2Name,
-                               Double avgLevelValue, int scoredSkillCount,
-                               List<HeatmapSkill> skills) {}
-
-    public record HeatmapSkill(String skillName, Integer levelValue) {}
-
-    public record TimelineResponse(List<TimelineEvent> events) {}
-
-    public record TimelineEvent(String type, String lane, String name,
-                                 String yearMonth, boolean isPast) {}
 
     // Internal value objects
     private record Cat2Key(Integer id, String name) {}

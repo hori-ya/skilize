@@ -1,6 +1,7 @@
 package com.skilize.user.presentation;
 
 import com.skilize.inventory.domain.Inventory;
+import com.skilize.user.dto.*;
 import com.skilize.inventory.domain.InventoryRepository;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.application.UserService;
@@ -8,8 +9,6 @@ import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;
 import com.skilize.user.domain.UserRepository;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -165,70 +164,4 @@ public class UserController {
         }
     }
 
-    // ─── DTOs ─────────────────────────────────────────────────────────────────
-
-    public record UserDto(int id, String userId, String name, String email, String role,
-                           Integer tlUserId, String tlName, boolean isInitialPassword,
-                           boolean isActive, String createdAt) {
-        static UserDto from(User u, Map<Integer, String> nameById) {
-            return new UserDto(
-                    u.getId(), u.getUserId(), u.getName(), u.getEmail(),
-                    u.getRole().name(),
-                    u.getTlUserId(),
-                    u.getTlUserId() != null ? nameById.get(u.getTlUserId()) : null,
-                    u.isInitialPassword(), u.isActive(),
-                    u.getCreatedAt() != null ? u.getCreatedAt().toString() : null
-            );
-        }
-    }
-
-    public record CreateUserRequest(
-            @NotBlank String userId,
-            @NotBlank String name,
-            String email,
-            @NotBlank String role,
-            Integer tlUserId
-    ) {}
-
-    public record UpdateUserRequest(
-            @NotBlank String name,
-            String email,
-            @NotBlank @Pattern(regexp = "GENERAL|TL|ADMIN") String role,
-            Integer tlUserId,
-            Boolean active
-    ) {}
-
-    public record ResetPasswordResponse(String temporaryPassword) {}
-
-    record FiscalYearRef(int id, String name) {}
-
-    record CurrentInventoryDto(int id, FiscalYearRef fiscalYear, String status) {}
-
-    public record TeamMemberDto(int id, String userId, String name, String email,
-                                 String role, Integer tlUserId, String tlName,
-                                 boolean isActive, CurrentInventoryDto currentInventory) {
-        static TeamMemberDto from(User u, Inventory inv, Map<Integer, String> nameById) {
-            CurrentInventoryDto invDto = inv == null ? null : new CurrentInventoryDto(
-                    inv.getId(),
-                    new FiscalYearRef(inv.getFiscalYear().getId(), inv.getFiscalYear().getName()),
-                    inv.getStatus().name()
-            );
-            String tlName = u.getTlUserId() != null ? nameById.get(u.getTlUserId()) : null;
-            return new TeamMemberDto(u.getId(), u.getUserId(), u.getName(), u.getEmail(),
-                    u.getRole().name(), u.getTlUserId(), tlName, u.isActive(), invDto);
-        }
-    }
-
-    public record MemberInventorySummaryDto(int id, FiscalYearRef fiscalYear, String status,
-                                             String submittedAt, String goalCompletedAt) {
-        static MemberInventorySummaryDto from(Inventory inv) {
-            return new MemberInventorySummaryDto(
-                    inv.getId(),
-                    new FiscalYearRef(inv.getFiscalYear().getId(), inv.getFiscalYear().getName()),
-                    inv.getStatus().name(),
-                    inv.getSubmittedAt() != null ? inv.getSubmittedAt().toString() : null,
-                    inv.getGoalCompletedAt() != null ? inv.getGoalCompletedAt().toString() : null
-            );
-        }
-    }
 }

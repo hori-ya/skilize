@@ -1,4 +1,4 @@
-package com.skilize.ai.presentation;
+package com.skilize.ai.dto;
 
 import java.time.OffsetDateTime;
 

@@ -280,9 +280,37 @@ common/service/CommonService
 
 # DTO Rules
 
-* EntityをAPIへ直接返さない
-* Request/Response DTOを分離
-* DTO変換は mapper または assembler を利用
+## 配置ルール
+
+* DTO は必ず独立したファイルとして作成する（Controller・Service クラス内への record 定義禁止）
+* HTTP リクエスト・レスポンス DTO は `feature/presentation/` に配置する
+* Service が返す中間データ型（Controller との橋渡し用）も `feature/presentation/` に配置する
+* Entity を API へ直接返さない
+
+## ファイル構成例
+
+```text
+feature/presentation/
+  FeatureController.java
+  XxxRequest.java      ← リクエスト DTO
+  XxxResponse.java     ← レスポンス DTO
+  XxxDto.java          ← 共有・ネスト用 DTO
+```
+
+## 命名規則
+
+```text
+XxxRequest      ← HTTP リクエストボディ (@RequestBody)
+XxxResponse     ← HTTP レスポンスボディ
+XxxDto          ← Controller↔Service 間の共有データ、ネスト用
+```
+
+## 実装ルール
+
+* Java `record` を使用する
+* バリデーションは `jakarta.validation` アノテーション + `@Valid`
+* 特定 DTO 内でしか使わないネスト DTO は、親 DTO ファイル内に record として定義してよい（複数箇所で参照する場合は独立ファイルにすること）
+* DTO 変換ロジック（Entity → DTO）は Service または Controller 内のプライベートメソッドで行う
 
 ---
 

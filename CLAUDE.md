@@ -147,6 +147,9 @@ infrastructure → domain / application
 - 例外は `AuthException`（認証系）と Spring の標準例外を使い分ける
 - バリデーションは `jakarta.validation` アノテーション + `@Valid`
 - Entity を API へ直接返さない（必ず Request/Response DTO を分離）
+- **DTO は Controller・Service クラス内に定義しない。必ず `feature/presentation/` に独立ファイルとして作成する**
+- DTO 命名: `XxxRequest`（リクエスト）/ `XxxResponse`（レスポンス）/ `XxxDto`（共有・ネスト用）
+- 特定 DTO 内でしか使わないネスト DTO は、親 DTO ファイル内に record としてまとめて定義してよい
 
 **Frontend**
 - React 関数コンポーネント + hooks のみ
@@ -405,9 +408,10 @@ docker compose up db     # init.sql が再実行される
 | `apps/backend/src/main/java/com/skilize/shared/domain/exception/` | 共通例外（AuthException, GoalIncompleteException） |
 | `apps/backend/src/main/java/com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter |
 | `apps/backend/src/main/java/com/skilize/shared/presentation/` | GlobalExceptionHandler・ErrorResponse・ValidationErrorResponse |
-| `apps/backend/src/main/java/com/skilize/auth/presentation/` | AuthController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/auth/presentation/` | AuthController |
+| `apps/backend/src/main/java/com/skilize/auth/dto/` | LoginRequest・LoginResponse・ChangePasswordRequest・MeResponse（auth は dto/ サブフォルダ） |
 | `apps/backend/src/main/java/com/skilize/auth/application/` | AuthService（ログイン・JWT 発行・パスワード変更ロジック） |
-| `apps/backend/src/main/java/com/skilize/user/presentation/` | UserController・Request/Response DTO |
+| `apps/backend/src/main/java/com/skilize/user/presentation/` | UserController・UserDto・CreateUserRequest・UpdateUserRequest 等 Request/Response DTO |
 | `apps/backend/src/main/java/com/skilize/user/domain/` | User エンティティ・Role・UserRepository |
 | `apps/backend/src/main/java/com/skilize/user/infrastructure/` | UserDetailsServiceImpl（Spring Security 実装） |
 | `apps/backend/src/main/java/com/skilize/inventory/presentation/` | InventoryController・Request/Response DTO |

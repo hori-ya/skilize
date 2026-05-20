@@ -1,4 +1,4 @@
-package com.skilize.interview.presentation;
+package com.skilize.interview.dto;
 
 import com.skilize.interview.domain.InventoryInterview;
 

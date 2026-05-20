@@ -1,4 +1,4 @@
-package com.skilize.interview.presentation;
+package com.skilize.interview.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;

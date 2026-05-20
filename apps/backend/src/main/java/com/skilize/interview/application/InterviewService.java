@@ -1,6 +1,7 @@
 package com.skilize.interview.application;
 
 import com.skilize.interview.domain.*;
+import com.skilize.interview.dto.DetailNoteItem;
 import com.skilize.inventory.domain.Inventory;
 import com.skilize.inventory.domain.InventoryRepository;
 import com.skilize.user.domain.Role;
@@ -108,5 +109,4 @@ public class InterviewService {
         }
     }
 
-    public record DetailNoteItem(DetailType detailType, Integer detailId, String note) {}
 }

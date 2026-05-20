@@ -1,5 +1,6 @@
 package com.skilize.dashboard.presentation;
 
+import com.skilize.dashboard.dto.DashboardResponse;
 import com.skilize.fiscalyear.domain.FiscalYear;
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.inventory.domain.*;
@@ -35,7 +36,8 @@ public class DashboardController {
      */
     @GetMapping
     public DashboardResponse getDashboard(@AuthenticationPrincipal User user) {
-        UserInfo userInfo = new UserInfo(user.getId(), user.getName(), user.getRole().name());
+        DashboardResponse.UserInfo userInfo = new DashboardResponse.UserInfo(
+                user.getId(), user.getName(), user.getRole().name());
 
         // 今日の日付を基準に現在の有効年度を取得する
         FiscalYear currentFy = fiscalYearRepository.findCurrent(LocalDate.now()).orElse(null);
@@ -44,7 +46,7 @@ public class DashboardController {
             return new DashboardResponse(userInfo, null, null);
         }
 
-        FiscalYearRef fyRef = new FiscalYearRef(
+        DashboardResponse.FiscalYearRef fyRef = new DashboardResponse.FiscalYearRef(
                 currentFy.getId(), currentFy.getName(),
                 currentFy.getInputStartDate() != null ? currentFy.getInputStartDate().toString() : null,
                 currentFy.getInputEndDate()   != null ? currentFy.getInputEndDate().toString()   : null);
@@ -65,7 +67,7 @@ public class DashboardController {
         int qualCount = qualificationDetailRepository.findByInventoryId(currentInv.getId()).size();
         int semCount = seminarDetailRepository.findByInventoryId(currentInv.getId()).size();
 
-        CurrentInventoryInfo invInfo = new CurrentInventoryInfo(
+        DashboardResponse.CurrentInventoryInfo invInfo = new DashboardResponse.CurrentInventoryInfo(
                 currentInv.getId(), currentInv.getStatus().name(),
                 itCount, qualCount, semCount,
                 currentInv.getSubmittedAt() != null ? currentInv.getSubmittedAt().toString() : null,
@@ -74,12 +76,4 @@ public class DashboardController {
 
         return new DashboardResponse(userInfo, fyRef, invInfo);
     }
-
-    public record DashboardResponse(UserInfo user, FiscalYearRef currentFiscalYear,
-                                     CurrentInventoryInfo currentInventory) {}
-    public record UserInfo(int id, String name, String role) {}
-    public record FiscalYearRef(int id, String name, String inputStartDate, String inputEndDate) {}
-    public record CurrentInventoryInfo(int id, String status,
-                                        int itSkillCount, int qualificationCount, int seminarCount,
-                                        String submittedAt, String goalReviewCompletedAt, String goalCompletedAt) {}
 }

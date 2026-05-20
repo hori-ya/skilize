@@ -2,6 +2,9 @@ package com.skilize.inventory.application;
 
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.inventory.domain.*;
+import com.skilize.inventory.dto.*;
+import com.skilize.inventory.dto.ComparisonResponse.ComparisonItem;
+import com.skilize.inventory.dto.GoalReviewResponse.GoalReviewItem;
 import com.skilize.master.domain.*;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.domain.exception.GoalIncompleteException;
@@ -377,34 +380,4 @@ public class InventoryService {
         return g.getCustomName();
     }
 
-    // --- Application-layer DTOs ---
-
-    public record ItSkillDetailItem(Integer id, Integer itSkillId, String customSkillName,
-                                    int skillLevelId, String remarks) {}
-
-    public record QualificationDetailItem(Integer id, Integer qualificationId,
-                                          String customQualificationName,
-                                          String acquiredYearMonth, String remarks) {}
-
-    public record SeminarDetailItem(Integer id, Integer adSeminarId, String seminarName,
-                                    Integer seminarCategoryId, String attendedYearMonth, String remarks) {}
-
-    public record GoalItem(Integer id, String goalCategory, Integer itSkillId,
-                           Integer qualificationId, Integer adSeminarId,
-                           String customName, String targetPeriod, String reason) {}
-
-    public record GoalReviewUpdateItem(int prevGoalId, String achievementStatus, String reviewNote) {}
-
-    public record ComparisonResponse(int inventoryId, String currentFiscalYear, String prevFiscalYear,
-                                     boolean hasPrevYear, List<ComparisonItem> items) {}
-
-    public record ComparisonItem(Integer itSkillId, String skillName, int currentDetailId,
-                                 int currentLevelValue, String currentRemarks,
-                                 Integer prevLevelValue, Integer diff) {}
-
-    public record GoalReviewResponse(String prevFiscalYear, boolean hasPrevGoals, List<GoalReviewItem> items) {}
-
-    public record GoalReviewItem(int prevGoalId, String goalCategory, String goalName,
-                                 String targetPeriod, String reason,
-                                 String achievementStatus, String reviewNote) {}
 }

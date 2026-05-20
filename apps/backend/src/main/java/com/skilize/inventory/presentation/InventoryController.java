@@ -1,6 +1,7 @@
 package com.skilize.inventory.presentation;
 
 import com.skilize.inventory.application.InventoryService;
+import com.skilize.inventory.dto.*;
 import com.skilize.inventory.domain.*;
 import com.skilize.user.domain.User;
 import lombok.RequiredArgsConstructor;
@@ -132,7 +133,7 @@ public class InventoryController {
 
     /** 前年度との比較データを取得する。前年度の棚卸がない場合は空のリストを返す。 */
     @GetMapping("/{id}/comparison")
-    public InventoryService.ComparisonResponse getComparison(@PathVariable int id, @AuthenticationPrincipal User user) {
+    public ComparisonResponse getComparison(@PathVariable int id, @AuthenticationPrincipal User user) {
         return inventoryService.getComparison(id, user);
     }
 
@@ -140,13 +141,13 @@ public class InventoryController {
 
     /** 前年度目標の振り返り情報を取得する（目標ごとの達成状況）。 */
     @GetMapping("/{id}/goal-review")
-    public InventoryService.GoalReviewResponse getGoalReview(@PathVariable int id, @AuthenticationPrincipal User user) {
+    public GoalReviewResponse getGoalReview(@PathVariable int id, @AuthenticationPrincipal User user) {
         return inventoryService.getGoalReview(id, user);
     }
 
     /** 前年度目標の振り返り（達成状況）を保存する。 */
     @PutMapping("/{id}/goal-review")
-    public InventoryService.GoalReviewResponse saveGoalReview(@PathVariable int id, @AuthenticationPrincipal User user,
+    public GoalReviewResponse saveGoalReview(@PathVariable int id, @AuthenticationPrincipal User user,
                                               @RequestBody GoalReviewUpdateRequest req) {
         return inventoryService.saveGoalReview(id, user, req.items());
     }
@@ -184,122 +185,4 @@ public class InventoryController {
                 inv.getGoalCompletedAt() != null ? inv.getGoalCompletedAt().toString() : null);
     }
 
-    // ===== DTOs =====
-
-    public record CreateInventoryRequest(int fiscalYearId) {}
-
-    public record InventorySummaryDto(int id, FiscalYearRef fiscalYear, String status,
-                                       String submittedAt, String goalCompletedAt) {
-        static InventorySummaryDto from(Inventory i) {
-            return new InventorySummaryDto(i.getId(),
-                    new FiscalYearRef(i.getFiscalYear().getId(), i.getFiscalYear().getName()),
-                    i.getStatus().name(),
-                    i.getSubmittedAt() != null ? i.getSubmittedAt().toString() : null,
-                    i.getGoalCompletedAt() != null ? i.getGoalCompletedAt().toString() : null);
-        }
-    }
-
-    public record InventoryDetailDto(int id, int userId, FiscalYearRef fiscalYear, String status,
-                                      String submittedAt, String goalReviewCompletedAt,
-                                      String goalCompletedAt, String createdAt, String updatedAt) {
-        static InventoryDetailDto from(Inventory i) {
-            return new InventoryDetailDto(i.getId(), i.getUser().getId(),
-                    new FiscalYearRef(i.getFiscalYear().getId(), i.getFiscalYear().getName()),
-                    i.getStatus().name(),
-                    i.getSubmittedAt() != null ? i.getSubmittedAt().toString() : null,
-                    i.getGoalReviewCompletedAt() != null ? i.getGoalReviewCompletedAt().toString() : null,
-                    i.getGoalCompletedAt() != null ? i.getGoalCompletedAt().toString() : null,
-                    i.getCreatedAt() != null ? i.getCreatedAt().toString() : null,
-                    i.getUpdatedAt() != null ? i.getUpdatedAt().toString() : null);
-        }
-    }
-
-    public record FiscalYearRef(int id, String name) {}
-
-    // IT Skill details
-    public record ItSkillDetailsRequest(List<InventoryService.ItSkillDetailItem> items) {}
-    public record ItSkillDetailsResponse(List<ItSkillDetailDto> items) {}
-    public record ItSkillDetailDto(int id, Integer itSkillId, String itSkillName,
-                                    String customSkillName, int skillLevelId,
-                                    short levelValue, String remarks) {
-        static ItSkillDetailDto from(ItSkillDetail d) {
-            return new ItSkillDetailDto(d.getId(),
-                    d.getItSkill() != null ? d.getItSkill().getId() : null,
-                    d.getItSkill() != null ? d.getItSkill().getName() : null,
-                    d.getCustomSkillName(),
-                    d.getSkillLevel().getId(), d.getSkillLevel().getLevelValue(), d.getRemarks());
-        }
-    }
-
-    public record RemarksPatchRequest(String remarks) {}
-    public record RemarksPatchResponse(int id, String remarks) {}
-
-    // Qualification details
-    public record QualificationDetailsRequest(List<InventoryService.QualificationDetailItem> items) {}
-    public record QualificationDetailsResponse(List<QualificationDetailDto> items) {}
-    public record QualificationDetailDto(int id, Integer qualificationId, String qualificationName,
-                                          String qualificationCategoryName,
-                                          String customQualificationName,
-                                          String acquiredYearMonth, String remarks) {
-        static QualificationDetailDto from(QualificationDetail d) {
-            return new QualificationDetailDto(d.getId(),
-                    d.getQualification() != null ? d.getQualification().getId() : null,
-                    d.getQualification() != null ? d.getQualification().getName() : null,
-                    d.getQualification() != null && d.getQualification().getCategory() != null
-                            ? d.getQualification().getCategory().getName() : null,
-                    d.getCustomQualificationName(),
-                    d.getAcquiredYearMonth() != null ? d.getAcquiredYearMonth().toString() : null,
-                    d.getRemarks());
-        }
-    }
-
-    // Seminar details
-    public record SeminarDetailsRequest(List<InventoryService.SeminarDetailItem> items) {}
-    public record SeminarDetailsResponse(List<SeminarDetailDto> items) {}
-    public record SeminarDetailDto(int id, Integer adSeminarId, String adSeminarName,
-                                    Integer adSeminarCategoryId, String adSeminarCategoryName,
-                                    String seminarName, Integer seminarCategoryId, String seminarCategoryName,
-                                    String attendedYearMonth, String remarks) {
-        static SeminarDetailDto from(SeminarDetail d) {
-            return new SeminarDetailDto(d.getId(),
-                    d.getAdSeminar() != null ? d.getAdSeminar().getId() : null,
-                    d.getAdSeminar() != null ? d.getAdSeminar().getName() : null,
-                    d.getAdSeminar() != null && d.getAdSeminar().getCategory() != null ? d.getAdSeminar().getCategory().getId() : null,
-                    d.getAdSeminar() != null && d.getAdSeminar().getCategory() != null ? d.getAdSeminar().getCategory().getName() : null,
-                    d.getSeminarName(),
-                    d.getSeminarCategory() != null ? d.getSeminarCategory().getId() : null,
-                    d.getSeminarCategory() != null ? d.getSeminarCategory().getName() : null,
-                    d.getAttendedYearMonth() != null ? d.getAttendedYearMonth().toString() : null,
-                    d.getRemarks());
-        }
-    }
-
-    // Submit
-    public record SubmitResponse(int id, String status, String submittedAt) {}
-
-    // Goal review
-    public record GoalReviewUpdateRequest(List<InventoryService.GoalReviewUpdateItem> items) {}
-    public record GoalReviewCompleteResponse(int id, String goalReviewCompletedAt) {}
-
-    // Goals
-    public record GoalsRequest(List<InventoryService.GoalItem> items) {}
-    public record GoalsResponse(List<GoalDto> items) {}
-    public record GoalDto(int id, String goalCategory,
-                           Integer itSkillId, String itSkillName,
-                           Integer qualificationId, String qualificationName,
-                           Integer adSeminarId, String adSeminarName,
-                           String customName, String targetPeriod, String reason) {
-        static GoalDto from(InventoryGoal g) {
-            return new GoalDto(g.getId(), g.getGoalCategory().name(),
-                    g.getItSkill() != null ? g.getItSkill().getId() : null,
-                    g.getItSkill() != null ? g.getItSkill().getName() : null,
-                    g.getQualification() != null ? g.getQualification().getId() : null,
-                    g.getQualification() != null ? g.getQualification().getName() : null,
-                    g.getAdSeminar() != null ? g.getAdSeminar().getId() : null,
-                    g.getAdSeminar() != null ? g.getAdSeminar().getName() : null,
-                    g.getCustomName(),
-                    g.getTargetPeriod().toString(), g.getReason());
-        }
-    }
-    public record GoalCompleteResponse(int id, String status, String goalCompletedAt) {}
 }

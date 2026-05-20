@@ -2,7 +2,7 @@ package com.skilize.expectation.application;
 
 import com.skilize.expectation.domain.UserExpectation;
 import com.skilize.expectation.domain.UserExpectationRepository;
-import com.skilize.expectation.presentation.ExpectationResponse;
+import com.skilize.expectation.dto.ExpectationResponse;
 import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;
 import com.skilize.user.domain.UserRepository;

@@ -1,6 +1,7 @@
 package com.skilize.ai.presentation;
 
 import com.skilize.ai.application.AiAnalysisService;
+import com.skilize.ai.dto.*;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;

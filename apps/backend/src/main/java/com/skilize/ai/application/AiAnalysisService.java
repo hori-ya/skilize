@@ -3,7 +3,7 @@ package com.skilize.ai.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skilize.ai.domain.AiCareerAnalysis;
 import com.skilize.ai.domain.AiCareerAnalysisRepository;
-import com.skilize.ai.presentation.AiAnalysisResponse;
+import com.skilize.ai.dto.AiAnalysisResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

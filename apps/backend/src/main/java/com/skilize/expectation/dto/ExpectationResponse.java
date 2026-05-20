@@ -1,4 +1,4 @@
-package com.skilize.expectation.presentation;
+package com.skilize.expectation.dto;
 
 import com.skilize.expectation.domain.UserExpectation;
 

@@ -1,6 +1,7 @@
 package com.skilize.interview.presentation;
 
 import com.skilize.interview.application.InterviewService;
+import com.skilize.interview.dto.*;
 import com.skilize.interview.domain.InventoryInterview;
 import com.skilize.user.domain.User;
 import jakarta.validation.Valid;
@@ -47,9 +48,8 @@ public class InterviewController {
     public InterviewResponse save(@PathVariable int inventoryId,
                                    @AuthenticationPrincipal User user,
                                    @RequestBody @Valid SaveInterviewRequest req) {
-        // リクエストの detailNotes を Service が受け取れる内部レコード型に変換する
-        List<InterviewService.DetailNoteItem> items = req.detailNotes().stream()
-                .map(d -> new InterviewService.DetailNoteItem(d.detailType(), d.detailId(), d.note()))
+        List<DetailNoteItem> items = req.detailNotes().stream()
+                .map(d -> new DetailNoteItem(d.detailType(), d.detailId(), d.note()))
                 .toList();
         InventoryInterview saved = interviewService.save(
                 inventoryId, user, req.generalNote(), items);
