@@ -1,7 +1,7 @@
 package com.skilize.interview.application;
 
+import com.skilize.interview.application.command.DetailNoteCommand;
 import com.skilize.interview.domain.*;
-import com.skilize.interview.dto.DetailNoteItem;
 import com.skilize.inventory.domain.Inventory;
 import com.skilize.inventory.domain.InventoryRepository;
 import com.skilize.user.domain.Role;
@@ -45,7 +45,7 @@ public class InterviewService {
     @Transactional
     public InventoryInterview save(int inventoryId, User requester,
                                     String generalNote,
-                                    List<DetailNoteItem> detailNotes) {
+                                    List<DetailNoteCommand> detailNotes) {
         requireTlOrAdmin(requester);
 
         Inventory inventory = inventoryRepository.findById(inventoryId)
@@ -63,7 +63,7 @@ public class InterviewService {
         // 明細ノートは全件洗い替え（全削除 → 再 INSERT）
         interviewDetailNoteRepository.deleteByInterviewId(saved.getId());
         List<InterviewDetailNote> notes = detailNotes.stream()
-                .map(item -> InterviewDetailNote.create(saved, item.detailType(), item.detailId(), item.note()))
+                .map(cmd -> InterviewDetailNote.create(saved, cmd.detailType(), cmd.detailId(), cmd.note()))
                 .toList();
         interviewDetailNoteRepository.saveAll(notes);
 

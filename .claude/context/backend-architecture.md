@@ -50,47 +50,88 @@ src/main/java/com/skilize
 │   └── presentation/            ← GlobalExceptionHandler, ErrorResponse, ValidationErrorResponse
 │
 ├── auth
-│   ├── presentation/            ← AuthController + Request/Response DTO
-│   └── application/             ← AuthService (@Transactional)
+│   ├── presentation/
+│   │   ├── AuthController.java
+│   │   └── request/             ← LoginRequest, ChangePasswordRequest
+│   └── application/
+│       ├── AuthService.java
+│       ├── command/             ← LoginCommand, ChangePasswordCommand
+│       ├── query/               ← LoginQueryResult, MeQueryResult
+│       └── mapper/              ← AuthApplicationMapper
 │
 ├── user
-│   ├── presentation/            ← UserController + Request/Response DTO
+│   ├── presentation/
+│   │   ├── UserController.java
+│   │   ├── request/             ← CreateUserRequest, UpdateUserRequest
+│   │   └── response/            ← UserResponse, TeamMemberResponse, MemberInventorySummaryResponse, FiscalYearRef, ResetPasswordResponse
 │   ├── domain/                  ← User, Role, UserRepository
 │   └── infrastructure/          ← UserDetailsServiceImpl
 │
 ├── inventory
-│   ├── presentation/            ← InventoryController + Request/Response DTO
-│   ├── application/             ← InventoryService (@Transactional)
+│   ├── presentation/
+│   │   ├── InventoryController.java
+│   │   ├── request/             ← CreateInventoryRequest, ItSkillDetailsRequest, ItSkillDetailItem, QualificationDetailsRequest, QualificationDetailItem, SeminarDetailsRequest, SeminarDetailItem, RemarksPatchRequest, GoalsRequest, GoalItem, GoalReviewUpdateRequest, GoalReviewUpdateItem
+│   │   └── response/            ← InventorySummaryResponse, InventoryDetailResponse, ItSkillDetailsResponse, ItSkillDetailResponse, QualificationDetailsResponse, QualificationDetailResponse, SeminarDetailsResponse, SeminarDetailResponse, RemarksPatchResponse, SubmitResponse, GoalsResponse, GoalResponse, GoalCompleteResponse, GoalReviewCompleteResponse, FiscalYearRef
+│   ├── application/
+│   │   ├── InventoryService.java
+│   │   ├── command/             ← ItSkillDetailCommand, QualificationDetailCommand, SeminarDetailCommand, GoalCommand, GoalReviewUpdateCommand
+│   │   ├── query/               ← ComparisonQueryResult, GoalReviewQueryResult
+│   │   └── mapper/              ← InventoryApplicationMapper
 │   └── domain/                  ← エンティティ・Repository・列挙型
 │
 ├── master
-│   ├── presentation/            ← MasterController + Request/Response DTO
+│   ├── presentation/
+│   │   ├── MasterController.java
+│   │   ├── request/             ← SkillLevelRequest, ItSkillRequest, ItSkillCategoryRequest, ItSkillCategoryUpdateRequest, QualificationRequest, AdSeminarRequest, PromoteItSkillRequest, PromoteQualificationRequest, SimpleCategoryRequest
+│   │   └── response/            ← SkillLevelResponse, ItSkillResponse, ItSkillCategoryResponse, QualificationResponse, QualificationCategoryResponse, AdSeminarResponse, AdSeminarCategoryResponse, SeminarCategoryResponse, CustomUnregisteredResponse
 │   └── domain/                  ← マスタエンティティ・Repository
 │
 ├── fiscalyear
-│   ├── presentation/            ← FiscalYearController + Request/Response DTO
+│   ├── presentation/
+│   │   ├── FiscalYearController.java
+│   │   ├── request/             ← FiscalYearRequest, FiscalYearSettingsRequest
+│   │   └── response/            ← FiscalYearResponse, FiscalYearSettingsResponse
 │   └── domain/                  ← FiscalYear, FiscalYearSettings, Repository
 │
 ├── dashboard
-│   └── presentation/            ← DashboardController + Response DTO
+│   └── presentation/
+│       ├── DashboardController.java
+│       └── response/            ← DashboardResponse（nested UserInfo・FiscalYearRef・CurrentInventoryInfo）
 │
 ├── charts
-│   ├── presentation/            ← ChartController + Response DTO（radar/growth/heatmap/timeline）
-│   └── application/             ← ChartService (@Transactional readOnly)
+│   ├── presentation/
+│   │   ├── ChartController.java
+│   │   └── (response なし)      ← QueryResult を直接返す
+│   └── application/
+│       ├── ChartService.java
+│       └── query/               ← RadarQueryResult, GrowthQueryResult, HeatmapQueryResult, TimelineQueryResult
 │
 ├── expectation
-│   ├── presentation/            ← ExpectationController + Request/Response DTO
-│   ├── application/             ← ExpectationService（@Transactional）
+│   ├── presentation/
+│   │   ├── ExpectationController.java
+│   │   └── request/             ← SaveExpectationRequest
+│   ├── application/
+│   │   ├── ExpectationService.java
+│   │   └── query/               ← ExpectationQueryResult
 │   └── domain/                  ← UserExpectation・UserExpectationRepository
 │
 ├── interview
-│   ├── presentation/            ← InterviewController + Request/Response DTO
-│   ├── application/             ← InterviewService（@Transactional）
+│   ├── presentation/
+│   │   ├── InterviewController.java
+│   │   ├── request/             ← SaveInterviewRequest, DetailNoteRequest
+│   │   └── response/            ← InterviewResponse, DetailNoteResponse
+│   ├── application/
+│   │   ├── InterviewService.java
+│   │   └── command/             ← DetailNoteCommand
 │   └── domain/                  ← InventoryInterview・InterviewDetailNote・DetailType・Repository
 │
 └── ai
-    ├── presentation/            ← AiAnalysisController + Response DTO
-    ├── application/             ← AiAnalysisService（@Async）・InventoryCompletedEventListener
+    ├── presentation/
+    │   └── AiAnalysisController.java  ← QueryResult を直接返す
+    ├── application/
+    │   ├── AiAnalysisService.java
+    │   ├── AiAnalysisEventListener.java
+    │   └── query/               ← AiAnalysisQueryResult
     └── domain/                  ← AiCareerAnalysis・AiAnalysisStatus・AiCareerAnalysisRepository
 ```
 
@@ -295,38 +336,89 @@ common/service/CommonService
 
 # DTO Rules
 
-## 配置ルール
+## 配置ルール（責務別パッケージ分離）
 
-* DTO は必ず独立したファイルとして作成する（Controller・Service クラス内への record 定義禁止）
-* HTTP リクエスト・レスポンス DTO は `feature/dto/` に独立ファイルとして配置する（`feature/presentation/` には Controller のみ）
-* Entity を API へ直接返さない
+`feature/dto/` は廃止。DTO は責務に応じて以下の4カテゴリに分類し、それぞれ専用パッケージへ配置する。
+
+| 種別 | 配置先 | 役割 |
+|---|---|---|
+| `XxxRequest` | `presentation/request/` | HTTP 入力・バリデーション。Controller が受け取る |
+| `XxxResponse` | `presentation/response/` | Controller が組み立てて返す HTTP 出力 |
+| `XxxCommand` | `application/command/` | Service への Write オペレーション入力 |
+| `XxxQueryResult` | `application/query/` | Service が組み立てて返すクエリ結果 |
+| `XxxApplicationMapper` | `application/mapper/` | `XxxRequest` → `XxxCommand` 変換コンポーネント |
 
 ## ファイル構成例
 
 ```text
 feature/
 ├── presentation/
-│   └── FeatureController.java
-└── dto/
-    ├── XxxRequest.java      ← リクエスト DTO
-    ├── XxxResponse.java     ← レスポンス DTO
-    └── XxxDto.java          ← 共有・ネスト用 DTO
+│   ├── FeatureController.java
+│   ├── request/
+│   │   ├── XxxRequest.java        ← @RequestBody で受け取る入力
+│   │   └── XxxItem.java           ← リスト内の入力要素
+│   └── response/
+│       ├── XxxResponse.java       ← Controller が構築して返す出力
+│       └── XxxRef.java            ← ネスト用参照オブジェクト
+└── application/
+    ├── FeatureService.java
+    ├── command/
+    │   └── XxxCommand.java        ← Service に渡す Write 入力
+    ├── query/
+    │   └── XxxQueryResult.java    ← Service が構築して返すクエリ結果
+    └── mapper/
+        └── XxxApplicationMapper.java  ← Request → Command 変換
 ```
+
+## どちらに置くかの判断基準
+
+```text
+「誰が組み立てるか」で決まる:
+
+Controller が組み立てる  → presentation/response/
+Service が組み立てる     → application/query/
+
+「誰が受け取るか」で決まる:
+HTTP から来る入力       → presentation/request/
+Service への入力        → application/command/
+```
+
+具体的な判断例:
+- `InventorySummaryResponse` → Controller 内で `Inventory.from()` を呼ぶ → `presentation/response/`
+- `ComparisonQueryResult` → Service 内で計算・構築する → `application/query/`
+- `ItSkillDetailsRequest` → `@RequestBody` で受け取る → `presentation/request/`
+- `ItSkillDetailCommand` → Service の引数として渡す → `application/command/`
 
 ## 命名規則
 
 ```text
-XxxRequest      ← HTTP リクエストボディ (@RequestBody)
-XxxResponse     ← HTTP レスポンスボディ
-XxxDto          ← Controller↔Service 間の共有データ、ネスト用
+XxxRequest         ← HTTP リクエストボディ（@RequestBody）
+XxxItem            ← リクエスト内のリスト要素
+XxxResponse        ← HTTP レスポンスボディ（Controller 構築）
+XxxRef             ← レスポンス内の参照オブジェクト（ネスト用）
+XxxCommand         ← Service への Write 入力
+XxxQueryResult     ← Service が返すクエリ結果
+XxxApplicationMapper ← Request → Command 変換（@Component）
 ```
+
+`XxxDto` という命名は使用しない（責務が曖昧なため廃止）。
 
 ## 実装ルール
 
 * Java `record` を使用する
-* バリデーションは `jakarta.validation` アノテーション + `@Valid`
-* 特定 DTO 内でしか使わないネスト DTO は、親 DTO ファイル内に record として定義してよい（複数箇所で参照する場合は独立ファイルにすること）
-* DTO 変換ロジック（Entity → DTO）は Service または Controller 内のプライベートメソッドで行う
+* バリデーションは `jakarta.validation` アノテーション + `@Valid`（Request クラスのみ）
+* 特定クラス内でしか使わないネスト型は、親ファイル内に `record` としてまとめて定義してよい
+* `presentation → application` の依存は禁止。Service は `Request` クラスを直接インポートしない
+* Mapper（`XxxApplicationMapper`）は `@Component` で DI し、Controller でコンストラクタ注入して使う
+* `static from(Entity)` ファクトリメソッドは Response / QueryResult に定義してよい（domain エンティティへの依存は許容）
+
+## レイヤー依存の厳守
+
+```text
+【禁止】Service が presentation パッケージをインポートする
+【禁止】Request クラスを Service メソッドの引数にする
+【必須】Controller → Mapper → Command → Service の順で変換する
+```
 
 ---
 

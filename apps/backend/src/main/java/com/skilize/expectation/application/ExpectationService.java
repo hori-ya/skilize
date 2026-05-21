@@ -1,8 +1,8 @@
 package com.skilize.expectation.application;
 
+import com.skilize.expectation.application.query.ExpectationQueryResult;
 import com.skilize.expectation.domain.UserExpectation;
 import com.skilize.expectation.domain.UserExpectationRepository;
-import com.skilize.expectation.dto.ExpectationResponse;
 import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;
 import com.skilize.user.domain.UserRepository;
@@ -30,13 +30,13 @@ public class ExpectationService {
      * レコードが存在しない場合は空のレスポンスを返す（エラーにはしない）。
      */
     @Transactional(readOnly = true)
-    public ExpectationResponse getForUser(int targetUserId, User requester) {
+    public ExpectationQueryResult getForUser(int targetUserId, User requester) {
         requireAccess(targetUserId, requester);
-        // map() で Optional<UserExpectation> → Optional<ExpectationResponse> に変換し、
+        // map() で Optional<UserExpectation> → Optional<ExpectationQueryResult> に変換し、
         // 存在しない場合は empty() を返す
         return expectationRepository.findByUserId(targetUserId)
-                .map(ExpectationResponse::from)
-                .orElse(ExpectationResponse.empty());
+                .map(ExpectationQueryResult::from)
+                .orElse(ExpectationQueryResult.empty());
     }
 
     /**
@@ -44,7 +44,7 @@ public class ExpectationService {
      * レコードが存在しない場合は新規作成する（upsert）。
      */
     @Transactional
-    public ExpectationResponse saveTlExpectation(int targetUserId, User requester, String expectation) {
+    public ExpectationQueryResult saveTlExpectation(int targetUserId, User requester, String expectation) {
         // ロールが TL でない場合は弾く
         if (requester.getRole() != Role.TL) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "TLが期待することはユーザーの担当TLのみ編集可能です");
@@ -58,7 +58,7 @@ public class ExpectationService {
         UserExpectation entity = expectationRepository.findByUserId(targetUserId)
                 .orElseGet(() -> UserExpectation.create(target));
         entity.updateTlExpectation(expectation);
-        return ExpectationResponse.from(expectationRepository.save(entity));
+        return ExpectationQueryResult.from(expectationRepository.save(entity));
     }
 
     /**
@@ -66,7 +66,7 @@ public class ExpectationService {
      * レコードが存在しない場合は新規作成する（upsert）。
      */
     @Transactional
-    public ExpectationResponse saveCompanyExpectation(int targetUserId, User requester, String expectation) {
+    public ExpectationQueryResult saveCompanyExpectation(int targetUserId, User requester, String expectation) {
         if (requester.getRole() != Role.ADMIN) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "会社期待の設定は管理者のみ可能です");
         }
@@ -74,7 +74,7 @@ public class ExpectationService {
         UserExpectation entity = expectationRepository.findByUserId(targetUserId)
                 .orElseGet(() -> UserExpectation.create(target));
         entity.updateCompanyExpectation(expectation);
-        return ExpectationResponse.from(expectationRepository.save(entity));
+        return ExpectationQueryResult.from(expectationRepository.save(entity));
     }
 
     /**

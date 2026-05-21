@@ -1,7 +1,10 @@
 package com.skilize.fiscalyear.presentation;
 
 import com.skilize.fiscalyear.application.FiscalYearService;
-import com.skilize.fiscalyear.dto.*;
+import com.skilize.fiscalyear.presentation.request.FiscalYearRequest;
+import com.skilize.fiscalyear.presentation.request.FiscalYearSettingsRequest;
+import com.skilize.fiscalyear.presentation.response.FiscalYearResponse;
+import com.skilize.fiscalyear.presentation.response.FiscalYearSettingsResponse;
 import com.skilize.fiscalyear.domain.FiscalYear;
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.fiscalyear.domain.FiscalYearSettings;
@@ -32,20 +35,20 @@ public class FiscalYearController {
 
     /** 全年度を開始日降順（新しい順）で返す。ロール制限なし。 */
     @GetMapping("/fiscal-years")
-    public List<FiscalYearDto> list() {
+    public List<FiscalYearResponse> list() {
         return fiscalYearRepository.findAll().stream()
                 // 開始日の降順（新しい年度が先頭）でソートする
                 .sorted((a, b) -> b.getStartDate().compareTo(a.getStartDate()))
-                .map(FiscalYearDto::from)
+                .map(FiscalYearResponse::from)
                 .toList();
     }
 
     /** 今日の日付を基準に現在有効な年度を返す。存在しない場合は 404 を返す。 */
     @GetMapping("/fiscal-years/current")
-    public ResponseEntity<FiscalYearDto> current() {
+    public ResponseEntity<FiscalYearResponse> current() {
         // findCurrent() は today が startDate〜endDate に含まれる年度を返す
         return fiscalYearRepository.findCurrent(LocalDate.now())
-                .map(FiscalYearDto::from)
+                .map(FiscalYearResponse::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
@@ -53,7 +56,7 @@ public class FiscalYearController {
     /** 年度を新規作成する（ADMIN のみ）。日付文字列は ISO-8601 形式（"yyyy-MM-dd"）で受け取り LocalDate に変換する。 */
     @PostMapping("/fiscal-years")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<FiscalYearDto> create(@Valid @RequestBody FiscalYearRequest req) {
+    public ResponseEntity<FiscalYearResponse> create(@Valid @RequestBody FiscalYearRequest req) {
         FiscalYear saved = fiscalYearService.createFiscalYear(
                 req.name(),
                 // LocalDate.parse() は ISO-8601 形式の文字列を LocalDate に変換する
@@ -63,7 +66,7 @@ public class FiscalYearController {
                 req.inputStartDate() != null ? LocalDate.parse(req.inputStartDate()) : null,
                 req.inputEndDate() != null ? LocalDate.parse(req.inputEndDate()) : null
         );
-        return ResponseEntity.status(HttpStatus.CREATED).body(FiscalYearDto.from(saved));
+        return ResponseEntity.status(HttpStatus.CREATED).body(FiscalYearResponse.from(saved));
     }
 
     /**
@@ -72,7 +75,7 @@ public class FiscalYearController {
      */
     @PutMapping("/fiscal-years/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public FiscalYearDto update(@PathVariable int id, @Valid @RequestBody FiscalYearRequest req) {
+    public FiscalYearResponse update(@PathVariable int id, @Valid @RequestBody FiscalYearRequest req) {
         // active が未送信（null）の場合、既存の値をそのまま引き継ぐ
         FiscalYear existing = fiscalYearRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
@@ -85,24 +88,24 @@ public class FiscalYearController {
                 req.inputEndDate() != null ? LocalDate.parse(req.inputEndDate()) : null,
                 req.active() != null ? req.active() : existing.isActive()
         );
-        return FiscalYearDto.from(updated);
+        return FiscalYearResponse.from(updated);
     }
 
     /** 年度設定（年度開始月）を取得する。ロール制限なし。 */
     @GetMapping("/fiscal-year-settings")
-    public FiscalYearSettingsDto getSettings() {
+    public FiscalYearSettingsResponse getSettings() {
         // FiscalYearSettings はシングルトン（id=1 のみ）
         FiscalYearSettings s = settingsRepository.findById((short) 1)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        return new FiscalYearSettingsDto(s.getFiscalYearStartMonth());
+        return new FiscalYearSettingsResponse(s.getFiscalYearStartMonth());
     }
 
     /** 年度設定（年度開始月）を更新する（ADMIN のみ）。fiscalYearStartMonth は 1〜12 の範囲で指定する。 */
     @PutMapping("/fiscal-year-settings")
     @PreAuthorize("hasRole('ADMIN')")
-    public FiscalYearSettingsDto updateSettings(@Valid @RequestBody FiscalYearSettingsRequest req) {
+    public FiscalYearSettingsResponse updateSettings(@Valid @RequestBody FiscalYearSettingsRequest req) {
         FiscalYearSettings s = fiscalYearService.updateSettings(req.fiscalYearStartMonth());
-        return new FiscalYearSettingsDto(s.getFiscalYearStartMonth());
+        return new FiscalYearSettingsResponse(s.getFiscalYearStartMonth());
     }
 
 }

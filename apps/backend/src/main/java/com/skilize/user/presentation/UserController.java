@@ -1,13 +1,18 @@
 package com.skilize.user.presentation;
 
 import com.skilize.inventory.domain.Inventory;
-import com.skilize.user.dto.*;
 import com.skilize.inventory.domain.InventoryRepository;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.application.UserService;
 import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;
 import com.skilize.user.domain.UserRepository;
+import com.skilize.user.presentation.request.CreateUserRequest;
+import com.skilize.user.presentation.request.UpdateUserRequest;
+import com.skilize.user.presentation.response.MemberInventorySummaryResponse;
+import com.skilize.user.presentation.response.ResetPasswordResponse;
+import com.skilize.user.presentation.response.TeamMemberResponse;
+import com.skilize.user.presentation.response.UserResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -39,16 +44,16 @@ public class UserController {
 
     /**
      * 全ユーザーをユーザーID昇順で返す（ADMIN のみ）。
-     * TL名表示のために nameById マップを構築し、DTO 変換時に使用する。
+     * TL名表示のために nameById マップを構築し、レスポンス変換時に使用する。
      */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public List<UserDto> list() {
+    public List<UserResponse> list() {
         List<User> users = userRepository.findAllByOrderByUserIdAsc();
         // TL名を tlUserId から引けるよう「内部ID → 氏名」のマップを構築する
         Map<Integer, String> nameById = users.stream()
                 .collect(Collectors.toMap(User::getId, User::getName));
-        return users.stream().map(u -> UserDto.from(u, nameById)).toList();
+        return users.stream().map(u -> UserResponse.from(u, nameById)).toList();
     }
 
     /**
@@ -57,14 +62,14 @@ public class UserController {
      */
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDto> create(@Valid @RequestBody CreateUserRequest req) {
+    public ResponseEntity<UserResponse> create(@Valid @RequestBody CreateUserRequest req) {
         validateRole(req.role());
         User saved = userService.create(req.userId(), req.name(), req.email(),
                 Role.valueOf(req.role()), req.tlUserId());
         // 作成後に全ユーザーを再取得してTL名マップを更新する（作成ユーザーを含むため）
         List<User> all = userRepository.findAllByOrderByUserIdAsc();
         Map<Integer, String> nameById = all.stream().collect(Collectors.toMap(User::getId, User::getName));
-        return ResponseEntity.status(HttpStatus.CREATED).body(UserDto.from(saved, nameById));
+        return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(saved, nameById));
     }
 
     /**
@@ -73,14 +78,14 @@ public class UserController {
      */
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public UserDto update(@PathVariable int id, @Valid @RequestBody UpdateUserRequest req) {
+    public UserResponse update(@PathVariable int id, @Valid @RequestBody UpdateUserRequest req) {
         validateRole(req.role());
         // active が null（未送信）の場合は true をデフォルトとする
         User saved = userService.update(id, req.name(), req.email(), Role.valueOf(req.role()),
                 req.tlUserId(), req.active() != null ? req.active() : true);
         List<User> all = userRepository.findAllByOrderByUserIdAsc();
         Map<Integer, String> nameById = all.stream().collect(Collectors.toMap(User::getId, User::getName));
-        return UserDto.from(saved, nameById);
+        return UserResponse.from(saved, nameById);
     }
 
     /**
@@ -103,7 +108,7 @@ public class UserController {
      */
     @GetMapping("/me/team-members")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
-    public List<TeamMemberDto> getTeamMembers(@AuthenticationPrincipal User currentUser) {
+    public List<TeamMemberResponse> getTeamMembers(@AuthenticationPrincipal User currentUser) {
         // ADMIN は全有効ユーザー、TL は tlUserId が自分の ID と一致する有効ユーザーのみ取得する
         List<User> members = currentUser.getRole() == Role.ADMIN
                 ? userRepository.findByActiveTrue()
@@ -121,7 +126,7 @@ public class UserController {
             Inventory inv = currentFy
                     .flatMap(fy -> userService.findCurrentInventory(member.getId(), fy.getId()))
                     .orElse(null);
-            return TeamMemberDto.from(member, inv, nameById);
+            return TeamMemberResponse.from(member, inv, nameById);
         }).toList();
     }
 
@@ -131,7 +136,7 @@ public class UserController {
      */
     @GetMapping("/{id}/inventories")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
-    public List<MemberInventorySummaryDto> getUserInventories(
+    public List<MemberInventorySummaryResponse> getUserInventories(
             @PathVariable int id,
             @AuthenticationPrincipal User currentUser) {
         User targetUser = userRepository.findById(id)
@@ -146,7 +151,7 @@ public class UserController {
 
         return inventoryRepository.findByUserIdWithFiscalYear(id)
                 .stream()
-                .map(MemberInventorySummaryDto::from)
+                .map(MemberInventorySummaryResponse::from)
                 .toList();
     }
 

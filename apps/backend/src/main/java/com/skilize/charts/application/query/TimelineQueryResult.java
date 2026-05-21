@@ -1,0 +1,24 @@
+package com.skilize.charts.application.query;
+
+import java.util.List;
+
+/**
+ * スキルタイムラインチャートのクエリ結果。GET /api/charts/timeline のレスポンスに使用する。
+ * 資格取得・セミナー受講の時系列イベントをレーン別に表示するためのデータを提供する。
+ *
+ * @param events タイムラインイベント一覧（取得・受講年月昇順）
+ */
+public record TimelineQueryResult(List<TimelineEvent> events) {
+
+    /**
+     * タイムライン上の1イベント。
+     *
+     * @param type      イベント種別（QUALIFICATION / SEMINAR）
+     * @param lane      表示レーン名（カテゴリ名など）
+     * @param name      資格名またはセミナー名
+     * @param yearMonth 取得・受講年月（"yyyy-MM" 形式）
+     * @param isPast    過去イベントか（当年度より前の年月の場合 true）
+     */
+    public record TimelineEvent(String type, String lane, String name,
+                                 String yearMonth, boolean isPast) {}
+}

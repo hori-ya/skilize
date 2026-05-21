@@ -1,6 +1,6 @@
 package com.skilize.dashboard.presentation;
 
-import com.skilize.dashboard.dto.DashboardResponse;
+import com.skilize.dashboard.presentation.response.DashboardResponse;
 import com.skilize.fiscalyear.domain.FiscalYear;
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.inventory.domain.*;

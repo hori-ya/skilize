@@ -97,3 +97,10 @@ docker compose up --build frontend
 | 本番環境構築手順書 | [docs/setup/production-setup.md](docs/setup/production-setup.md) |
 | システム構成・アーキテクチャ | [docs/architecture/overview.md](docs/architecture/overview.md) |
 | 機能要件 | [docs/requirements/functional/functional-requirements.md](docs/requirements/functional/functional-requirements.md) |
+
+---
+
+## Notes
+
+このリポジトリは学習目的で作成したシステムです。
+実務利用を想定したものではありません。

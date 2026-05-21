@@ -1,0 +1,14 @@
+package com.skilize.inventory.application.command;
+
+/**
+ * ITスキル明細1件の保存コマンド。InventoryService.saveItSkillDetails() に渡す。
+ * 全件洗い替え方式のため id はサーバー側では参照されない（フロントエンドとの互換性のために保持）。
+ *
+ * @param id              既存明細の内部 PK（全件洗い替えのためサーバー側では未使用）
+ * @param itSkillId       ITスキルマスタの ID（null の場合はカスタムスキル）
+ * @param customSkillName カスタムスキル名（itSkillId が null の場合のみ有効）
+ * @param skillLevelId    スキルレベルマスタの ID
+ * @param remarks         備考（自由記述）
+ */
+public record ItSkillDetailCommand(Integer id, Integer itSkillId, String customSkillName,
+                                   int skillLevelId, String remarks) {}

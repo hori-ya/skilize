@@ -1,8 +1,11 @@
 package com.skilize.interview.presentation;
 
 import com.skilize.interview.application.InterviewService;
-import com.skilize.interview.dto.*;
+import com.skilize.interview.application.command.DetailNoteCommand;
 import com.skilize.interview.domain.InventoryInterview;
+import com.skilize.interview.presentation.request.SaveInterviewRequest;
+import com.skilize.interview.presentation.response.DetailNoteResponse;
+import com.skilize.interview.presentation.response.InterviewResponse;
 import com.skilize.user.domain.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -48,11 +51,10 @@ public class InterviewController {
     public InterviewResponse save(@PathVariable int inventoryId,
                                    @AuthenticationPrincipal User user,
                                    @RequestBody @Valid SaveInterviewRequest req) {
-        List<DetailNoteItem> items = req.detailNotes().stream()
-                .map(d -> new DetailNoteItem(d.detailType(), d.detailId(), d.note()))
+        List<DetailNoteCommand> commands = req.detailNotes().stream()
+                .map(d -> new DetailNoteCommand(d.detailType(), d.detailId(), d.note()))
                 .toList();
-        InventoryInterview saved = interviewService.save(
-                inventoryId, user, req.generalNote(), items);
+        InventoryInterview saved = interviewService.save(inventoryId, user, req.generalNote(), commands);
         // 保存後に明細ノートを再取得してレスポンスに付与する
         List<DetailNoteResponse> notes = interviewService.findDetailNotes(saved.getId())
                 .stream().map(DetailNoteResponse::from).toList();

@@ -143,42 +143,46 @@ apps/backend/src/main/java/com/skilize/
 ├── shared/
 │   ├── domain/exception/           ← 共通例外（AuthException, GoalIncompleteException）
 │   ├── infrastructure/             ← SecurityConfig・JwtUtil・JWT/初期PWフィルター
-│   └── presentation/               ← GlobalExceptionHandler・ErrorResponse DTO
+│   └── presentation/               ← GlobalExceptionHandler・ErrorResponse
 ├── auth/
-│   ├── presentation/               ← AuthController + Request/Response DTO
-│   └── application/                ← AuthService（@Transactional）
+│   ├── presentation/               ← AuthController（request/ · response/ サブパッケージ）
+│   └── application/                ← AuthService（command/ · query/ · mapper/ サブパッケージ）
 ├── user/
-│   ├── presentation/               ← UserController + Request/Response DTO
+│   ├── presentation/               ← UserController（request/ · response/ サブパッケージ）
 │   ├── domain/                     ← User, Role, UserRepository
 │   └── infrastructure/             ← UserDetailsServiceImpl
 ├── inventory/
-│   ├── presentation/               ← InventoryController + Request/Response DTO
-│   ├── application/                ← InventoryService（@Transactional）
+│   ├── presentation/               ← InventoryController（request/ · response/ サブパッケージ）
+│   ├── application/                ← InventoryService（command/ · query/ · mapper/ サブパッケージ）
 │   └── domain/                     ← エンティティ・Repository・列挙型
 ├── master/
-│   ├── presentation/               ← MasterController + Request/Response DTO
+│   ├── presentation/               ← MasterController（request/ · response/ サブパッケージ）
 │   └── domain/                     ← マスタエンティティ・Repository
 ├── fiscalyear/
-│   ├── presentation/               ← FiscalYearController + Request/Response DTO
+│   ├── presentation/               ← FiscalYearController（request/ · response/ サブパッケージ）
 │   └── domain/                     ← FiscalYear, FiscalYearSettings, Repository
 ├── dashboard/
-│   └── presentation/               ← DashboardController + Response DTO
+│   └── presentation/               ← DashboardController（response/ サブパッケージ）
 ├── charts/
-│   ├── presentation/               ← ChartController + Response DTO（4エンドポイント）
-│   └── application/                ← ChartService（radar/growth/heatmap/timeline 集計）
+│   ├── presentation/               ← ChartController（radar/growth/heatmap/timeline）
+│   └── application/                ← ChartService（query/ サブパッケージ）
 ├── expectation/
-│   ├── presentation/               ← ExpectationController + Request/Response DTO
-│   ├── application/                ← ExpectationService（@Transactional）
+│   ├── presentation/               ← ExpectationController（request/ サブパッケージ）
+│   ├── application/                ← ExpectationService（query/ サブパッケージ）
 │   └── domain/                     ← UserExpectation・UserExpectationRepository
 ├── interview/
-│   ├── presentation/               ← InterviewController + Request/Response DTO
-│   ├── application/                ← InterviewService（@Transactional）
+│   ├── presentation/               ← InterviewController（request/ · response/ サブパッケージ）
+│   ├── application/                ← InterviewService（command/ サブパッケージ）
 │   └── domain/                     ← InventoryInterview・InterviewDetailNote・DetailType・Repository
 └── ai/
-    ├── presentation/               ← AiAnalysisController + Response DTO
-    ├── application/                ← AiAnalysisService（@Async）・InventoryCompletedEventListener
+    ├── presentation/               ← AiAnalysisController
+    ├── application/                ← AiAnalysisService（@Async）・InventoryCompletedEventListener（query/ サブパッケージ）
     └── domain/                     ← AiCareerAnalysis・AiAnalysisStatus・AiCareerAnalysisRepository
 ```
+
+各 `presentation/` は Controller のみを直接置き、HTTP 入力は `request/`、HTTP 出力は `response/` サブパッケージへ分離する。  
+各 `application/` は Service のみを直接置き、Write 入力は `command/`、クエリ結果は `query/`、Request→Command 変換は `mapper/` へ分離する。  
+詳細は [`.claude/context/backend-architecture.md`](../../.claude/context/backend-architecture.md) を参照。
 
 **依存方向**（厳守）:
 ```
@@ -188,7 +192,8 @@ infrastructure → domain / application
 
 - `@Transactional` は `application` レイヤーのみ配置（Controller での業務トランザクション禁止）
 - コンストラクタ注入のみ（`@Autowired` フィールドインジェクション禁止）
-- Entity を API へ直接返さない（Request/Response DTO を分離）
+- Entity を API へ直接返さない（`presentation/response/` に変換して返す）
+- Service は `presentation/request/` をインポートしない（Mapper で Command に変換してから渡す）
 - feature 間の直接依存禁止（`shared` を介して連携）
 
 ---

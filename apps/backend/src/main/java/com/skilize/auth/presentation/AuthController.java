@@ -1,10 +1,11 @@
 package com.skilize.auth.presentation;
 
 import com.skilize.auth.application.AuthService;
-import com.skilize.auth.dto.ChangePasswordRequest;
-import com.skilize.auth.dto.LoginRequest;
-import com.skilize.auth.dto.LoginResponse;
-import com.skilize.auth.dto.MeResponse;
+import com.skilize.auth.application.mapper.AuthApplicationMapper;
+import com.skilize.auth.application.query.LoginQueryResult;
+import com.skilize.auth.application.query.MeQueryResult;
+import com.skilize.auth.presentation.request.ChangePasswordRequest;
+import com.skilize.auth.presentation.request.LoginRequest;
 import com.skilize.user.domain.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,14 +23,15 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final AuthService authService;
+    private final AuthApplicationMapper authApplicationMapper;
 
     /**
      * ログイン。ユーザーID・パスワードを検証し、JWT を返す。
      * SecurityConfig で permitAll() 設定済み（認証不要エンドポイント）。
      */
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authService.login(request));
+    public ResponseEntity<LoginQueryResult> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(authApplicationMapper.toCommand(request)));
     }
 
     /**
@@ -50,7 +52,7 @@ public class AuthController {
     @PostMapping("/change-password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
                                                @AuthenticationPrincipal User user) {
-        authService.changePassword(request, user);
+        authService.changePassword(authApplicationMapper.toCommand(request), user);
         return ResponseEntity.noContent().build();
     }
 
@@ -59,7 +61,7 @@ public class AuthController {
      * @param user @AuthenticationPrincipal → JwtAuthenticationFilter が JWT から復元したユーザー
      */
     @GetMapping("/me")
-    public ResponseEntity<MeResponse> me(@AuthenticationPrincipal User user) {
+    public ResponseEntity<MeQueryResult> me(@AuthenticationPrincipal User user) {
         return ResponseEntity.ok(authService.getMe(user));
     }
 }

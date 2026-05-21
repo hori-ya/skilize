@@ -1,12 +1,12 @@
 package com.skilize.charts.application;
 
-import com.skilize.charts.dto.*;
-import com.skilize.charts.dto.GrowthResponse.GrowthSeries;
-import com.skilize.charts.dto.HeatmapResponse.HeatmapCell;
-import com.skilize.charts.dto.HeatmapResponse.HeatmapRow;
-import com.skilize.charts.dto.HeatmapResponse.HeatmapSkill;
-import com.skilize.charts.dto.RadarResponse.RadarAxis;
-import com.skilize.charts.dto.TimelineResponse.TimelineEvent;
+import com.skilize.charts.application.query.*;
+import com.skilize.charts.application.query.GrowthQueryResult.GrowthSeries;
+import com.skilize.charts.application.query.HeatmapQueryResult.HeatmapCell;
+import com.skilize.charts.application.query.HeatmapQueryResult.HeatmapRow;
+import com.skilize.charts.application.query.HeatmapQueryResult.HeatmapSkill;
+import com.skilize.charts.application.query.RadarQueryResult.RadarAxis;
+import com.skilize.charts.application.query.TimelineQueryResult.TimelineEvent;
 import com.skilize.fiscalyear.domain.FiscalYear;
 import com.skilize.fiscalyear.domain.FiscalYearRepository;
 import com.skilize.inventory.domain.*;
@@ -42,7 +42,7 @@ public class ChartService {
     // ===== Radar =====
 
     @Transactional(readOnly = true)
-    public RadarResponse getRadar(User user) {
+    public RadarQueryResult getRadar(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
         List<ItSkillCategory> cat1List = getActiveCat1List(catMap);
         int maxLevelValue = getMaxLevelValue();
@@ -52,7 +52,7 @@ public class ChartService {
             List<RadarAxis> axes = cat1List.stream()
                     .map(c -> new RadarAxis(c.getId(), c.getName(), 0.0, null))
                     .toList();
-            return new RadarResponse(null, null, false, maxLevelValue, axes);
+            return new RadarQueryResult(null, null, false, maxLevelValue, axes);
         }
 
         List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(user.getId());
@@ -104,13 +104,13 @@ public class ChartService {
         }).toList();
 
         String prevFyName = prevInv != null ? prevInv.getFiscalYear().getName() : null;
-        return new RadarResponse(currentFy.getName(), prevFyName, hasCurrentYearData, getMaxScoreWeight(), axes);
+        return new RadarQueryResult(currentFy.getName(), prevFyName, hasCurrentYearData, getMaxScoreWeight(), axes);
     }
 
     // ===== Growth =====
 
     @Transactional(readOnly = true)
-    public GrowthResponse getGrowth(User user) {
+    public GrowthQueryResult getGrowth(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
         List<ItSkillCategory> cat1List = getActiveCat1List(catMap);
 
@@ -124,7 +124,7 @@ public class ChartService {
             List<GrowthSeries> series = cat1List.stream()
                     .map(c -> new GrowthSeries(c.getId(), c.getName(), List.of()))
                     .toList();
-            return new GrowthResponse(List.of(), series);
+            return new GrowthQueryResult(List.of(), series);
         }
 
         // カスタムスキルは最大重みで集計するため取得しておく
@@ -166,13 +166,13 @@ public class ChartService {
             series.add(new GrowthSeries(CUSTOM_SERIES_ID, "カスタムスキル", customScores));
         }
 
-        return new GrowthResponse(fiscalYears, series);
+        return new GrowthQueryResult(fiscalYears, series);
     }
 
     // ===== Heatmap =====
 
     @Transactional(readOnly = true)
-    public HeatmapResponse getHeatmap(User user) {
+    public HeatmapQueryResult getHeatmap(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
         List<ItSkillCategory> cat1List = getActiveCat1List(catMap);
         int maxLevelValue = getMaxLevelValue();
@@ -236,14 +236,14 @@ public class ChartService {
 
         boolean hasCurrentYearData = !scoredBySkillId.isEmpty();
         List<HeatmapRow> rows = buildHeatmapRows(cat1List, structure);
-        return new HeatmapResponse(currentFy.getName(), hasCurrentYearData, maxLevelValue, rows);
+        return new HeatmapQueryResult(currentFy.getName(), hasCurrentYearData, maxLevelValue, rows);
     }
 
-    private HeatmapResponse buildHeatmapNoScores(FiscalYear currentFy,
-                                                   List<ItSkillCategory> cat1List,
-                                                   Map<Integer, ItSkillCategory> catMap,
-                                                   List<ItSkill> activeSkills,
-                                                   int maxLevelValue) {
+    private HeatmapQueryResult buildHeatmapNoScores(FiscalYear currentFy,
+                                                     List<ItSkillCategory> cat1List,
+                                                     Map<Integer, ItSkillCategory> catMap,
+                                                     List<ItSkill> activeSkills,
+                                                     int maxLevelValue) {
         Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> structure = initStructure(cat1List);
         for (ItSkill skill : activeSkills) {
             ItSkillCategory cat1 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 1);
@@ -257,7 +257,7 @@ public class ChartService {
         }
         List<HeatmapRow> rows = buildHeatmapRows(cat1List, structure);
         String fyName = currentFy != null ? currentFy.getName() : null;
-        return new HeatmapResponse(fyName, false, maxLevelValue, rows);
+        return new HeatmapQueryResult(fyName, false, maxLevelValue, rows);
     }
 
     private Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> initStructure(List<ItSkillCategory> cat1List) {
@@ -293,7 +293,7 @@ public class ChartService {
     // ===== Timeline =====
 
     @Transactional(readOnly = true)
-    public TimelineResponse getTimeline(User user) {
+    public TimelineQueryResult getTimeline(User user) {
         List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(user.getId());
         List<TimelineEvent> events = new ArrayList<>();
         LocalDate firstOfMonth = LocalDate.now().withDayOfMonth(1);
@@ -346,7 +346,7 @@ public class ChartService {
         }
 
         events.sort(Comparator.comparing(TimelineEvent::yearMonth));
-        return new TimelineResponse(events);
+        return new TimelineQueryResult(events);
     }
 
     // ===== Helpers =====

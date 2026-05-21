@@ -1,7 +1,8 @@
 package com.skilize.expectation.presentation;
 
 import com.skilize.expectation.application.ExpectationService;
-import com.skilize.expectation.dto.*;
+import com.skilize.expectation.application.query.ExpectationQueryResult;
+import com.skilize.expectation.presentation.request.SaveExpectationRequest;
 import com.skilize.user.domain.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,8 +27,8 @@ public class ExpectationController {
      */
     @GetMapping
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
-    public ExpectationResponse get(@PathVariable int userId,
-                                    @AuthenticationPrincipal User requester) {
+    public ExpectationQueryResult get(@PathVariable int userId,
+                                       @AuthenticationPrincipal User requester) {
         return expectationService.getForUser(userId, requester);
     }
 
@@ -37,18 +38,18 @@ public class ExpectationController {
      */
     @PutMapping("/tl")
     @PreAuthorize("hasRole('TL')")
-    public ExpectationResponse saveTl(@PathVariable int userId,
-                                       @AuthenticationPrincipal User requester,
-                                       @RequestBody SaveExpectationRequest req) {
+    public ExpectationQueryResult saveTl(@PathVariable int userId,
+                                          @AuthenticationPrincipal User requester,
+                                          @RequestBody SaveExpectationRequest req) {
         return expectationService.saveTlExpectation(userId, requester, req.expectation());
     }
 
     /** 会社期待コメントを保存する（ADMIN のみ）。 */
     @PutMapping("/company")
     @PreAuthorize("hasRole('ADMIN')")
-    public ExpectationResponse saveCompany(@PathVariable int userId,
-                                            @AuthenticationPrincipal User requester,
-                                            @RequestBody SaveExpectationRequest req) {
+    public ExpectationQueryResult saveCompany(@PathVariable int userId,
+                                               @AuthenticationPrincipal User requester,
+                                               @RequestBody SaveExpectationRequest req) {
         return expectationService.saveCompanyExpectation(userId, requester, req.expectation());
     }
 }

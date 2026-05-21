@@ -1,7 +1,7 @@
 package com.skilize.ai.presentation;
 
 import com.skilize.ai.application.AiAnalysisService;
-import com.skilize.ai.dto.*;
+import com.skilize.ai.application.query.AiAnalysisQueryResult;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;
@@ -30,7 +30,7 @@ public class AiAnalysisController {
 
     /** 自分の AI 分析結果一覧を返す（全ロール参照可）。 */
     @GetMapping("/users/me/ai-analyses")
-    public List<AiAnalysisResponse> getMyAnalyses(@AuthenticationPrincipal User user) {
+    public List<AiAnalysisQueryResult> getMyAnalyses(@AuthenticationPrincipal User user) {
         return aiAnalysisService.findByUserId(user.getId());
     }
 
@@ -40,7 +40,7 @@ public class AiAnalysisController {
      */
     @GetMapping("/users/{userId}/ai-analyses")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
-    public List<AiAnalysisResponse> getMemberAnalyses(
+    public List<AiAnalysisQueryResult> getMemberAnalyses(
             @PathVariable int userId,
             @AuthenticationPrincipal User currentUser) {
         User targetUser = userRepository.findById(userId)

@@ -3,7 +3,7 @@ package com.skilize.ai.application;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.skilize.ai.domain.AiCareerAnalysis;
 import com.skilize.ai.domain.AiCareerAnalysisRepository;
-import com.skilize.ai.dto.AiAnalysisResponse;
+import com.skilize.ai.application.query.AiAnalysisQueryResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,10 +39,10 @@ public class AiAnalysisService {
     private String aiSecretKey;
 
     @Transactional(readOnly = true)
-    public List<AiAnalysisResponse> findByUserId(int userId) {
+    public List<AiAnalysisQueryResult> findByUserId(int userId) {
         return repository.findByUserIdOrderByFiscalYearIdDesc(userId)
                 .stream()
-                .map(this::toResponse)
+                .map(this::toQueryResult)
                 .toList();
     }
 
@@ -86,7 +86,7 @@ public class AiAnalysisService {
         }
     }
 
-    private AiAnalysisResponse toResponse(AiCareerAnalysis a) {
+    private AiAnalysisQueryResult toQueryResult(AiCareerAnalysis a) {
         Object parsed = null;
         if (a.getAnalysisResult() != null) {
             try {
@@ -96,7 +96,7 @@ public class AiAnalysisService {
                 log.warn("Failed to parse analysisResult for id={}", a.getId(), e);
             }
         }
-        return new AiAnalysisResponse(
+        return new AiAnalysisQueryResult(
                 a.getId(),
                 a.getFiscalYearId(),
                 a.getStatus().name(),

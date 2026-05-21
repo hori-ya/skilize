@@ -85,43 +85,66 @@ com.skilize
 │   ├── infrastructure/         ← Security設定・JWT・フィルター
 │   └── presentation/           ← GlobalExceptionHandler・ErrorResponse DTO
 ├── auth/
-│   ├── presentation/           ← AuthController + Request/Response DTO
+│   ├── presentation/           ← AuthController
+│   │   └── request/            ← LoginRequest・ChangePasswordRequest
 │   └── application/            ← AuthService（@Transactional）
+│       ├── command/            ← LoginCommand・ChangePasswordCommand
+│       ├── query/              ← LoginQueryResult・MeQueryResult
+│       └── mapper/             ← AuthApplicationMapper
 ├── user/
-│   ├── presentation/           ← UserController + Request/Response DTO
+│   ├── presentation/           ← UserController
+│   │   ├── request/            ← CreateUserRequest・UpdateUserRequest
+│   │   └── response/           ← UserResponse・TeamMemberResponse・MemberInventorySummaryResponse 等
 │   ├── domain/                 ← User, Role, UserRepository
 │   └── infrastructure/         ← UserDetailsServiceImpl
 ├── inventory/
-│   ├── presentation/           ← InventoryController + Request/Response DTO
+│   ├── presentation/           ← InventoryController
+│   │   ├── request/            ← CreateInventoryRequest・ItSkillDetailsRequest 等
+│   │   └── response/           ← InventorySummaryResponse・ItSkillDetailsResponse 等
 │   ├── application/            ← InventoryService（@Transactional）
+│   │   ├── command/            ← ItSkillDetailCommand・GoalCommand 等
+│   │   ├── query/              ← ComparisonQueryResult・GoalReviewQueryResult
+│   │   └── mapper/             ← InventoryApplicationMapper
 │   └── domain/                 ← エンティティ・Repository・列挙型
 ├── master/
-│   ├── presentation/           ← MasterController + Request/Response DTO
+│   ├── presentation/           ← MasterController
+│   │   ├── request/            ← SkillLevelRequest・ItSkillRequest 等
+│   │   └── response/           ← SkillLevelResponse・ItSkillResponse 等
 │   └── domain/                 ← マスタエンティティ・Repository
 ├── fiscalyear/
-│   ├── presentation/           ← FiscalYearController + Request/Response DTO
+│   ├── presentation/           ← FiscalYearController
+│   │   ├── request/            ← FiscalYearRequest・FiscalYearSettingsRequest
+│   │   └── response/           ← FiscalYearResponse・FiscalYearSettingsResponse
 │   └── domain/                 ← FiscalYear, FiscalYearSettings, Repository
 ├── dashboard/
-│   └── presentation/           ← DashboardController + Response DTO
+│   └── presentation/           ← DashboardController
+│       └── response/           ← DashboardResponse（nested UserInfo・FiscalYearRef・CurrentInventoryInfo）
 ├── charts/
-│   ├── presentation/           ← ChartController + Response DTO
+│   ├── presentation/           ← ChartController（QueryResult を直接返す）
 │   └── application/            ← ChartService（radar/growth/heatmap/timeline 集計）
+│       └── query/              ← RadarQueryResult・GrowthQueryResult・HeatmapQueryResult・TimelineQueryResult
 ├── expectation/
-│   ├── presentation/           ← ExpectationController + Request/Response DTO
+│   ├── presentation/           ← ExpectationController
+│   │   └── request/            ← SaveExpectationRequest
 │   ├── application/            ← ExpectationService（@Transactional）
+│   │   └── query/              ← ExpectationQueryResult
 │   └── domain/                 ← UserExpectation・UserExpectationRepository
 ├── interview/
-│   ├── presentation/           ← InterviewController + Request/Response DTO
+│   ├── presentation/           ← InterviewController
+│   │   ├── request/            ← SaveInterviewRequest・DetailNoteRequest
+│   │   └── response/           ← InterviewResponse・DetailNoteResponse
 │   └── application/            ← InterviewService（面談メモ保存）
+│       └── command/            ← DetailNoteCommand
 └── ai/
-    ├── presentation/           ← AiAnalysisController + Response DTO
-    ├── application/            ← AiAnalysisService（非同期AI分析トリガー・結果取得）
-    └── domain/                 ← AiCareerAnalysis エンティティ・Repository・InventoryCompletedEventListener
+    ├── presentation/           ← AiAnalysisController（QueryResult を直接返す）
+    ├── application/            ← AiAnalysisService（非同期AI分析）・InventoryCompletedEventListener
+    │   └── query/              ← AiAnalysisQueryResult
+    └── domain/                 ← AiCareerAnalysis エンティティ・Repository
 ```
 
 **レイヤー責務**:
-- `presentation` — Controller・Request/Response DTO・バリデーション・HTTPハンドリング（ビジネスロジック禁止）
-- `application` — UseCase/ApplicationService・トランザクション境界・ワークフロー調整（SQL直接実装禁止）
+- `presentation` — Controller のみ。`request/` に HTTP 入力、`response/` に HTTP 出力を配置。バリデーションはここで完結（ビジネスロジック禁止）
+- `application` — UseCase/ApplicationService・トランザクション境界・ワークフロー調整。`command/` に Service 入力、`query/` に Service 出力、`mapper/` に Request→Command 変換を配置（SQL直接実装禁止）
 - `domain` — ビジネスルール・ドメインモデル・Repositoryインターフェース（Spring Framework依存禁止・SQL禁止）
 - `infrastructure` — JPA実装・Repositoryインターフェース実装・外部API・Security
 
@@ -151,9 +174,15 @@ infrastructure → domain / application
 - 例外は `AuthException`（認証系）と Spring の標準例外を使い分ける
 - バリデーションは `jakarta.validation` アノテーション + `@Valid`
 - Entity を API へ直接返さない（必ず Request/Response DTO を分離）
-- **DTO は Controller・Service クラス内に定義しない。必ず `feature/dto/` に独立ファイルとして作成する**（`presentation/` は Controller のみ）
-- DTO 命名: `XxxRequest`（リクエスト）/ `XxxResponse`（レスポンス）/ `XxxDto`（共有・ネスト用）
-- 特定 DTO 内でしか使わないネスト DTO は、親 DTO ファイル内に record としてまとめて定義してよい
+- **DTO は責務別パッケージに分離する（`feature/dto/` は廃止）**
+  - `presentation/request/` — HTTP 入力（`@RequestBody`）。バリデーションアノテーションはここに付ける
+  - `presentation/response/` — Controller が組み立てて返す HTTP 出力
+  - `application/command/` — Service への Write オペレーション入力（`XxxRequest` を直接 Service に渡さない）
+  - `application/query/` — Service が組み立てて返すクエリ結果
+  - `application/mapper/` — `XxxRequest` → `XxxCommand` 変換（`@Component`、Controller でコンストラクタ注入）
+- DTO 命名: `XxxRequest` / `XxxResponse` / `XxxCommand` / `XxxQueryResult`（`XxxDto` という命名は使わない）
+- 特定クラス内でしか使わないネスト型は、親ファイル内に `record` としてまとめて定義してよい
+- **依存方向厳守**: Service は `presentation/request/` パッケージをインポートしない。Request → Command 変換は必ず Mapper 経由で行う
 
 **Frontend**
 - React 関数コンポーネント + hooks のみ
@@ -372,6 +401,10 @@ docker compose up db     # init.sql が再実行される
 - Flyway マイグレーション済みファイルを後から編集しない（新バージョンで対応）
 - フロントエンドで `any` 型を使わない
 - フロントエンドコンポーネント内に日本語文字列をハードコードしない（`className` 値・コメントを除く。翻訳は `src/i18n/locales/ja/` の JSON ファイルで管理）
+- **`feature/dto/` パッケージを新規作成しない**（廃止済み。責務別パッケージ `request/` / `response/` / `command/` / `query/` を使うこと）
+- **`XxxDto` という命名のクラスを新規作成しない**（`XxxRequest` / `XxxResponse` / `XxxCommand` / `XxxQueryResult` のいずれかで命名する）
+- **Service メソッドの引数に `presentation/request/` のクラスを直接渡さない**（必ず Mapper で Command に変換してから渡す）
+- **Service クラスが `presentation` パッケージをインポートしない**（application → presentation の依存禁止）
 
 ---
 
@@ -413,43 +446,66 @@ docker compose up db     # init.sql が再実行される
 
 ## Directory Responsibilities (ディレクトリの責務説明)
 
+### バックエンド（Spring Boot）
+
 | ディレクトリ | 責務 |
 |---|---|
-| `apps/backend/src/main/java/com/skilize/shared/domain/exception/` | 共通例外（AuthException, GoalIncompleteException） |
-| `apps/backend/src/main/java/com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter |
-| `apps/backend/src/main/java/com/skilize/shared/presentation/` | GlobalExceptionHandler・ErrorResponse・ValidationErrorResponse |
-| `apps/backend/src/main/java/com/skilize/auth/presentation/` | AuthController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/auth/dto/` | LoginRequest・LoginResponse・ChangePasswordRequest・MeResponse |
-| `apps/backend/src/main/java/com/skilize/auth/application/` | AuthService（ログイン・JWT 発行・パスワード変更ロジック） |
-| `apps/backend/src/main/java/com/skilize/user/presentation/` | UserController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/user/dto/` | UserDto・CreateUserRequest・UpdateUserRequest・TeamMemberDto・MemberInventorySummaryDto 等 |
-| `apps/backend/src/main/java/com/skilize/user/domain/` | User エンティティ・Role・UserRepository |
-| `apps/backend/src/main/java/com/skilize/user/infrastructure/` | UserDetailsServiceImpl（Spring Security 実装） |
-| `apps/backend/src/main/java/com/skilize/inventory/presentation/` | InventoryController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/inventory/dto/` | CreateInventoryRequest・InventorySummaryDto・ItSkillDetailsRequest/Response・GoalReviewResponse 等 |
-| `apps/backend/src/main/java/com/skilize/inventory/application/` | InventoryService（棚卸ビジネスロジック） |
-| `apps/backend/src/main/java/com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
-| `apps/backend/src/main/java/com/skilize/master/presentation/` | MasterController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/master/dto/` | SkillLevelDto・SkillLevelRequest・ItSkillDto・ItSkillRequest・QualificationDto 等 |
-| `apps/backend/src/main/java/com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
-| `apps/backend/src/main/java/com/skilize/fiscalyear/presentation/` | FiscalYearController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/fiscalyear/dto/` | FiscalYearDto・FiscalYearRequest・FiscalYearSettingsDto・FiscalYearSettingsRequest |
-| `apps/backend/src/main/java/com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
-| `apps/backend/src/main/java/com/skilize/dashboard/presentation/` | DashboardController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/dashboard/dto/` | DashboardResponse（nested UserInfo・FiscalYearRef・CurrentInventoryInfo） |
-| `apps/backend/src/main/java/com/skilize/charts/presentation/` | ChartController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/charts/dto/` | RadarResponse・GrowthResponse・HeatmapResponse・TimelineResponse |
-| `apps/backend/src/main/java/com/skilize/charts/application/` | ChartService（スキルバランス・成長推移・ヒートマップ・タイムライン集計） |
-| `apps/backend/src/main/java/com/skilize/ai/` | AiAnalysisController・AiAnalysisService・AiCareerAnalysis エンティティ・InventoryCompletedEventListener（棚卸提出時の非同期AI分析トリガー） |
-| `apps/backend/src/main/java/com/skilize/interview/presentation/` | InterviewController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/interview/dto/` | SaveInterviewRequest・InterviewResponse・DetailNoteResponse・DetailNoteItem 等 |
-| `apps/backend/src/main/java/com/skilize/interview/application/` | InterviewService（面談メモ保存ロジック） |
-| `apps/backend/src/main/java/com/skilize/expectation/presentation/` | ExpectationController（Controller のみ） |
-| `apps/backend/src/main/java/com/skilize/expectation/dto/` | ExpectationDto・SaveExpectationRequest 等 |
-| `apps/backend/src/main/java/com/skilize/expectation/application/` | ExpectationService（期待コメント保存ロジック） |
-| `apps/backend/src/main/java/com/skilize/expectation/domain/` | UserExpectation エンティティ・UserExpectationRepository |
+| `com/skilize/shared/domain/exception/` | 共通例外（AuthException, GoalIncompleteException） |
+| `com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter |
+| `com/skilize/shared/presentation/` | GlobalExceptionHandler・ErrorResponse・ValidationErrorResponse |
+| `com/skilize/auth/presentation/` | AuthController |
+| `com/skilize/auth/presentation/request/` | LoginRequest・ChangePasswordRequest |
+| `com/skilize/auth/application/` | AuthService（ログイン・JWT 発行・パスワード変更ロジック） |
+| `com/skilize/auth/application/command/` | LoginCommand・ChangePasswordCommand |
+| `com/skilize/auth/application/query/` | LoginQueryResult・MeQueryResult |
+| `com/skilize/auth/application/mapper/` | AuthApplicationMapper（Request→Command 変換） |
+| `com/skilize/user/presentation/` | UserController |
+| `com/skilize/user/presentation/request/` | CreateUserRequest・UpdateUserRequest |
+| `com/skilize/user/presentation/response/` | UserResponse・TeamMemberResponse・MemberInventorySummaryResponse・FiscalYearRef・ResetPasswordResponse |
+| `com/skilize/user/domain/` | User エンティティ・Role・UserRepository |
+| `com/skilize/user/infrastructure/` | UserDetailsServiceImpl（Spring Security 実装） |
+| `com/skilize/inventory/presentation/` | InventoryController |
+| `com/skilize/inventory/presentation/request/` | CreateInventoryRequest・ItSkillDetailsRequest・ItSkillDetailItem・QualificationDetailsRequest・SeminarDetailsRequest・RemarksPatchRequest・GoalsRequest・GoalItem・GoalReviewUpdateRequest・GoalReviewUpdateItem |
+| `com/skilize/inventory/presentation/response/` | InventorySummaryResponse・InventoryDetailResponse・ItSkillDetailsResponse・ItSkillDetailResponse・QualificationDetailsResponse・QualificationDetailResponse・SeminarDetailsResponse・SeminarDetailResponse・RemarksPatchResponse・SubmitResponse・GoalsResponse・GoalResponse・GoalCompleteResponse・GoalReviewCompleteResponse・FiscalYearRef |
+| `com/skilize/inventory/application/` | InventoryService（棚卸ビジネスロジック） |
+| `com/skilize/inventory/application/command/` | ItSkillDetailCommand・QualificationDetailCommand・SeminarDetailCommand・GoalCommand・GoalReviewUpdateCommand |
+| `com/skilize/inventory/application/query/` | ComparisonQueryResult・GoalReviewQueryResult |
+| `com/skilize/inventory/application/mapper/` | InventoryApplicationMapper（Request→Command 変換） |
+| `com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
+| `com/skilize/master/presentation/` | MasterController |
+| `com/skilize/master/presentation/request/` | SkillLevelRequest・ItSkillRequest・ItSkillCategoryRequest・ItSkillCategoryUpdateRequest・QualificationRequest・AdSeminarRequest・PromoteItSkillRequest・PromoteQualificationRequest・SimpleCategoryRequest |
+| `com/skilize/master/presentation/response/` | SkillLevelResponse・ItSkillResponse・ItSkillCategoryResponse・QualificationResponse・QualificationCategoryResponse・AdSeminarResponse・AdSeminarCategoryResponse・SeminarCategoryResponse・CustomUnregisteredResponse |
+| `com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
+| `com/skilize/fiscalyear/presentation/` | FiscalYearController |
+| `com/skilize/fiscalyear/presentation/request/` | FiscalYearRequest・FiscalYearSettingsRequest |
+| `com/skilize/fiscalyear/presentation/response/` | FiscalYearResponse・FiscalYearSettingsResponse |
+| `com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
+| `com/skilize/dashboard/presentation/` | DashboardController |
+| `com/skilize/dashboard/presentation/response/` | DashboardResponse（nested UserInfo・FiscalYearRef・CurrentInventoryInfo） |
+| `com/skilize/charts/presentation/` | ChartController（QueryResult を直接返す） |
+| `com/skilize/charts/application/` | ChartService（スキルバランス・成長推移・ヒートマップ・タイムライン集計） |
+| `com/skilize/charts/application/query/` | RadarQueryResult・GrowthQueryResult・HeatmapQueryResult・TimelineQueryResult |
+| `com/skilize/expectation/presentation/` | ExpectationController |
+| `com/skilize/expectation/presentation/request/` | SaveExpectationRequest |
+| `com/skilize/expectation/application/` | ExpectationService（期待コメント保存ロジック） |
+| `com/skilize/expectation/application/query/` | ExpectationQueryResult |
+| `com/skilize/expectation/domain/` | UserExpectation エンティティ・UserExpectationRepository |
+| `com/skilize/interview/presentation/` | InterviewController |
+| `com/skilize/interview/presentation/request/` | SaveInterviewRequest・DetailNoteRequest |
+| `com/skilize/interview/presentation/response/` | InterviewResponse・DetailNoteResponse |
+| `com/skilize/interview/application/` | InterviewService（面談メモ保存ロジック） |
+| `com/skilize/interview/application/command/` | DetailNoteCommand |
+| `com/skilize/ai/presentation/` | AiAnalysisController（QueryResult を直接返す） |
+| `com/skilize/ai/application/` | AiAnalysisService（非同期AI分析トリガー・結果取得）・InventoryCompletedEventListener |
+| `com/skilize/ai/application/query/` | AiAnalysisQueryResult |
+| `com/skilize/ai/domain/` | AiCareerAnalysis エンティティ・AiAnalysisStatus・AiCareerAnalysisRepository |
 | `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
 | `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |
+
+### フロントエンド（React / Vite）
+
+| ディレクトリ | 責務 |
+|---|---|
 | `apps/frontend/src/app/providers/` | AuthProvider（認証状態の全体共有）と useAuth hook |
 | `apps/frontend/src/app/layouts/` | NavBar（グローバルナビゲーション） |
 | `apps/frontend/src/shared/api/` | Axios クライアント・マスタデータ API（複数 feature で共有） |
@@ -461,5 +517,10 @@ docker compose up db     # init.sql が再実行される
 | `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー管理） |
 | `apps/frontend/src/features/interview/` | 面談機能の API 呼び出し・型定義（ページは features/team に統合） |
 | `apps/frontend/src/i18n/` | i18next 初期設定（`index.ts`）と翻訳 JSON ファイル（`locales/ja/`） |
+
+### インフラ
+
+| ディレクトリ | 責務 |
+|---|---|
 | `infra/docker/` | 各サービスの Dockerfile・nginx 設定 |
 | `infra/compose/` | Docker Compose ファイル（ローカル用・本番用） |
