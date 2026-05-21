@@ -19,7 +19,12 @@ services:
       retries: 5
 
   backend:
-    build: ../docker/backend
+    build:
+      context: ../docker/backend
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
     volumes:
       - ../../apps/backend:/app
       - gradle_cache:/root/.gradle
@@ -35,6 +40,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: local
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,db,backend,frontend,ai}
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:-}
     depends_on:
       db:
         condition: service_healthy
@@ -43,6 +52,10 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/frontend/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
     volumes:
       - ../../apps/frontend:/app
       - node_modules:/app/node_modules
@@ -55,6 +68,10 @@ services:
     build:
       context: ../..
       dockerfile: infra/docker/ai/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       AI_SECRET_KEY: ${AI_SECRET_KEY}
@@ -62,6 +79,9 @@ services:
       LLM_MODEL: ${LLM_MODEL:-gpt-4o}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,db,backend,frontend,ai}
     depends_on:
       db:
         condition: service_healthy

@@ -10,16 +10,17 @@
    - [IDE のインストール](#15-ide-のインストール)
 2. [リポジトリのクローン](#2-リポジトリのクローン)
 3. [環境変数の設定](#3-環境変数の設定)
-4. [起動方法](#4-起動方法)
+4. [社内プロキシ環境での設定](#4-社内プロキシ環境での設定)
+5. [起動方法](#5-起動方法)
    - [A. Docker 一括起動（推奨）](#a-docker-一括起動推奨)
    - [B. IntelliJ + ローカル起動（デバッグ向け）](#b-intellij--ローカル起動デバッグ向け)
    - [C. VSCode + ローカル起動（デバッグ向け）](#c-vscode--ローカル起動デバッグ向け)
    - [D. Cursor + ローカル起動（デバッグ向け）](#d-cursor--ローカル起動デバッグ向け)
    - [E. Eclipse + ローカル起動（デバッグ向け）](#e-eclipse--ローカル起動デバッグ向け)
-5. [動作確認](#5-動作確認)
-6. [テストユーザー](#6-テストユーザー)
-7. [よく使うコマンド](#7-よく使うコマンド)
-8. [トラブルシューティング](#8-トラブルシューティング)
+6. [動作確認](#6-動作確認)
+7. [テストユーザー](#7-テストユーザー)
+8. [よく使うコマンド](#8-よく使うコマンド)
+9. [トラブルシューティング](#9-トラブルシューティング)
 
 ---
 
@@ -297,7 +298,157 @@ AI_SERVICE_URL=http://ai:8000
 
 ---
 
-## 4. 起動方法
+## 4. 社内プロキシ環境での設定
+
+社内ネットワークにプロキシサーバーがある場合、設定なしでは Docker イメージのビルドや依存パッケージのダウンロードが失敗します。  
+以下の設定を行うことでプロキシ環境でも動作させられます。
+
+> **プロキシが不要な環境（自宅・プロキシなし）では設定不要**です。`.env` の該当行はコメントのままにして次のセクションへ進んでください。
+
+---
+
+### 4.1 各ツールとプロキシの関係
+
+| ツール・処理 | プロキシ設定方法 | 備考 |
+|---|---|---|
+| Docker Desktop（イメージ pull） | Docker Desktop の GUI 設定 | Docker Hub からのダウンロードに必要 |
+| Docker ビルド（RUN コマンド） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | apk・wget・pip・npm のビルド時ダウンロード |
+| Gradle（依存関係ダウンロード） | `.env` の `JAVA_TOOL_OPTIONS` | **Java は `HTTP_PROXY` を読まない**ため専用設定が必要 |
+| npm（ビルド時 npm install） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | Dockerfile 内で自動的に npm config に変換される |
+| Python pip（依存関係ダウンロード） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | pip は標準プロキシ env var を参照する |
+| AI コンテナ（OpenAI / Anthropic API 呼び出し） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | 外部 API への通信に必要 |
+| Git（クローン・プッシュ） | `git config --global` | 下記参照 |
+| IDE（IntelliJ / VSCode / Eclipse） | 各 IDE の設定画面 | 下記参照 |
+
+---
+
+### 4.2 Docker Desktop のプロキシ設定
+
+Docker Desktop 自身のプロキシを設定しないと、`docker pull` でイメージの取得に失敗します。
+
+1. Docker Desktop を起動します
+2. 右上の歯車アイコン（Settings）を開きます
+3. 「Resources」→「Proxies」を開きます
+4. 「Manual proxy configuration」を有効にします
+5. 以下を入力します:
+
+   | 項目 | 入力値の例 |
+   |---|---|
+   | Web Server (HTTP) | `http://proxy.corp.example.com:8080` |
+   | Secure Web Server (HTTPS) | `http://proxy.corp.example.com:8080` |
+   | Bypass proxy settings for these hosts and domains | `localhost,127.0.0.1,db,backend,frontend,ai` |
+
+6. 「Apply & restart」をクリックします
+
+---
+
+### 4.3 .env へのプロキシ設定
+
+`.env` ファイルを開き、末尾のプロキシ設定のコメントを外して編集します。
+
+```env
+# ─── 社内プロキシ設定 ────────────────────────────────────────────
+HTTP_PROXY=http://proxy.corp.example.com:8080
+HTTPS_PROXY=http://proxy.corp.example.com:8080
+NO_PROXY=localhost,127.0.0.1,db,backend,frontend,ai
+
+# Gradle / Spring Boot 用（Java は HTTP_PROXY を読まないため個別指定が必要）
+JAVA_TOOL_OPTIONS=-Dhttp.proxyHost=proxy.corp.example.com -Dhttp.proxyPort=8080 -Dhttps.proxyHost=proxy.corp.example.com -Dhttps.proxyPort=8080 -Dhttp.nonProxyHosts="localhost|127.0.0.1|db|backend|frontend|ai"
+```
+
+**設定値の確認ポイント**:
+
+| 項目 | 説明 |
+|---|---|
+| `proxy.corp.example.com` | 社内プロキシのホスト名または IP アドレスに変更する |
+| `8080` | 社内プロキシのポート番号に変更する |
+| `NO_PROXY` | **必ず Docker サービス名（`db,backend,frontend,ai`）を含める**こと。含めないとコンテナ間通信がプロキシ経由になり接続失敗する |
+| `nonProxyHosts` | Java 用。区切り文字は `,` でなく `\|`（パイプ）を使う |
+
+> **認証プロキシの場合**（ユーザー名・パスワードが必要な場合）:
+> ```env
+> HTTP_PROXY=http://ユーザー名:パスワード@proxy.corp.example.com:8080
+> HTTPS_PROXY=http://ユーザー名:パスワード@proxy.corp.example.com:8080
+> ```
+> パスワードに特殊文字が含まれる場合は URL エンコード（例: `@` → `%40`）が必要です。
+
+---
+
+### 4.4 設定後の起動手順
+
+`.env` を保存したら、イメージを再ビルドします。  
+プロキシ設定はビルド時にも渡す必要があるため、**必ず `--build` オプションを付けて**起動します。
+
+```bash
+docker compose up --build
+```
+
+---
+
+### 4.5 Git のプロキシ設定
+
+リポジトリのクローンやプッシュにプロキシが必要な場合は以下を実行します。
+
+```bash
+git config --global http.proxy http://proxy.corp.example.com:8080
+git config --global https.proxy http://proxy.corp.example.com:8080
+```
+
+不要になったときは以下で削除できます。
+
+```bash
+git config --global --unset http.proxy
+git config --global --unset https.proxy
+```
+
+---
+
+### 4.6 IDE のプロキシ設定
+
+#### IntelliJ IDEA
+
+1. 「File」→「Settings」（Mac: 「IntelliJ IDEA」→「Settings」）を開きます
+2. 「Appearance & Behavior」→「System Settings」→「HTTP Proxy」を開きます
+3. 「Manual proxy configuration」を選択して入力します
+
+また、Gradle がダウンロードする際にもプロキシが必要です。  
+プロジェクトの `apps/backend/gradle.properties` に以下を追記します（`.gitignore` 対象外のため注意）:
+
+```properties
+systemProp.http.proxyHost=proxy.corp.example.com
+systemProp.http.proxyPort=8080
+systemProp.https.proxyHost=proxy.corp.example.com
+systemProp.https.proxyPort=8080
+systemProp.http.nonProxyHosts=localhost|127.0.0.1
+```
+
+> **注意**: `gradle.properties` に認証情報を書く場合は Git にコミットしないよう `.gitignore` への追加を検討してください。  
+> または、ユーザーホームの `~/.gradle/gradle.properties` に書く方法（プロジェクト全体に適用されます）も有効です。
+
+#### VSCode / Cursor
+
+1. `Ctrl+Shift+P` / `Cmd+Shift+P` でコマンドパレットを開きます
+2. 「Preferences: Open User Settings (JSON)」を検索して開きます
+3. 以下を追加します:
+
+```json
+{
+  "http.proxy": "http://proxy.corp.example.com:8080",
+  "http.proxyStrictSSL": false
+}
+```
+
+Java 拡張機能（Gradle）のプロキシは IntelliJ と同様に `gradle.properties` で設定します。
+
+#### Eclipse
+
+1. 「Window」→「Preferences」（Mac: 「Eclipse」→「Preferences」）を開きます
+2. 「General」→「Network Connections」を開きます
+3. 「Active Provider」を「Manual」に変更して入力します
+
+---
+
+## 5. 起動方法
 
 ### A. Docker 一括起動（推奨）
 
@@ -644,7 +795,7 @@ Eclipse にはフロントエンドデバッガーがないため、ブラウザ
 
 ---
 
-## 5. 動作確認
+## 6. 動作確認
 
 ### アクセス先
 
@@ -662,7 +813,7 @@ Eclipse にはフロントエンドデバッガーがないため、ブラウザ
 
 ---
 
-## 6. テストユーザー
+## 7. テストユーザー
 
 `scripts/db/init.sql` 適用後（Docker 起動時に自動実行）に以下のユーザーが使えます。
 
@@ -675,7 +826,7 @@ Eclipse にはフロントエンドデバッガーがないため、ブラウザ
 
 ---
 
-## 7. よく使うコマンド
+## 8. よく使うコマンド
 
 ### Docker
 
@@ -723,7 +874,7 @@ npm run lint       # ESLint によるコードチェック
 
 ---
 
-## 8. トラブルシューティング
+## 9. トラブルシューティング
 
 ### Docker Desktop が起動していない
 

@@ -1,5 +1,10 @@
 FROM python:3.12-slim
 
+# 社内プロキシ対応: docker compose build --build-arg HTTP_PROXY=... で渡す
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
 WORKDIR /app
 
 COPY apps/ai/requirements.txt .
