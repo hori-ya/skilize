@@ -632,6 +632,15 @@ GitHub Actions を使って、`main` ブランチへの push または Pull Requ
 
 - リポジトリが GitHub でホストされていること
 - `apps/frontend/package-lock.json` がコミットされていること（`npm ci` が利用するため）
+- GitHub Personal Access Token（PAT）に **`workflow` スコープ**が付与されていること（`.github/workflows/` 配下のファイルをプッシュするために必要）
+
+PAT に `workflow` スコープがない場合、プッシュ時に以下のエラーが発生します:
+
+```
+! [remote rejected] main -> main (refusing to allow a Personal Access Token to create or update workflow ... without `workflow` scope)
+```
+
+スコープを追加するには GitHub → **Settings** → **Developer settings** → **Personal access tokens** でトークンを編集し、`workflow` にチェックを入れて保存します。その後、Windows の「資格情報マネージャー」で `github.com` のエントリを新しいトークンで更新してください。
 
 `package-lock.json` がまだコミットされていない場合は以下を実行します:
 
