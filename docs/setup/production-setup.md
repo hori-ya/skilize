@@ -1,4 +1,4 @@
-# 本番環境構築手順書
+﻿# 本番環境構築手順書
 
 ## データベース構成について（試用期間中の方針）
 
@@ -6,7 +6,7 @@
 >
 > **試用期間中はコスト削減のため、RDS を使用せず、EC2 上の Docker コンテナで PostgreSQL を運用します。**  
 > アプリケーション側の接続方法（JDBC URL・環境変数）は RDS でも同一のため、将来の RDS 切り替え時にアプリコードの変更は不要です。  
-> RDS への移行手順については本文書末尾の「[RDS 移行手順](#10-rds-移行手順)」を参照してください。
+> RDS への移行手順については本文書末尾の「[RDS 移行手順](#11-rds-移行手順)」を参照してください。
 
 ---
 
@@ -16,7 +16,7 @@
 >
 > **試用期間中はコスト削減および誤操作防止のため、Elastic IP を取得しない想定で運用します。**  
 > Elastic IP を取得しない場合、EC2 インスタンスを停止・起動するたびにパブリック IP アドレスが変わります。  
-> IP が変わった際に必要な再設定手順については「[11. Elastic IP を使用しない場合の手順（試用期間向け）](#11-elastic-ip-を使用しない場合の手順試用期間向け)」を参照してください。
+> IP が変わった際に必要な再設定手順については「[12. Elastic IP を使用しない場合の手順（試用期間向け）](#12-elastic-ip-を使用しない場合の手順試用期間向け)」を参照してください。
 
 ---
 
@@ -31,10 +31,11 @@
 7. [環境変数の設定](#7-環境変数の設定)
 8. [アプリケーションの起動](#8-アプリケーションの起動)
 9. [動作確認と初期設定](#9-動作確認と初期設定)
-10. [RDS 移行手順](#10-rds-移行手順)
-11. [Elastic IP を使用しない場合の手順（試用期間向け）](#11-elastic-ip-を使用しない場合の手順試用期間向け)
-12. [運用手順](#12-運用手順)
-13. [トラブルシューティング](#13-トラブルシューティング)
+10. [GitHub Actions による CI](#10-github-actions-による-ci)
+11. [RDS 移行手順](#11-rds-移行手順)
+12. [Elastic IP を使用しない場合の手順（試用期間向け）](#12-elastic-ip-を使用しない場合の手順試用期間向け)
+13. [運用手順](#13-運用手順)
+14. [トラブルシューティング](#14-トラブルシューティング)
 
 ---
 
@@ -230,7 +231,7 @@ Elastic IP は「固定の IP アドレス」で、インスタンスを再起�
 
 > **試用期間中（Elastic IP を使用しない場合）**: このセクションはスキップして「4. SSH 接続」へ進んでください。  
 > EC2 インスタンス一覧の「パブリック IPv4 アドレス」を `<Elastic-IP>` の代わりに使用します。  
-> インスタンス停止・起動後の再設定手順は「[11. Elastic IP を使用しない場合の手順（試用期間向け）](#11-elastic-ip-を使用しない場合の手順試用期間向け)」を参照してください。
+> インスタンス停止・起動後の再設定手順は「[12. Elastic IP を使用しない場合の手順（試用期間向け）](#12-elastic-ip-を使用しない場合の手順試用期間向け)」を参照してください。
 
 ---
 
@@ -612,12 +613,172 @@ Flyway によって初期データ（`V4__test_data.sql`）が投入され、以
 
 ---
 
-## 10. RDS 移行手順
+## 10. GitHub Actions による CI
+
+GitHub Actions を使って、`main` ブランチへの push または Pull Request のタイミングで自動的にテストを実行します。
+
+### CI で実行されるテスト
+
+| ジョブ | テスト対象 | 使用ツール |
+|---|---|---|
+| `backend` | AuthServiceTest・JwtUtilTest・AuthControllerTest・InventoryServiceComparisonTest | JUnit 5 / Gradle |
+| `frontend` | LoginPage.test.tsx・InventoryHistoryPage.test.tsx | Vitest |
+
+バックエンドのユニットテスト・Web レイヤーテストは DB 接続不要のため、PostgreSQL の別途セットアップは不要です。
+
+---
+
+### 10.1 前提条件
+
+- リポジトリが GitHub でホストされていること
+- `apps/frontend/package-lock.json` がコミットされていること（`npm ci` が利用するため）
+
+`package-lock.json` がまだコミットされていない場合は以下を実行します:
+
+```bash
+cd apps/frontend
+npm install   # package-lock.json が生成される
+git add package-lock.json
+git commit -m "add package-lock.json"
+```
+
+---
+
+### 10.2 ワークフローファイルの作成
+
+リポジトリルートに `.github/workflows/ci.yml` を作成します。
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # ─── バックエンドテスト ───────────────────────────────────────
+  backend:
+    name: Backend Unit Tests (JUnit 5)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x apps/backend/gradlew
+
+      - name: Run backend unit tests
+        working-directory: apps/backend
+        run: |
+          ./gradlew test \
+            --tests "com.skilize.auth.application.AuthServiceTest" \
+            --tests "com.skilize.shared.infrastructure.JwtUtilTest" \
+            --tests "com.skilize.auth.presentation.AuthControllerTest" \
+            --tests "com.skilize.inventory.application.InventoryServiceComparisonTest"
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-report
+          path: apps/backend/build/reports/tests/test/
+
+  # ─── フロントエンドテスト ─────────────────────────────────────
+  frontend:
+    name: Frontend Tests (Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: apps/frontend
+        run: npm ci
+
+      - name: Run frontend tests
+        working-directory: apps/frontend
+        run: npm test
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-report
+          path: apps/frontend/test-results/
+```
+
+このファイルを作成してコミット・プッシュするだけで CI が有効になります。GitHub Actions の追加設定は不要です。
+
+```bash
+git add .github/workflows/ci.yml
+git commit -m "add GitHub Actions CI workflow"
+git push origin main
+```
+
+---
+
+### 10.3 CI 実行結果の確認
+
+1. GitHub のリポジトリページを開きます
+2. 上部の「Actions」タブをクリックします
+3. 最新のワークフロー実行が一覧表示されます
+   - ✅ 緑のチェックマーク → 全テスト通過
+   - ❌ 赤の×マーク → テスト失敗あり
+
+---
+
+### 10.4 テストレポートのダウンロード
+
+テスト結果の詳細は Artifacts としてダウンロードできます。
+
+1. 「Actions」タブで対象のワークフロー実行をクリックします
+2. ページ下部の「Artifacts」セクションに `backend-test-report` と `frontend-test-report` が表示されます
+3. クリックしてダウンロードし、zip を展開します
+4. `backend-test-report/index.html` をブラウザで開くと、テストケースごとの合否と失敗時のスタックトレースを確認できます
+
+---
+
+### 10.5 CI が失敗した場合の対処
+
+**ログの確認**
+
+1. 「Actions」タブ → 失敗したワークフロー実行をクリックします
+2. 失敗したジョブ（`backend` または `frontend`）をクリックします
+3. 失敗したステップを展開するとエラーメッセージが確認できます
+
+**よくある失敗原因**
+
+| 症状 | 原因 | 対処 |
+|---|---|---|
+| `gradlew: Permission denied` | gradlew に実行権限がない | `git update-index --chmod=+x apps/backend/gradlew` を実行してコミット |
+| `npm ci` 失敗 | `package-lock.json` がコミットされていない | `apps/frontend/package-lock.json` をコミットする |
+| `Could not find class ...` | テストクラスのパッケージ名が変わった | ワークフローの `--tests` 引数のクラス名を修正する |
+| バックエンドのコンパイルエラー | 本番コードに構文エラーがある | エラーメッセージを元にコードを修正する |
+
+---
+
+## 11. RDS 移行手順
 
 試用期間終了後に PostgreSQL を RDS へ切り替える手順です。  
 アプリケーションコードの変更は不要で、接続先の設定変更だけで移行できます。
 
-### 10.1 RDS インスタンスの作成
+### 11.1 RDS インスタンスの作成
 
 1. AWS マネジメントコンソールで「RDS」を開きます
 2. 「データベースの作成」をクリックします
@@ -639,7 +800,7 @@ RDS の「エンドポイント」をメモしておきます（例: `skilize-db
 
 ---
 
-### 10.2 データ移行
+### 11.2 データ移行
 
 EC2 上で以下を実行します。
 
@@ -658,7 +819,7 @@ psql -h <RDSエンドポイント> -U skilize -d skilize < /home/ec2-user/migrat
 
 ---
 
-### 10.3 接続先の切り替え
+### 11.3 接続先の切り替え
 
 `infra/compose/docker-compose.prod.yml` の `backend` と `ai` の接続先を RDS に変更します:
 
@@ -686,7 +847,7 @@ DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@<RDSエンドポイント>:
 
 ---
 
-### 10.4 アプリの再起動と確認
+### 11.4 アプリの再起動と確認
 
 ```bash
 docker compose down
@@ -698,12 +859,12 @@ docker compose up -d
 
 ---
 
-## 11. Elastic IP を使用しない場合の手順（試用期間向け）
+## 12. Elastic IP を使用しない場合の手順（試用期間向け）
 
 試用期間中はコスト削減のため Elastic IP を取得しません。  
 EC2 インスタンスを停止・起動するたびにパブリック IP アドレスが変わるため、起動のたびに以下の手順で設定を更新してください。
 
-### 11.1 初回セットアップ時の読み替え
+### 12.1 初回セットアップ時の読み替え
 
 「
 
@@ -713,7 +874,7 @@ EC2 インスタンス一覧の「パブリック IPv4 アドレス」（例: `1
 
 ---
 
-### 11.2 インスタンス停止・起動後の再設定手順
+### 12.2 インスタンス停止・起動後の再設定手順
 
 **手順 1: 新しいパブリック IP を確認する**
 
@@ -792,7 +953,7 @@ curl http://localhost/api/health
 
 ---
 
-### 11.3 停止・起動後の再設定チェックリスト
+### 12.3 停止・起動後の再設定チェックリスト
 
 
 | 対象                       | 対応内容                             | 備考                         |
@@ -807,7 +968,7 @@ curl http://localhost/api/health
 
 ---
 
-## 12. 運用手順
+## 13. 運用手順
 
 ### アプリケーションの停止・再起動
 
@@ -915,7 +1076,7 @@ docker image prune -f
 
 ---
 
-## 13. トラブルシューティング
+## 14. トラブルシューティング
 
 ### バックエンドが起動しない
 
