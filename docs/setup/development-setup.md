@@ -5,13 +5,17 @@
 1. [必要なツールのインストール](#1-必要なツールのインストール)
    - [Git](#11-git)
    - [Docker Desktop](#12-docker-desktop)
-   - [JDK 21（IntelliJ デバッグ実行時のみ）](#13-jdk-21intellij-デバッグ実行時のみ)
-   - [Node.js（IntelliJ デバッグ実行時のみ）](#14-nodejsintelliJ-デバッグ実行時のみ)
+   - [JDK 21（IDE デバッグ実行時のみ）](#13-jdk-21ide-デバッグ実行時のみ)
+   - [Node.js（IDE デバッグ実行時のみ）](#14-nodejside-デバッグ実行時のみ)
+   - [IDE のインストール](#15-ide-のインストール)
 2. [リポジトリのクローン](#2-リポジトリのクローン)
 3. [環境変数の設定](#3-環境変数の設定)
 4. [起動方法](#4-起動方法)
    - [A. Docker 一括起動（推奨）](#a-docker-一括起動推奨)
    - [B. IntelliJ + ローカル起動（デバッグ向け）](#b-intellij--ローカル起動デバッグ向け)
+   - [C. VSCode + ローカル起動（デバッグ向け）](#c-vscode--ローカル起動デバッグ向け)
+   - [D. Cursor + ローカル起動（デバッグ向け）](#d-cursor--ローカル起動デバッグ向け)
+   - [E. Eclipse + ローカル起動（デバッグ向け）](#e-eclipse--ローカル起動デバッグ向け)
 5. [動作確認](#5-動作確認)
 6. [テストユーザー](#6-テストユーザー)
 7. [よく使うコマンド](#7-よく使うコマンド)
@@ -102,9 +106,9 @@ docker compose version
 
 ---
 
-### 1.3 JDK 21（IntelliJ デバッグ実行時のみ）
+### 1.3 JDK 21（IDE デバッグ実行時のみ）
 
-バックエンド（Spring Boot）をローカルで直接実行する場合に必要です。  
+バックエンド（Spring Boot）を IDE でローカル実行する場合に必要です。  
 Docker 一括起動（方法 A）のみ使う場合はインストール不要です。
 
 **Windows / Mac 共通**
@@ -128,7 +132,7 @@ java --version
 
 ---
 
-### 1.4 Node.js（IntelliJ デバッグ実行時のみ）
+### 1.4 Node.js（IDE デバッグ実行時のみ）
 
 フロントエンド（React）をローカルで直接実行する場合に必要です。  
 Docker 一括起動（方法 A）のみ使う場合はインストール不要です。
@@ -152,6 +156,49 @@ node --version
 npm --version
 # 10.x.x 以上と表示されれば OK
 ```
+
+---
+
+### 1.5 IDE のインストール
+
+IDE（統合開発環境）はいずれか 1 つをインストールしてください。
+
+#### IntelliJ IDEA
+
+1. [jetbrains.com/idea/download](https://www.jetbrains.com/idea/download/) からダウンロードします
+2. **Community Edition（無料）** または **Ultimate Edition（有料）** を選択してインストールします
+
+> Spring Boot プロジェクトのデバッグは Community Edition でも可能です。
+
+#### VSCode
+
+1. [code.visualstudio.com](https://code.visualstudio.com/) からダウンロードしてインストールします
+2. 起動後、以下の拡張機能をインストールします（拡張機能パネル `Ctrl+Shift+X` / `Cmd+Shift+X` から検索）
+
+   | 拡張機能名 | 提供元 | 用途 |
+   |---|---|---|
+   | Extension Pack for Java | Microsoft | Java 実行・デバッグ・補完 |
+   | Spring Boot Extension Pack | VMware | Spring Boot デバッグ補助・Dashboard |
+   | Gradle for Java | Microsoft | Gradle プロジェクトサポート |
+   | ESLint | Microsoft | フロントエンドコード品質チェック |
+
+#### Cursor
+
+1. [cursor.com](https://www.cursor.com/) からダウンロードしてインストールします
+2. Cursor は VSCode をベースとしているため **VSCode と同じ拡張機能**が使えます
+3. 上記 VSCode と同じ拡張機能をインストールします
+
+> **Cursor の設定は VSCode と共通**です。以降の「C. VSCode + ローカル起動」の手順をそのまま適用できます。
+
+#### Eclipse
+
+1. [eclipse.org/downloads](https://www.eclipse.org/downloads/) から **Eclipse IDE for Enterprise Java and Web Developers** をダウンロードしてインストールします
+2. 起動後、Spring Tools プラグインをインストールします
+   - 「Help」→「Eclipse Marketplace...」を開きます
+   - 「Spring Tools 4」で検索し、**Spring Tools 4 (aka Spring Tool Suite 4)** をインストールします
+   - インストール後、Eclipse を再起動します
+
+> Spring Tools 4 を入れることで、Spring Boot アプリを Eclipse から直接起動・デバッグできるようになります。
 
 ---
 
@@ -336,9 +383,29 @@ SPRING_PROFILES_ACTIVE=local
 > `SPRING_PROFILES_ACTIVE=local` にすることで `application-local.yml` が有効になり、Flyway（DB マイグレーションツール）が無効化されます。  
 > ローカル環境では `scripts/db/init.sql` でスキーマを初期化しているため Flyway は不要です。
 
-6. 「OK」で保存し、「▶ Run」または「🐛 Debug」で起動します
+6. 「OK」で保存します
 
-#### ステップ 3: フロントエンドをローカル起動
+#### ステップ 3: デバッグ実行
+
+「🐛 Debug」ボタン（または `Shift+F9`）でバックエンドを起動します。
+
+#### ステップ 4: ブレークポイントの使い方
+
+1. デバッグしたい Java ファイルを開きます
+2. 行番号の左側の余白をクリックすると **赤い丸（ブレークポイント）** が表示されます
+3. ブラウザや API クライアントから対象の処理を呼び出すと、ブレークポイントで実行が一時停止します
+4. 停止中は以下の操作ができます:
+
+   | 操作 | ショートカット | 説明 |
+   |---|---|---|
+   | 再開 | `F9` | 次のブレークポイントまで実行を続ける |
+   | ステップオーバー | `F8` | 現在の行を実行して次の行へ（メソッド内部には入らない） |
+   | ステップイン | `F7` | 現在の行のメソッド内部に入る |
+   | ステップアウト | `Shift+F8` | 現在のメソッドを抜けて呼び出し元へ戻る |
+
+5. 「Variables」パネルで現在のローカル変数の値を確認できます
+
+#### ステップ 5: フロントエンドをローカル起動
 
 ```bash
 cd apps/frontend
@@ -351,6 +418,232 @@ Vite の設定により、`/api` へのリクエストは自動的に `localhost
 
 ---
 
+### C. VSCode + ローカル起動（デバッグ向け）
+
+VSCode で Java のブレークポイントデバッグと TypeScript のソースマップデバッグの両方が使えます。  
+JDK 21・Node.js・VSCode（拡張機能インストール済み）が必要です。
+
+#### ステップ 1: DB コンテナのみ起動
+
+```bash
+docker compose up db
+```
+
+#### ステップ 2: VSCode でプロジェクトを開く
+
+プロジェクトルート（`skilize/`）を VSCode で開きます。
+
+```bash
+code .
+```
+
+初回起動時に Java Extension Pack が `apps/backend` を Gradle プロジェクトとして自動認識します。  
+右下に「Building workspace...」と表示されている間は認識処理中です（1〜2 分）。
+
+#### ステップ 3: launch.json の確認
+
+リポジトリには `.vscode/launch.json` が同梱されており、バックエンド・フロントエンド両方のデバッグ設定が含まれています。  
+追加の設定変更は不要です。
+
+<details>
+<summary>launch.json の内容（参考）</summary>
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "SkilizeBackend (Debug)",
+            "request": "launch",
+            "mainClass": "com.skilize.BackendApplication",
+            "projectName": "backend",
+            "env": {
+                "SPRING_DATASOURCE_URL": "jdbc:postgresql://localhost:5433/skilize",
+                "SPRING_DATASOURCE_USERNAME": "skilize",
+                "SPRING_DATASOURCE_PASSWORD": "password",
+                "JWT_SECRET": "change-this-to-a-random-256-bit-secret-key-before-use",
+                "AI_ENABLED": "false",
+                "AI_SECRET_KEY": "local-secret",
+                "SPRING_PROFILES_ACTIVE": "local"
+            }
+        },
+        {
+            "type": "chrome",
+            "name": "SkilizeFrontend (Debug)",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/apps/frontend/src",
+            "sourceMapPathOverrides": {
+                "/@fs/*": "${workspaceFolder}/*"
+            }
+        }
+    ]
+}
+```
+
+</details>
+
+#### ステップ 4: バックエンドのデバッグ起動
+
+1. サイドバーの「実行とデバッグ」パネルを開きます（`Ctrl+Shift+D` / `Cmd+Shift+D`）
+2. 上部のドロップダウンから **「SkilizeBackend (Debug)」** を選択します
+3. 「▶ デバッグの開始」（`F5`）をクリックします
+4. デバッグコンソールに `Started BackendApplication` が表示されれば起動完了です
+
+#### ステップ 5: バックエンドのブレークポイントの使い方
+
+1. デバッグしたい Java ファイルを開きます
+2. 行番号の左側の余白をクリックすると **赤い丸（ブレークポイント）** が表示されます
+3. ブラウザから対象の処理を呼び出すと、ブレークポイントで実行が一時停止します
+4. 停止中は以下の操作ができます:
+
+   | 操作 | ショートカット | 説明 |
+   |---|---|---|
+   | 再開 | `F5` | 次のブレークポイントまで実行を続ける |
+   | ステップオーバー | `F10` | 現在の行を実行して次の行へ（メソッド内部には入らない） |
+   | ステップイン | `F11` | 現在の行のメソッド内部に入る |
+   | ステップアウト | `Shift+F11` | 現在のメソッドを抜けて呼び出し元へ戻る |
+
+5. 「変数」パネルで現在の変数の値を確認できます
+
+#### ステップ 6: フロントエンドの起動とデバッグ
+
+ターミナルで開発サーバーを起動します:
+
+```bash
+cd apps/frontend
+npm install      # 初回のみ
+npm run dev
+```
+
+フロントエンドのブレークポイントデバッグ（`.tsx` / `.ts` ファイル）を使う場合:
+
+1. Vite 開発サーバーが `http://localhost:5173` で起動している状態にします
+2. 「実行とデバッグ」パネルで **「SkilizeFrontend (Debug)」** を選択して `F5` を押します
+3. Chrome が自動的に開きます
+4. VSCode で `.tsx` / `.ts` ファイルの行番号左をクリックしてブレークポイントを設定します
+5. ブラウザで操作すると VSCode 側でブレークポイントに停止します
+
+> **注意**: フロントエンドデバッグには Chrome がインストールされている必要があります。  
+> Chrome の代わりに Edge を使う場合は、`launch.json` の `"type": "chrome"` を `"type": "msedge"` に変更してください。
+
+---
+
+### D. Cursor + ローカル起動（デバッグ向け）
+
+Cursor は VSCode をベースとしているため、**起動・デバッグの手順は VSCode と同一**です。  
+上記「[C. VSCode + ローカル起動（デバッグ向け）](#c-vscode--ローカル起動デバッグ向け)」をそのまま適用してください。
+
+**Cursor 固有の補足**:
+
+- `.vscode/launch.json` は Cursor でも同じように機能します（フォルダ名 `.vscode` のままで動作します）
+- Cursor の AI 機能（Cmd+K や Cmd+L）を使ってコードの説明や修正の提案を受けながらデバッグすることができます
+
+---
+
+### E. Eclipse + ローカル起動（デバッグ向け）
+
+Eclipse でバックエンドのブレークポイントデバッグができます。  
+フロントエンドのデバッグは Eclipse では非対応のため、ブラウザの DevTools を使います。
+
+JDK 21・Node.js・Eclipse（Spring Tools 4 インストール済み）が必要です。
+
+#### ステップ 1: DB コンテナのみ起動
+
+```bash
+docker compose up db
+```
+
+#### ステップ 2: プロジェクトのインポート
+
+1. Eclipse を起動します
+2. 「File」→「Import...」→「Gradle」→「Existing Gradle Project」を選択します
+3. 「Project root directory」に `apps/backend` のパスを指定します
+
+   | OS | 例 |
+   |---|---|
+   | Windows | `C:\git\skilize\apps\backend` |
+   | Mac | `/Users/yourname/git/skilize/apps/backend` |
+
+4. 「Finish」をクリックします
+5. Gradle のビルドが完了するまで待ちます（右下のステータスバーで進捗確認）
+
+#### ステップ 3: 実行構成に環境変数を設定
+
+1. 「Run」→「Debug Configurations...」を開きます
+2. 左側の「Spring Boot App」を展開し、`BackendApplication` を選択します  
+   （表示されない場合は「Spring Boot App」を右クリック →「New Configuration」で作成します）
+3. 「Arguments」タブ → 「VM arguments」に以下を入力します（**1行ずつ**）:
+
+   ```
+   -DSPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/skilize
+   -DSPRING_DATASOURCE_USERNAME=skilize
+   -DSPRING_DATASOURCE_PASSWORD=password
+   -DJWT_SECRET=change-this-to-a-random-256-bit-secret-key-before-use
+   -DAI_ENABLED=false
+   -DAI_SECRET_KEY=local-secret
+   -DSPRING_PROFILES_ACTIVE=local
+   ```
+
+   または「Environment」タブから Key/Value 形式で設定することもできます:
+
+   | Key | Value |
+   |---|---|
+   | `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5433/skilize` |
+   | `SPRING_DATASOURCE_USERNAME` | `skilize` |
+   | `SPRING_DATASOURCE_PASSWORD` | `password` |
+   | `JWT_SECRET` | `change-this-to-a-random-256-bit-secret-key-before-use` |
+   | `AI_ENABLED` | `false` |
+   | `AI_SECRET_KEY` | `local-secret` |
+   | `SPRING_PROFILES_ACTIVE` | `local` |
+
+4. 「Apply」→「Debug」をクリックします
+
+#### ステップ 4: バックエンドのブレークポイントの使い方
+
+1. デバッグしたい Java ファイルを Package Explorer からダブルクリックで開きます
+2. 行番号の左側の余白を **ダブルクリック** すると **青い丸（ブレークポイント）** が表示されます  
+   （右クリック →「Toggle Breakpoint」でも設定できます）
+3. ブラウザから対象の処理を呼び出すと、「Confirm Perspective Switch」ダイアログが表示されます  
+   → 「Switch」を選択すると Debug パースペクティブに切り替わり、ブレークポイントで停止します
+4. 停止中は以下の操作ができます:
+
+   | 操作 | ショートカット | 説明 |
+   |---|---|---|
+   | 再開 | `F8` | 次のブレークポイントまで実行を続ける |
+   | ステップオーバー | `F6` | 現在の行を実行して次の行へ（メソッド内部には入らない） |
+   | ステップイン | `F5` | 現在の行のメソッド内部に入る |
+   | ステップアウト | `F7` | 現在のメソッドを抜けて呼び出し元へ戻る |
+
+5. 「Variables」ビューで現在の変数の値を確認できます
+6. 「Expressions」ビューに式を入力すると任意の値を評価できます
+
+#### ステップ 5: フロントエンドの起動
+
+ターミナルで開発サーバーを起動します:
+
+```bash
+cd apps/frontend
+npm install      # 初回のみ
+npm run dev
+```
+
+`http://localhost:5173` でアクセスできます。
+
+#### フロントエンドのデバッグ（ブラウザ DevTools）
+
+Eclipse にはフロントエンドデバッガーがないため、ブラウザの DevTools を使います。
+
+1. `http://localhost:5173` を Chrome / Edge で開きます
+2. `F12` キーで DevTools を開きます
+3. 「Sources」タブ → 左側ツリーから `src/` 以下の `.tsx` / `.ts` ファイルを開きます  
+   （Vite がソースマップを出力しているため、ビルド前のコードがそのまま表示されます）
+4. 行番号をクリックしてブレークポイントを設定します
+5. ブラウザで操作すると DevTools 側でブレークポイントに停止します
+
+---
+
 ## 5. 動作確認
 
 ### アクセス先
@@ -358,7 +651,7 @@ Vite の設定により、`/api` へのリクエストは自動的に `localhost
 | 方法 | URL | 説明 |
 |---|---|---|
 | Docker 一括起動（A） | http://localhost:8081 | nginx 経由（本番に近い構成） |
-| IntelliJ + ローカル（B） | http://localhost:5173 | Vite 直接（コード変更が即反映される） |
+| IDE + ローカル（B〜E） | http://localhost:5173 | Vite 直接（コード変更が即反映される） |
 | バックエンド API 直接 | http://localhost:8080/api/health | `{"status":"ok"}` が返れば正常 |
 
 ### 確認手順
@@ -418,7 +711,7 @@ docker compose down -v   # ボリューム（DB のデータ）ごと削除
 docker compose up db     # DB コンテナを起動（init.sql が自動実行される）
 ```
 
-### フロントエンド（B 方法・ローカル直接起動時）
+### フロントエンド（B〜E 方法・ローカル直接起動時）
 
 ```bash
 cd apps/frontend
@@ -469,7 +762,7 @@ docker compose ps
 docker compose logs -f backend   # "Started BackendApplication" が出るまで待つ
 ```
 
-- **ローカル起動（B 方法）の場合**: IntelliJ でバックエンドが起動しているか確認します（ポート 8080）
+- **ローカル起動（B〜E 方法）の場合**: IDE でバックエンドが起動しているか確認します（ポート 8080）
 
 ---
 
@@ -526,3 +819,26 @@ node --version   # v20 以上であることを確認
 2. 「File」→「Project Structure」→「SDKs」で JDK 21 が登録されているか
 3. 登録されていない場合は「+」→「JDK の追加」でインストール先フォルダを指定します  
    （例: Mac は `/Library/Java/JavaVirtualMachines/temurin-21.jdk/Contents/Home`）
+
+---
+
+### VSCode でバックエンドが起動しない（Java プロジェクト認識エラー）
+
+**症状**: 「SkilizeBackend (Debug)」を実行すると `Build failed` や `Project not found` エラーが出る
+
+**対処**:
+1. `Ctrl+Shift+P` / `Cmd+Shift+P` でコマンドパレットを開き、「Java: Clean Java Language Server Workspace」を実行します
+2. VSCode を再起動します
+3. 右下に「Building workspace...」が表示されなくなるまで待ちます（1〜2 分）
+4. 再度デバッグを実行します
+
+---
+
+### Eclipse でブレークポイントに止まらない
+
+**症状**: ブレークポイントを設定しても、処理を呼び出しても停止しない
+
+**対処**:
+1. 「Debug As」→「Spring Boot App」（または「Java Application」）で起動しているか確認します  
+   （「Run As」で起動するとデバッグモードにならず、ブレークポイントが無効になります）
+2. ブレークポイントのアイコンに「×」マークが付いている場合は、コードが変更されてビルドが追いついていない状態です。「Project」→「Build All」（`Ctrl+B`）を実行してから再試行してください

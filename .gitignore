@@ -20,6 +20,7 @@ build/
 .idea/
 *.iml
 .vscode/
+!.vscode/launch.json.example
 
 # OS
 .DS_Store
