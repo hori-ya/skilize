@@ -19,7 +19,7 @@ build/
 # IDE
 .idea/
 *.iml
-.vscode/
+.vscode/*
 !.vscode/launch.json.example
 
 # OS

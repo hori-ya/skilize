@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "java",
+            "name": "SkilizeBackend (Debug)",
+            "request": "launch",
+            "mainClass": "com.skilize.BackendApplication",
+            "projectName": "backend",
+            "env": {
+                "SPRING_DATASOURCE_URL": "jdbc:postgresql://localhost:5433/skilize",
+                "SPRING_DATASOURCE_USERNAME": "skilize",
+                "SPRING_DATASOURCE_PASSWORD": "password",
+                "JWT_SECRET": "change-this-to-a-random-256-bit-secret-key-before-use",
+                "AI_ENABLED": "false",
+                "AI_SECRET_KEY": "local-secret",
+                "SPRING_PROFILES_ACTIVE": "local"
+            }
+        },
+        {
+            "type": "chrome",
+            "name": "SkilizeFrontend (Debug)",
+            "request": "launch",
+            "url": "http://localhost:5173",
+            "webRoot": "${workspaceFolder}/apps/frontend/src",
+            "sourceMapPathOverrides": {
+                "/@fs/*": "${workspaceFolder}/*"
+            }
+        }
+    ]
+}
