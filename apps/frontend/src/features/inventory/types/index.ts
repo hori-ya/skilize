@@ -63,7 +63,7 @@ export interface ComparisonItem {
   itSkillId: number | null;
   skillName: string;
   currentDetailId: number;
-  currentLevelValue: number;
+  currentLevelValue: number | null;
   currentRemarks: string | null;
   prevLevelValue: number | null;
   diff: number | null;

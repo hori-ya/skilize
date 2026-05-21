@@ -90,13 +90,15 @@ export default function ComparisonPage() {
   const changedItems = comparison.items.filter(i => i.diff !== null && i.diff !== 0);
   const changedWithNoRemarks = changedItems.filter(i => !editingRemarks[i.currentDetailId]);
 
-  const renderRow = (item: ComparisonItem) => (
+  const renderRow = (item: ComparisonItem) => {
+    const isCustom = item.itSkillId === null;
+    return (
     <tr key={item.currentDetailId} className={item.diff !== 0 && item.diff !== null ? 'changed-row' : ''}>
       <td>{item.skillName}</td>
       <td>{item.prevLevelValue ?? '—'}</td>
-      <td>{item.currentLevelValue}</td>
-      <td className={`diff-cell${item.diff != null && item.diff > 0 ? ' diff-up' : item.diff != null && item.diff < 0 ? ' diff-down' : ''}`}>
-        {item.diff != null ? (item.diff > 0 ? `+${item.diff}` : item.diff) : '—'}
+      <td>{isCustom ? '—' : item.currentLevelValue}</td>
+      <td className={`diff-cell${isCustom ? ' diff-new' : item.diff != null && item.diff > 0 ? ' diff-up' : item.diff != null && item.diff < 0 ? ' diff-down' : ''}`}>
+        {isCustom ? t('comparisonPage.diffNew') : item.diff != null ? (item.diff > 0 ? `+${item.diff}` : item.diff) : '—'}
       </td>
       <td>
         <textarea
@@ -120,6 +122,7 @@ export default function ComparisonPage() {
       </td>
     </tr>
   );
+  };
 
   return (
     <div className="comparison-page">

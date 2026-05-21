@@ -115,7 +115,8 @@
       "remarks": "備考",
       "changeRemarksPlaceholder": "変化の理由を記入（任意）"
     },
-    "customSkillLabel": "カスタムスキル ※"
+    "customSkillLabel": "カスタムスキル ※",
+    "diffNew": "新規"
   },
   "goalReviewPage": {
     "backButton": "← 前年度比較に戻る",

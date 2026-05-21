@@ -402,9 +402,11 @@ export default function MemberDetailPage() {
       });
       if (filtered.length > 0) filteredGroups.set(cat1, filtered);
     }
-    const filteredCustom = itSkillCategory1Filter ? [] : itSkillTree.customItems.filter(item =>
-      !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
-    );
+    const filteredCustom = itSkillCategory1Filter || itSkillDiffFilter === 'up' || itSkillDiffFilter === 'down'
+      ? []
+      : itSkillTree.customItems.filter(item =>
+          !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
+        );
     return { groups: filteredGroups, customItems: filteredCustom };
   }, [itSkillTree, itSkillSearch, itSkillCategory1Filter, itSkillDiffFilter, comparisonMap]);
 
@@ -680,7 +682,11 @@ export default function MemberDetailPage() {
                                       <td>{detail.customSkillName} ※</td>
                                       {hasPrevYear && <td>—</td>}
                                       <td>—</td>
-                                      {hasPrevYear && <td>—</td>}
+                                      {hasPrevYear && (
+                                        <td className="diff-cell">
+                                          <DiffCell diff={null} hasPrevYear={hasPrevYear} />
+                                        </td>
+                                      )}
                                       <td>{detail.remarks || '—'}</td>
                                       {isTlOrAdmin && renderDetailNoteCell('IT_SKILL', detail.id)}
                                     </tr>

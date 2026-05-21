@@ -191,8 +191,10 @@ public class InventoryService {
                 .collect(Collectors.toMap(d -> d.getItSkill().getId(), d -> d));
 
         List<ComparisonItem> items = currentDetails.stream()
-                .filter(d -> d.getItSkill() != null)
                 .map(d -> {
+                    if (d.getItSkill() == null) {
+                        return new ComparisonItem(null, d.getCustomSkillName(), d.getId(), null, d.getRemarks(), null, null);
+                    }
                     ItSkillDetail prev = prevBySkillId.get(d.getItSkill().getId());
                     Short currentLv = d.getSkillLevel().getLevelValue();
                     Short prevLv = prev != null ? prev.getSkillLevel().getLevelValue() : null;
