@@ -23,6 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * スキル棚卸のビジネスロジック。
+ * 棚卸ヘッダー・ITスキル/資格/セミナー明細・目標・前年比較・目標振り返りを管理する。
+ * 明細の更新は全件洗い替え（deleteBy〜 → saveAll）で行う。
+ * checkOwnership() で本人・TL・ADMIN のみが棚卸にアクセスできるよう制御する。
+ */
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -42,11 +48,13 @@ public class InventoryService {
 
     // --- Inventory header ---
 
+    /** 指定ユーザーの棚卸一覧を年度情報付きで返す（年度降順）。 */
     @Transactional(readOnly = true)
     public List<Inventory> findMine(int userId) {
         return inventoryRepository.findByUserIdWithFiscalYear(userId);
     }
 
+    /** 棚卸を新規作成する。同年度に既存棚卸がある場合は 409 CONFLICT をスローする。 */
     @Transactional
     public Inventory create(User user, int fiscalYearId) {
         fiscalYearRepository.findById(fiscalYearId)
@@ -58,6 +66,7 @@ public class InventoryService {
         return inventoryRepository.save(Inventory.create(user, fy));
     }
 
+    /** 棚卸を ID で取得し、所有権チェックを行う。 */
     @Transactional(readOnly = true)
     public Inventory findById(int id, User user) {
         Inventory inv = inventoryRepository.findByIdWithAssociations(id)
@@ -68,6 +77,10 @@ public class InventoryService {
 
     // --- IT Skill details ---
 
+    /**
+     * ITスキル明細を全件洗い替えで保存する。
+     * 既存の明細を全削除してから新規 INSERT するため、エラー時はトランザクション rollback により整合性を保つ。
+     */
     @Transactional
     public List<ItSkillDetail> saveItSkillDetails(int inventoryId, User user,
                                                    List<ItSkillDetailCommand> commands) {
@@ -86,12 +99,17 @@ public class InventoryService {
         return itSkillDetailRepository.findByInventoryId(inventoryId);
     }
 
+    /** 棚卸のITスキル明細一覧を返す。 */
     @Transactional(readOnly = true)
     public List<ItSkillDetail> findItSkillDetails(int inventoryId, User user) {
         findById(inventoryId, user);
         return itSkillDetailRepository.findByInventoryId(inventoryId);
     }
 
+    /**
+     * ITスキル明細の備考のみを更新する。
+     * 明細が指定棚卸に属するかを確認し、他の棚卸の明細へのアクセスは 403 を返す。
+     */
     @Transactional
     public ItSkillDetail updateItSkillDetailRemarks(int inventoryId, int detailId, User user, String remarks) {
         findById(inventoryId, user);
@@ -106,6 +124,7 @@ public class InventoryService {
 
     // --- Qualification details ---
 
+    /** 資格明細を全件洗い替えで保存する。取得年月は "yyyy-MM-dd" 形式の文字列を LocalDate に変換する。 */
     @Transactional
     public List<QualificationDetail> saveQualificationDetails(int inventoryId, User user,
                                                                List<QualificationDetailCommand> commands) {
@@ -123,6 +142,7 @@ public class InventoryService {
         return qualificationDetailRepository.findByInventoryId(inventoryId);
     }
 
+    /** 棚卸の資格明細一覧を返す。 */
     @Transactional(readOnly = true)
     public List<QualificationDetail> findQualificationDetails(int inventoryId, User user) {
         findById(inventoryId, user);
@@ -131,6 +151,10 @@ public class InventoryService {
 
     // --- Seminar details ---
 
+    /**
+     * セミナー明細を全件洗い替えで保存する。
+     * ADセミナーが指定されている場合はセミナー分類を無視する（AD明細にカテゴリは不要）。
+     */
     @Transactional
     public List<SeminarDetail> saveSeminarDetails(int inventoryId, User user,
                                                    List<SeminarDetailCommand> commands) {
@@ -151,6 +175,7 @@ public class InventoryService {
         return seminarDetailRepository.findByInventoryId(inventoryId);
     }
 
+    /** 棚卸のセミナー明細一覧を返す。 */
     @Transactional(readOnly = true)
     public List<SeminarDetail> findSeminarDetails(int inventoryId, User user) {
         findById(inventoryId, user);
@@ -159,6 +184,7 @@ public class InventoryService {
 
     // --- Submit ---
 
+    /** 棚卸を提出する。ステータスが PENDING_GOAL に遷移する。 */
     @Transactional
     public Inventory submit(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -168,6 +194,12 @@ public class InventoryService {
 
     // --- Comparison ---
 
+    /**
+     * 今年度と前年度のITスキルレベル差分を計算して返す。
+     * 前年度棚卸は今年度の startDate より以前に終了した棚卸を検索する。
+     * 同一マスタスキルがある場合のみ差分（diff = 今年度レベル − 前年度レベル）を計算する。
+     * カスタムスキルはマスタと紐付かないため差分計算の対象外（diff=null）。
+     */
     @Transactional(readOnly = true)
     public ComparisonQueryResult getComparison(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -210,6 +242,10 @@ public class InventoryService {
 
     // --- Goal review ---
 
+    /**
+     * 前年度の目標一覧と各目標への達成状況・振り返りメモを返す。
+     * 前年度棚卸が存在しない場合は空レスポンスを返す（404 にはしない）。
+     */
     @Transactional(readOnly = true)
     public GoalReviewQueryResult getGoalReview(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -238,6 +274,7 @@ public class InventoryService {
         return new GoalReviewQueryResult(prevInv.getFiscalYear().getName(), !items.isEmpty(), items);
     }
 
+    /** 前年度の目標に達成状況・振り返りメモを保存する。 */
     @Transactional
     public GoalReviewQueryResult saveGoalReview(int inventoryId, User user,
                                                 List<GoalReviewUpdateCommand> commands) {
@@ -253,6 +290,7 @@ public class InventoryService {
         return getGoalReview(inventoryId, user);
     }
 
+    /** 目標振り返りを完了させる（goal_review_completed_at を設定）。 */
     @Transactional
     public Inventory completeGoalReview(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -262,12 +300,14 @@ public class InventoryService {
 
     // --- Goals ---
 
+    /** 今年度の目標一覧を返す。 */
     @Transactional(readOnly = true)
     public List<InventoryGoal> findGoals(int inventoryId, User user) {
         findById(inventoryId, user);
         return inventoryGoalRepository.findByInventoryId(inventoryId);
     }
 
+    /** 目標を全件洗い替えで保存する。目標期間は "yyyy-MM-dd" 形式の文字列を LocalDate に変換する。 */
     @Transactional
     public List<InventoryGoal> saveGoals(int inventoryId, User user, List<GoalCommand> commands) {
         Inventory inv = findById(inventoryId, user);
@@ -287,6 +327,12 @@ public class InventoryService {
         return inventoryGoalRepository.findByInventoryId(inventoryId);
     }
 
+    /**
+     * 目標設定を完了させる。
+     * 完了条件: ITスキル/資格カテゴリの目標が1件以上 かつ AD カテゴリの目標が2件以上。
+     * 条件未達の場合は GoalIncompleteException をスローする（フロントエンドが項目別エラーを表示）。
+     * 完了後に InventoryCompletedEvent を発行し、AI 分析を非同期でトリガーする。
+     */
     @Transactional
     public Inventory completeGoal(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
@@ -313,6 +359,11 @@ public class InventoryService {
         return saved;
     }
 
+    /**
+     * 棚卸の所有権チェック。
+     * 本人（棚卸の user_id と一致）は常に許可。TL/ADMIN は他ユーザーの棚卸も参照可。
+     * GENERAL ロールが他ユーザーの棚卸にアクセスした場合は 403 をスローする。
+     */
     private void checkOwnership(Inventory inv, User user) {
         if (!inv.getUser().getId().equals(user.getId())) {
             String role = user.getRole().name();
@@ -322,6 +373,7 @@ public class InventoryService {
         }
     }
 
+    /** 目標名称を参照先の優先順位（ITスキル → 資格 → ADセミナー → カスタム名）で解決して返す。 */
     private String resolveGoalName(InventoryGoal g) {
         if (g.getItSkill() != null) return g.getItSkill().getName();
         if (g.getQualification() != null) return g.getQualification().getName();

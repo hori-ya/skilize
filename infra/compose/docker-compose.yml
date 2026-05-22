@@ -20,11 +20,13 @@ services:
 
   backend:
     build:
-      context: ../docker/backend
+      context: ../..
+      dockerfile: infra/docker/backend/Dockerfile
       args:
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
     volumes:
       - ../../apps/backend:/app
       - gradle_cache:/root/.gradle
@@ -53,9 +55,11 @@ services:
       context: ../..
       dockerfile: infra/docker/frontend/Dockerfile
       args:
+        NODE_VERSION: ${NODE_VERSION:-20}
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
     volumes:
       - ../../apps/frontend:/app
       - node_modules:/app/node_modules
@@ -72,6 +76,7 @@ services:
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
       AI_SECRET_KEY: ${AI_SECRET_KEY}

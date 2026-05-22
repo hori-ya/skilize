@@ -10,7 +10,7 @@
    - [IDE のインストール](#15-ide-のインストール)
 2. [リポジトリのクローン](#2-リポジトリのクローン)
 3. [環境変数の設定](#3-環境変数の設定)
-4. [社内プロキシ環境での設定](#4-社内プロキシ環境での設定)
+4. [社内プロキシ環境での設定](#4-社内プロキシ環境での設定)（プロキシ・CA 証明書・npm）
 5. [起動方法](#5-起動方法)
    - [A. Docker 一括起動（推奨）](#a-docker-一括起動推奨)
    - [B. IntelliJ + ローカル起動（デバッグ向け）](#b-intellij--ローカル起動デバッグ向け)
@@ -138,6 +138,37 @@ java --version
 フロントエンド（React）をローカルで直接実行する場合に必要です。  
 Docker 一括起動（方法 A）のみ使う場合はインストール不要です。
 
+このプロジェクトは **Node.js 20 LTS** が必要です。  
+Vite 8・Vitest 3・jsdom 26 が Node.js 20 以上を要求するため、v18 以下では動作しません。  
+複数バージョンを管理しやすい **nvm**（バージョンマネージャー）の使用を推奨します。
+
+#### nvm を使う場合（推奨）
+
+**Mac / Linux**
+
+```bash
+# nvm のインストール（https://github.com/nvm-sh/nvm）
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.0/install.sh | bash
+
+# シェルを再起動後、Node.js のインストール
+nvm install 20   # v20 LTS をインストール
+
+# プロジェクトルートで実行すると .nvmrc のバージョン（20）が自動適用される
+nvm use
+```
+
+**Windows**
+
+1. [github.com/coreybutler/nvm-windows](https://github.com/coreybutler/nvm-windows) からインストーラーをダウンロードして実行します
+2. インストール後、以下を実行します:
+
+```powershell
+nvm install 20
+nvm use 20
+```
+
+#### nvm を使わない場合
+
 **Windows**
 
 1. [nodejs.org](https://nodejs.org/en) にアクセスし、**LTS 版**（推奨版）をダウンロードしてインストールします
@@ -145,7 +176,7 @@ Docker 一括起動（方法 A）のみ使う場合はインストール不要�
 **Mac**
 
 ```bash
-brew install node
+brew install node@20
 ```
 
 **確認**
@@ -315,6 +346,7 @@ AI_SERVICE_URL=http://ai:8000
 | Docker ビルド（RUN コマンド） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | apk・wget・pip・npm のビルド時ダウンロード |
 | Gradle（依存関係ダウンロード） | `.env` の `JAVA_TOOL_OPTIONS` | **Java は `HTTP_PROXY` を読まない**ため専用設定が必要 |
 | npm（ビルド時 npm install） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | Dockerfile 内で自動的に npm config に変換される |
+| npm（ローカル直接起動時） | `npm config set proxy` または `~/.npmrc` | Node.js バージョンに依存しないため、v18→v20 移行後もそのまま有効 |
 | Python pip（依存関係ダウンロード） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | pip は標準プロキシ env var を参照する |
 | AI コンテナ（OpenAI / Anthropic API 呼び出し） | `.env` の `HTTP_PROXY` / `HTTPS_PROXY` | 外部 API への通信に必要 |
 | Git（クローン・プッシュ） | `git config --global` | 下記参照 |
@@ -403,7 +435,76 @@ git config --global --unset https.proxy
 
 ---
 
-### 4.6 IDE のプロキシ設定
+### 4.6 CA 証明書の設定（社内ルートCA証明書が必要な場合）
+
+社内プロキシが SSL インスペクションを行っている環境では、プロキシが独自のルートCA証明書で HTTPS 通信を再署名します。  
+この場合、Docker コンテナ内の各ランタイム（Node.js / Java / Python）でその CA 証明書を信頼させる必要があります。
+
+このプロジェクトは `CA_CERT_ENABLED=true` の設定で、社内ルートCA証明書をすべてのコンテナに自動的に組み込む仕組みを提供しています。
+
+> **プロキシが不要な環境（自宅・CA 証明書なし）では設定不要**です。`CA_CERT_ENABLED` はデフォルト `false` のため何も変更しなくて構いません。
+
+---
+
+#### ステップ 1: 証明書ファイルの配置
+
+社内ルートCA証明書を以下のパスに配置します。  
+ファイル名は `company-root-ca.cer` にしてください。
+
+```
+infra/certs/company-root-ca.cer
+```
+
+> `infra/certs/` ディレクトリは既にリポジトリに存在します。  
+> 証明書ファイルは `.gitignore` 登録済みで **Git 管理対象外**です。コミット・プッシュは行われません。
+
+---
+
+#### ステップ 2: .env の設定変更
+
+`.env` ファイルを開き、`CA_CERT_ENABLED` を `true` に変更します。
+
+```env
+CA_CERT_ENABLED=true
+```
+
+---
+
+#### ステップ 3: コンテナの再ビルド・起動
+
+設定後、コンテナを再ビルドして起動します。
+
+```bash
+docker compose up --build
+```
+
+---
+
+#### 有効化される内容
+
+| コンテナ | 信頼設定 | 説明 |
+|---|---|---|
+| frontend | OS CA バンドル + `NODE_EXTRA_CA_CERTS` | Node.js が npm registry・外部 API に HTTPS 接続できるようになる |
+| backend | OS CA バンドル + Java キーストア（`keytool`） | Gradle の依存解決・Spring Boot の外部通信が正常に行われる |
+| ai | OS CA バンドル + `REQUESTS_CA_BUNDLE` | pip・Python requests ライブラリが HTTPS 通信できるようになる |
+
+---
+
+#### 無効化する場合
+
+`.env` を元に戻してコンテナを再ビルドします。
+
+```env
+CA_CERT_ENABLED=false
+```
+
+```bash
+docker compose up --build
+```
+
+---
+
+### 4.7 IDE のプロキシ設定
 
 #### IntelliJ IDEA
 
@@ -445,6 +546,69 @@ Java 拡張機能（Gradle）のプロキシは IntelliJ と同様に `gradle.pr
 1. 「Window」→「Preferences」（Mac: 「Eclipse」→「Preferences」）を開きます
 2. 「General」→「Network Connections」を開きます
 3. 「Active Provider」を「Manual」に変更して入力します
+
+---
+
+### 4.8 npm のプロキシ設定（ローカル直接起動時）
+
+Docker 一括起動（方法 A）では `.env` の設定が自動で反映されますが、ローカル直接起動（方法 B〜E）で `npm install` や `npm run dev` を実行する際は npm に対してプロキシを手動で設定する必要があります。
+
+> **Node.js 18 → 20 に移行する場合**: npm のプロキシ設定は `~/.npmrc`（ユーザーホームディレクトリ）に保存されます。これは Node.js のバージョンに依存しないため、`nvm use 20` を実行するだけで既存の設定はそのまま有効です。追加の変更は不要です。
+
+---
+
+#### npm プロキシの設定
+
+以下のコマンドを一度実行すると `~/.npmrc` に永続保存されます。
+
+```bash
+npm config set proxy http://proxy.corp.example.com:8080
+npm config set https-proxy http://proxy.corp.example.com:8080
+npm config set noproxy localhost,127.0.0.1
+```
+
+`~/.npmrc` を直接編集しても構いません:
+
+```ini
+proxy=http://proxy.corp.example.com:8080
+https-proxy=http://proxy.corp.example.com:8080
+noproxy=localhost,127.0.0.1
+```
+
+> **認証プロキシの場合**: `http://ユーザー名:パスワード@proxy.corp.example.com:8080` の形式を使用します。  
+> パスワードに特殊文字が含まれる場合は URL エンコード（例: `@` → `%40`）が必要です。
+
+不要になった場合は以下で削除できます:
+
+```bash
+npm config delete proxy
+npm config delete https-proxy
+```
+
+---
+
+#### CA 証明書の設定（ローカル直接起動時）
+
+Docker 環境では `CA_CERT_ENABLED=true` で自動適用されますが、ローカルで npm を実行する際は `NODE_EXTRA_CA_CERTS` 環境変数で証明書を指定します。
+
+**Windows（PowerShell）**
+
+```powershell
+# 現在のセッションのみ有効
+$env:NODE_EXTRA_CA_CERTS = "C:\git\skilize\infra\certs\company-root-ca.cer"
+```
+
+永続化する場合は「システムのプロパティ」→「環境変数」→「ユーザー環境変数」に `NODE_EXTRA_CA_CERTS` を追加します。
+
+**Mac / Linux**
+
+```bash
+# 現在のセッションのみ有効
+export NODE_EXTRA_CA_CERTS=/path/to/company-root-ca.cer
+
+# 永続化（~/.zshrc または ~/.bashrc に追記）
+echo 'export NODE_EXTRA_CA_CERTS=/path/to/company-root-ca.cer' >> ~/.zshrc
+```
 
 ---
 
@@ -874,6 +1038,28 @@ npm run lint       # ESLint によるコードチェック
 
 ---
 
+### Node.js バージョンの切り替え
+
+このプロジェクトは **Node.js 20 LTS** が必要です（v18 以下では Vite 8 / Vitest 3 / jsdom 26 が動作しません）。
+
+#### ローカル直接起動（方法 B〜E）の場合
+
+プロジェクトルートに `.nvmrc` ファイル（内容: `20`）があるため、nvm を使うと自動で切り替わります。
+
+```bash
+# .nvmrc に記載のバージョン（20）に切り替える
+nvm use
+```
+
+nvm をインストールしていない場合は以下から取得してください。
+
+| OS | インストール先 |
+|---|---|
+| Mac / Linux | [github.com/nvm-sh/nvm](https://github.com/nvm-sh/nvm) |
+| Windows | [github.com/coreybutler/nvm-windows](https://github.com/coreybutler/nvm-windows) |
+
+---
+
 ## 9. トラブルシューティング
 
 ### Docker Desktop が起動していない
@@ -955,10 +1141,14 @@ docker compose logs -f ai
 **症状**: Node.js のバージョンが古くてエラーになる
 
 ```bash
-node --version   # v20 以上であることを確認
+node --version   # v20.x.x 以上であることを確認
 ```
 
-バージョンが古い場合は [nvm](https://github.com/nvm-sh/nvm)（Mac/Linux）または [nvm-windows](https://github.com/coreybutler/nvm-windows) でバージョンを切り替えてください。
+バージョンが古い場合は nvm でバージョンを切り替えてください。プロジェクトルートで以下を実行すると `.nvmrc` に基づいて v20 が自動的に適用されます。
+
+```bash
+nvm use
+```
 
 ---
 

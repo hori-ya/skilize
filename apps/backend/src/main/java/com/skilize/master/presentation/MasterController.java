@@ -13,6 +13,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * マスタデータ（スキルレベル・ITスキル・資格・ADセミナーとその各分類）の REST API コントローラー。
+ * 参照は全ロール可。作成・更新は ADMIN のみ（カスタム名昇格は TL/ADMIN も可）。
+ * isActive パラメータ: null → 全件、true → 有効のみ、false → 無効のみ（一部エンドポイントのみ対応）。
+ */
 @RestController
 @RequestMapping("/api")
 @RequiredArgsConstructor
@@ -28,6 +33,7 @@ public class MasterController {
     private final QualificationCategoryRepository qualificationCategoryRepository;
     private final AdSeminarCategoryRepository adSeminarCategoryRepository;
 
+    /** スキルレベル一覧を levelValue 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/skill-levels")
     public List<SkillLevelResponse> getSkillLevels(@RequestParam(required = false) Boolean isActive) {
         List<SkillLevel> levels = isActive != null
@@ -36,6 +42,7 @@ public class MasterController {
         return levels.stream().map(SkillLevelResponse::from).toList();
     }
 
+    /** スキルレベルを新規作成する（ADMIN のみ）。 */
     @PostMapping("/skill-levels")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<SkillLevelResponse> createSkillLevel(@Valid @RequestBody SkillLevelRequest req) {
@@ -43,12 +50,14 @@ public class MasterController {
                 .body(SkillLevelResponse.from(masterService.createSkillLevel(req.levelValue(), req.description(), req.scoreWeight())));
     }
 
+    /** スキルレベルを更新する（ADMIN のみ）。 */
     @PutMapping("/skill-levels/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public SkillLevelResponse updateSkillLevel(@PathVariable int id, @Valid @RequestBody SkillLevelRequest req) {
         return SkillLevelResponse.from(masterService.updateSkillLevel(id, req.levelValue(), req.description(), req.active(), req.scoreWeight()));
     }
 
+    /** ITスキル一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/it-skills")
     public List<ItSkillResponse> getItSkills(@RequestParam(required = false) Boolean isActive) {
         List<ItSkill> skills = isActive == null
@@ -58,6 +67,7 @@ public class MasterController {
         return skills.stream().map(s -> ItSkillResponse.from(s, resolveCategory1(s))).toList();
     }
 
+    /** ITスキルを新規作成する（ADMIN のみ）。resolveCategory1() で表示用の大分類を解決する。 */
     @PostMapping("/it-skills")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ItSkillResponse> createItSkill(@Valid @RequestBody ItSkillRequest req) {
@@ -66,6 +76,7 @@ public class MasterController {
                 .body(ItSkillResponse.from(saved, resolveCategory1(saved)));
     }
 
+    /** ITスキルを更新する（ADMIN のみ）。 */
     @PutMapping("/it-skills/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ItSkillResponse updateItSkill(@PathVariable int id, @Valid @RequestBody ItSkillRequest req) {
@@ -74,6 +85,7 @@ public class MasterController {
         return ItSkillResponse.from(skill, resolveCategory1(skill));
     }
 
+    /** カスタム入力されたが未マスタ登録のITスキル名を使用件数付きで返す（TL/ADMIN のみ）。 */
     @GetMapping("/it-skills/custom-unregistered")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public List<CustomUnregisteredResponse> getCustomUnregisteredItSkills() {
@@ -82,6 +94,7 @@ public class MasterController {
                 .toList();
     }
 
+    /** カスタムITスキルをマスタに昇格し、同名の棚卸明細をマスタへ紐付ける（TL/ADMIN のみ）。 */
     @PostMapping("/it-skills/promote")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public ResponseEntity<ItSkillResponse> promoteItSkill(@Valid @RequestBody PromoteItSkillRequest req) {
@@ -91,6 +104,7 @@ public class MasterController {
                 .body(ItSkillResponse.from(skill, resolveCategory1(skill)));
     }
 
+    /** 資格一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/qualifications")
     public List<QualificationResponse> getQualifications(@RequestParam(required = false) Boolean isActive) {
         List<Qualification> list = isActive == null
@@ -100,6 +114,7 @@ public class MasterController {
         return list.stream().map(QualificationResponse::from).toList();
     }
 
+    /** 資格を新規作成する（ADMIN のみ）。 */
     @PostMapping("/qualifications")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<QualificationResponse> createQualification(@Valid @RequestBody QualificationRequest req) {
@@ -107,6 +122,7 @@ public class MasterController {
                 masterService.createQualification(req.categoryId(), req.name(), req.description(), req.sortOrder())));
     }
 
+    /** 資格を更新する（ADMIN のみ）。 */
     @PutMapping("/qualifications/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public QualificationResponse updateQualification(@PathVariable int id, @Valid @RequestBody QualificationRequest req) {
@@ -114,6 +130,7 @@ public class MasterController {
                 req.description(), req.sortOrder(), req.active()));
     }
 
+    /** カスタム入力されたが未マスタ登録の資格名を使用件数付きで返す（TL/ADMIN のみ）。 */
     @GetMapping("/qualifications/custom-unregistered")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public List<CustomUnregisteredResponse> getCustomUnregisteredQualifications() {
@@ -122,6 +139,7 @@ public class MasterController {
                 .toList();
     }
 
+    /** カスタム資格をマスタに昇格し、同名の棚卸明細をマスタへ紐付ける（TL/ADMIN のみ）。 */
     @PostMapping("/qualifications/promote")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public ResponseEntity<QualificationResponse> promoteQualification(@Valid @RequestBody PromoteQualificationRequest req) {
@@ -130,6 +148,7 @@ public class MasterController {
                         req.description(), req.sortOrder())));
     }
 
+    /** 資格分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/qualification-categories")
     public List<QualificationCategoryResponse> getQualificationCategories(@RequestParam(required = false) Boolean isActive) {
         List<QualificationCategory> cats = isActive == null
@@ -138,6 +157,7 @@ public class MasterController {
         return cats.stream().map(QualificationCategoryResponse::from).toList();
     }
 
+    /** 資格分類を新規作成する（ADMIN のみ）。 */
     @PostMapping("/qualification-categories")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<QualificationCategoryResponse> createQualificationCategory(
@@ -146,6 +166,7 @@ public class MasterController {
                 masterService.createQualificationCategory(req.name(), req.sortOrder())));
     }
 
+    /** 資格分類を更新する（ADMIN のみ）。 */
     @PutMapping("/qualification-categories/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public QualificationCategoryResponse updateQualificationCategory(@PathVariable int id,
@@ -154,6 +175,7 @@ public class MasterController {
                 masterService.updateQualificationCategory(id, req.name(), req.sortOrder(), req.active()));
     }
 
+    /** ADセミナー一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/ad-seminars")
     public List<AdSeminarResponse> getAdSeminars(@RequestParam(required = false) Boolean isActive) {
         List<AdSeminar> list = isActive == null
@@ -163,6 +185,7 @@ public class MasterController {
         return list.stream().map(AdSeminarResponse::from).toList();
     }
 
+    /** ADセミナーを新規作成する（ADMIN のみ）。 */
     @PostMapping("/ad-seminars")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AdSeminarResponse> createAdSeminar(@Valid @RequestBody AdSeminarRequest req) {
@@ -170,6 +193,7 @@ public class MasterController {
                 masterService.createAdSeminar(req.categoryId(), req.name(), req.description(), req.sortOrder())));
     }
 
+    /** ADセミナーを更新する（ADMIN のみ）。 */
     @PutMapping("/ad-seminars/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public AdSeminarResponse updateAdSeminar(@PathVariable int id, @Valid @RequestBody AdSeminarRequest req) {
@@ -177,21 +201,27 @@ public class MasterController {
                 req.description(), req.sortOrder(), req.active()));
     }
 
+    /** 有効なセミナー分類一覧を sortOrder 昇順で返す（isActive フィルタなし・常に有効のみ）。 */
     @GetMapping("/seminar-categories")
     public List<SeminarCategoryResponse> getSeminarCategories() {
         return seminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
                 .stream().map(SeminarCategoryResponse::from).toList();
     }
 
+    /**
+     * ITスキル分類一覧を階層順（level 昇順）・sortOrder 順で返す。
+     * isActive=null で全件、true で有効のみ、false で無効のみ。
+     */
     @GetMapping("/it-skill-categories")
     public List<ItSkillCategoryResponse> getItSkillCategories(@RequestParam(required = false) Boolean isActive) {
         List<ItSkillCategory> cats = isActive == null
                 ? itSkillCategoryRepository.findAllByOrderByLevelAscSortOrderAsc()
                 : isActive ? itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
-                           : itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+                           : itSkillCategoryRepository.findByActiveFalseOrderBySortOrderAsc();
         return cats.stream().map(ItSkillCategoryResponse::from).toList();
     }
 
+    /** ITスキル分類を新規作成する（ADMIN のみ）。 */
     @PostMapping("/it-skill-categories")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ItSkillCategoryResponse> createItSkillCategory(@Valid @RequestBody ItSkillCategoryRequest req) {
@@ -199,6 +229,7 @@ public class MasterController {
                 masterService.createItSkillCategory(req.parentId(), req.name(), req.sortOrder())));
     }
 
+    /** ITスキル分類を更新する（ADMIN のみ）。 */
     @PutMapping("/it-skill-categories/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ItSkillCategoryResponse updateItSkillCategory(@PathVariable int id,
@@ -207,6 +238,7 @@ public class MasterController {
                 masterService.updateItSkillCategory(id, req.name(), req.sortOrder(), req.active()));
     }
 
+    /** ADセミナー分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/ad-seminar-categories")
     public List<AdSeminarCategoryResponse> getAdSeminarCategories(@RequestParam(required = false) Boolean isActive) {
         List<AdSeminarCategory> cats = isActive == null
@@ -215,6 +247,7 @@ public class MasterController {
         return cats.stream().map(AdSeminarCategoryResponse::from).toList();
     }
 
+    /** ADセミナー分類を新規作成する（ADMIN のみ）。 */
     @PostMapping("/ad-seminar-categories")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AdSeminarCategoryResponse> createAdSeminarCategory(@Valid @RequestBody SimpleCategoryRequest req) {
@@ -222,6 +255,7 @@ public class MasterController {
                 masterService.createAdSeminarCategory(req.name(), req.sortOrder())));
     }
 
+    /** ADセミナー分類を更新する（ADMIN のみ）。 */
     @PutMapping("/ad-seminar-categories/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public AdSeminarCategoryResponse updateAdSeminarCategory(@PathVariable int id,
@@ -230,6 +264,12 @@ public class MasterController {
                 masterService.updateAdSeminarCategory(id, req.name(), req.sortOrder(), req.active()));
     }
 
+    /**
+     * ITスキルの表示用大分類（レベル1）を返すプライベートヘルパー。
+     * ITスキル分類は最大3階層（レベル1=大分類、レベル2、レベル3）。
+     * レベル1 → そのまま返す / レベル2 → 親（レベル1）を返す / レベル3 → 親の親（レベル1）を返す。
+     * 上位分類に到達できない場合は直接の分類をそのまま返す（フォールバック）。
+     */
     private ItSkillCategory resolveCategory1(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
         if (cat.getLevel() == 1) return cat;

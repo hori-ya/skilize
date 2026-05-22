@@ -41,6 +41,10 @@ public class ChartService {
 
     // ===== Radar =====
 
+    /**
+     * レーダーチャートデータを返す。ITスキル大分類ごとに今年度・前年度の平均スコアを集計する。
+     * 今年度の有効年度が存在しない場合はスコアがすべて 0.0 の軸データを返す。
+     */
     @Transactional(readOnly = true)
     public RadarQueryResult getRadar(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
@@ -109,6 +113,10 @@ public class ChartService {
 
     // ===== Growth =====
 
+    /**
+     * 成長推移グラフデータを返す。提出済み棚卸を年度順に並べ、大分類ごとのスコア合計を集計する。
+     * カスタムスキルは大分類に属さないため、別途 CUSTOM_SERIES_ID（-1）の系列として末尾に追加する。
+     */
     @Transactional(readOnly = true)
     public GrowthQueryResult getGrowth(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
@@ -171,6 +179,10 @@ public class ChartService {
 
     // ===== Heatmap =====
 
+    /**
+     * ヒートマップデータを返す。大分類 → 中分類 → スキルの階層構造で今年度のスキルレベルを表示する。
+     * 無効化されたスキルでも採点済みの場合はヒートマップに表示する（過去棚卸との表示継続性を保持）。
+     */
     @Transactional(readOnly = true)
     public HeatmapQueryResult getHeatmap(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
@@ -239,6 +251,7 @@ public class ChartService {
         return new HeatmapQueryResult(currentFy.getName(), hasCurrentYearData, maxLevelValue, rows);
     }
 
+    /** スコアなし（棚卸未作成・採点なし）時のヒートマップを構築する。全スキルを levelValue=null でセルに追加する。 */
     private HeatmapQueryResult buildHeatmapNoScores(FiscalYear currentFy,
                                                      List<ItSkillCategory> cat1List,
                                                      Map<Integer, ItSkillCategory> catMap,
@@ -260,6 +273,7 @@ public class ChartService {
         return new HeatmapQueryResult(fyName, false, maxLevelValue, rows);
     }
 
+    /** ヒートマップの大分類→中分類→スキルエントリの入れ子マップ構造を初期化する。挿入順保持のため LinkedHashMap を使用する。 */
     private Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> initStructure(List<ItSkillCategory> cat1List) {
         Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> structure = new LinkedHashMap<>();
         for (ItSkillCategory cat1 : cat1List) {
@@ -268,6 +282,7 @@ public class ChartService {
         return structure;
     }
 
+    /** ヒートマップ表示用の行リストを構築する。大分類→中分類→スキルの階層で平均レベルを集計する。 */
     private List<HeatmapRow> buildHeatmapRows(List<ItSkillCategory> cat1List,
                                                Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> structure) {
         return cat1List.stream().map(cat1 -> {
@@ -292,6 +307,10 @@ public class ChartService {
 
     // ===== Timeline =====
 
+    /**
+     * タイムラインデータを返す。資格・セミナー実績と目標の時系列イベント一覧を返す。
+     * 実績は最新の提出済み棚卸1件のみを参照し（年度間の重複登録を避けるため）、目標は最新棚卸から取得する。
+     */
     @Transactional(readOnly = true)
     public TimelineQueryResult getTimeline(User user) {
         List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(user.getId());
@@ -351,11 +370,13 @@ public class ChartService {
 
     // ===== Helpers =====
 
+    /** 全ITスキル分類を ID→エンティティ のマップで返す。ツリー遡上時に高速アクセスするために使用する。 */
     private Map<Integer, ItSkillCategory> buildCategoryMap() {
         return itSkillCategoryRepository.findAllByOrderByLevelAscSortOrderAsc().stream()
                 .collect(Collectors.toMap(ItSkillCategory::getId, c -> c));
     }
 
+    /** 全分類マップからアクティブなレベル1（大分類）を sortOrder 昇順で返す。 */
     private List<ItSkillCategory> getActiveCat1List(Map<Integer, ItSkillCategory> catMap) {
         return catMap.values().stream()
                 .filter(c -> c.getLevel() == 1 && c.isActive())
@@ -363,6 +384,7 @@ public class ChartService {
                 .toList();
     }
 
+    /** アクティブなスキルレベルの最大 levelValue を返す。スキルレベル未設定の場合は 5 を返す。 */
     private int getMaxLevelValue() {
         return skillLevelRepository.findByActiveOrderByLevelValueAsc(true).stream()
                 .mapToInt(s -> (int) s.getLevelValue())
@@ -370,6 +392,7 @@ public class ChartService {
                 .orElse(5);
     }
 
+    /** アクティブなスキルレベルの最大 scoreWeight を返す。スキルレベル未設定の場合は 4 を返す。 */
     private int getMaxScoreWeight() {
         return skillLevelRepository.findByActiveOrderByLevelValueAsc(true).stream()
                 .mapToInt(SkillLevel::getScoreWeight)
@@ -393,10 +416,12 @@ public class ChartService {
         return null;
     }
 
+    /** Short リストの平均値を計算する。 */
     private double average(List<Short> values) {
         return values.stream().mapToInt(Short::intValue).average().orElse(0.0);
     }
 
+    /** Integer リストの平均値を計算する。 */
     private double averageInt(List<Integer> values) {
         return values.stream().mapToInt(Integer::intValue).average().orElse(0.0);
     }
@@ -406,6 +431,7 @@ public class ChartService {
         return Math.round(value * 10.0) / 10.0;
     }
 
+    /** 目標名称を参照先の優先順位（ITスキル → 資格 → ADセミナー → カスタム名）で解決して返す。 */
     private String resolveGoalName(InventoryGoal g) {
         if (g.getItSkill() != null) return g.getItSkill().getName();
         if (g.getQualification() != null) return g.getQualification().getName();

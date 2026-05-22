@@ -1,9 +1,30 @@
 FROM eclipse-temurin:21-jdk-alpine AS builder
+
+# 社内プロキシ対応（Gradle の依存関係ダウンロードに使用）
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
 WORKDIR /app
 COPY . .
 RUN ./gradlew bootJar --no-daemon
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
+
+# ヘルスチェック用ツール
+RUN apk add --no-cache wget
+
+# 非 root ユーザーの作成
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
 COPY --from=builder /app/build/libs/*.jar app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+RUN chown appuser:appgroup app.jar
+
+USER appuser
+EXPOSE 8080
+
+ENTRYPOINT ["java", \
+  "-XX:+UseContainerSupport", \
+  "-XX:MaxRAMPercentage=75.0", \
+  "-jar", "app.jar"]

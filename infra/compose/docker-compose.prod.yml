@@ -21,6 +21,10 @@ services:
     build:
       context: ../../apps/backend
       dockerfile: ../../infra/docker/backend/Dockerfile.prod
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
     restart: always
     env_file:
       - ../../.env
@@ -32,11 +36,23 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    # ポートは外部に公開しない（nginx 経由でのみアクセス）
 
   ai:
     build:
       context: ../../
       dockerfile: infra/docker/ai/Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
     restart: always
     environment:
       DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
@@ -48,15 +64,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # ポートは外部に公開しない（backend 経由でのみ呼び出し）
 
   nginx:
     build:
       context: ../../
       dockerfile: infra/docker/frontend/Dockerfile.prod
+      args:
+        NODE_VERSION: ${NODE_VERSION:-20}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
     ports:
-      - "80:80"
+      # nginx.prod.conf は非 root 実行のため 8080 でリッスン
+      - "80:8080"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: always
 
 volumes:

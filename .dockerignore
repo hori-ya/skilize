@@ -1,0 +1,30 @@
+# バージョン管理
+.git/
+
+# ドキュメント（ビルドには不要）
+docs/
+
+# IDE・CI 設定ファイル
+.idea/
+.vscode/
+.cursor/
+.github/
+
+# スクリプト（Docker ビルドには不要）
+scripts/
+
+# バックエンドビルド成果物
+apps/backend/build/
+apps/backend/.gradle/
+apps/backend/bin/
+
+# フロントエンドビルド成果物
+apps/frontend/node_modules/
+apps/frontend/dist/
+apps/frontend/build/
+
+# AI パッケージキャッシュ
+apps/ai/__pycache__/
+apps/ai/.pytest_cache/
+apps/ai/*.pyc
+apps/ai/*.pyo

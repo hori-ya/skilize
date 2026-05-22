@@ -439,6 +439,7 @@ docker compose up db     # init.sql が再実行される
 | `ANTHROPIC_API_KEY` | Anthropic API キー（`LLM_PROVIDER=anthropic` 時は必須） | — |
 | `AI_SECRET_KEY` | Spring Boot → Python AI サービス間の内部認証キー | なし（必須） |
 | `AI_SERVICE_URL` | Python FastAPI の内部 URL | `http://ai:8000` |
+| `CA_CERT_ENABLED` | 社内ルートCA証明書をコンテナに組み込む（`true` で有効化） | `false` |
 
 `.env` ファイルに記載し、`.gitignore` で除外する（`.env.example` に雛形を置く）。
 

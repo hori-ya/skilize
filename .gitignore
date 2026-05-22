@@ -28,3 +28,8 @@ Thumbs.db
 
 # Docker
 infra/docker/*/data/
+
+# 社内CA証明書（機密情報のため Git 管理対象外）
+infra/certs/*.cer
+infra/certs/*.crt
+infra/certs/*.pem

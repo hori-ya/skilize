@@ -1,10 +1,37 @@
-FROM node:20-alpine AS builder
+# NODE_VERSION はビルド時に --build-arg NODE_VERSION=20 等で指定可能（デフォルト: 20）
+ARG NODE_VERSION=20
+FROM node:${NODE_VERSION}-alpine AS builder
+
+# 社内プロキシ対応
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+# 社内CA証明書対応: CA_CERT_ENABLED=true かつ infra/certs/company-root-ca.cer が存在する場合に組み込む
+ARG CA_CERT_ENABLED=false
+
+# CA証明書のインストール（CA_CERT_ENABLED=true のときのみ実行）
+COPY infra/certs/ /tmp/certs/
+RUN if [ "$CA_CERT_ENABLED" = "true" ] && [ -f /tmp/certs/company-root-ca.cer ]; then \
+      cp /tmp/certs/company-root-ca.cer /usr/local/share/ca-certificates/company-root-ca.crt && \
+      update-ca-certificates; \
+    fi
+
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
+
 WORKDIR /app
 COPY apps/frontend/package.json apps/frontend/package-lock.json ./
-RUN npm ci
+RUN if [ -n "$HTTP_PROXY" ]; then npm config set proxy "$HTTP_PROXY"; fi && \
+    if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy "$HTTPS_PROXY"; fi && \
+    npm ci
 COPY apps/frontend/ .
 RUN npm run build
 
 FROM nginx:alpine
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY infra/docker/nginx/nginx.prod.conf /etc/nginx/conf.d/default.conf
+
+# 非 root ユーザー（nginx:alpine 組み込みの nginx ユーザー）で実行
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx && \
+    touch /var/run/nginx.pid && chown nginx:nginx /var/run/nginx.pid
+USER nginx
+EXPOSE 8080
