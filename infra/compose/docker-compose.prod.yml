@@ -19,12 +19,13 @@ services:
 
   backend:
     build:
-      context: ../../apps/backend
-      dockerfile: ../../infra/docker/backend/Dockerfile.prod
+      context: ../../
+      dockerfile: infra/docker/backend/Dockerfile.prod
       args:
         HTTP_PROXY: ${HTTP_PROXY:-}
         HTTPS_PROXY: ${HTTPS_PROXY:-}
         NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
     restart: always
     env_file:
       - ../../.env
