@@ -113,6 +113,9 @@ IAM ユーザーとは、AWS アカウント内に作る「操作用のサブア
 マネジメントコンソール右上のリージョン表示（例: `us-east-1`）をクリックし、  
 「**アジアパシフィック（東京）ap-northeast-1**」を選択してください。
 
+> **リージョン一覧をクリックしても切り替わらない場合**:  
+> 右上の歯車アイコン（⚙）→「全てのユーザー設定を表示」→「ローカリゼーションとデフォルトのリージョン」の編集から「アジアパシフィック (東京)」を設定してください。
+
 > **重要**: リージョンを間違えると、作成した EC2 が見つからないように見えることがあります。  
 > 作業中は常に「東京」リージョンになっているか確認してください。
 
@@ -159,12 +162,14 @@ EC2 にリモートで接続するための「鍵」を事前に作成します�
   - **VPC**: デフォルト VPC を選択
 4. 「インバウンドルール」に以下を追加します:
 
+> **説明欄について**: AWS の説明欄は英数字・記号のみ有効です（日本語不可）。  
+> 「AWS 入力値」列の文字列をそのまま貼り付けてください。
 
-| タイプ   | プロトコル | ポート範囲 | ソース           | 説明                    |
-| ----- | ----- | ----- | ------------- | --------------------- |
-| SSH   | TCP   | 22    | 自分の IP（マイ IP） | 管理用 SSH 接続            |
-| HTTP  | TCP   | 80    | 0.0.0.0/0     | アプリへの HTTP アクセス       |
-| HTTPS | TCP   | 443   | 0.0.0.0/0     | アプリへの HTTPS アクセス（将来用） |
+| タイプ   | プロトコル | ポート範囲 | ソース           | 説明（AWS 入力値）              | 意味           |
+| ----- | ----- | ----- | ------------- | ------------------------- | ------------ |
+| SSH   | TCP   | 22    | 自分の IP（マイ IP） | `SSH admin access`        | 管理用 SSH 接続   |
+| HTTP  | TCP   | 80    | 0.0.0.0/0     | `HTTP app access`         | アプリへの HTTP アクセス |
+| HTTPS | TCP   | 443   | 0.0.0.0/0     | `HTTPS app access future` | HTTPS アクセス（将来用） |
 
 
 > **SSH の「マイ IP」について**: ソースの選択肢で「マイ IP」を選ぶと、現在使っている IP アドレスが自動入力されます。  
@@ -349,21 +354,45 @@ docker ps
 
 ---
 
-### 5.4 Docker Compose をインストールする
+### 5.4 Docker Compose・Buildx をインストールする
+
+Amazon Linux 2023 の標準リポジトリには `docker-compose-plugin` と `docker-buildx-plugin` が含まれていないため、公式バイナリを直接インストールします。
 
 ```bash
-sudo dnf install -y docker-compose-plugin
+# Docker CLI プラグイン用ディレクトリを作成
+sudo mkdir -p /usr/local/lib/docker/cli-plugins
+
+# Docker Compose の最新バイナリをダウンロード
+sudo curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+  -o /usr/local/lib/docker/cli-plugins/docker-compose
+
+# Docker Buildx の最新バイナリをダウンロード
+sudo curl -SL "$(curl -s https://api.github.com/repos/docker/buildx/releases/latest \
+  | grep 'browser_download_url.*linux-amd64"' \
+  | cut -d '"' -f 4)" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+
+# 実行権限を付与
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 
 # インストール確認
 docker compose version
 # Docker Compose version v2.x.x と表示されれば OK
+
+docker buildx version
+# github.com/docker/buildx v0.x.x と表示されれば OK
 ```
 
 ---
 
 ## 6. リポジトリのクローン
 
-### 6.1 HTTPS でクローンする場合（パブリックリポジトリ）
+> **推奨**: EC2 では後述の `git pull`（デプロイ更新）のために SSH 認証が必要です。  
+> **6.2 の SSH 方式でクローンすることを推奨します。**  
+> HTTPS でクローンした場合も、6.2 の手順で SSH に切り替えられます。
+
+### 6.1 HTTPS でクローンする場合
 
 ```bash
 cd /home/ec2-user
@@ -371,11 +400,15 @@ git clone <リポジトリURL> skilize
 cd skilize
 ```
 
+クローン後、6.2 の「SSH キーの生成と GitHub 登録」を行い、リモート URL を SSH に切り替えます:
+
+```bash
+git remote set-url origin git@github.com:<組織名またはユーザー名>/<リポジトリ名>.git
+```
+
 ---
 
-### 6.2 SSH でクローンする場合（プライベートリポジトリ）
-
-プライベートリポジトリの場合は、EC2 に SSH キーを設定してからクローンします。
+### 6.2 SSH でクローンする場合（推奨）
 
 **EC2 上で SSH キーを生成する**
 
