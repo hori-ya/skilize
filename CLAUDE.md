@@ -412,6 +412,7 @@ docker compose up db     # init.sql が再実行される
 
 - エンティティの新規フィールド追加時は Flyway マイグレーション（`apps/backend/src/main/resources/db/migration/V{n}__xxx.sql`）と `scripts/db/init.sql` の両方を更新する
 - `application-local.yml` は `flyway.enabled: false` のため、ローカル向けスキーマ変更は `scripts/db/init.sql` に反映する
+- テストデータ（テストユーザー・サンプル棚卸など）は `db/testdata/` に配置する。`db/migration/` は本番 Flyway の対象のため、テストデータを `db/migration/` に置かないこと
 - `SecurityConfig` の `permitAll()` に追加する際は CORS 設定も確認する
 - 新しいロール制御が必要な場合は `@PreAuthorize("hasRole('ADMIN')")` 等を使用する
 

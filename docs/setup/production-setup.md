@@ -172,8 +172,8 @@ EC2 にリモートで接続するための「鍵」を事前に作成します�
 
 > **PostgreSQL ポート（5432）は追加しない**: DB は EC2 内部でのみ使用し、外部に公開しません。
 
-1. アウトバウンドルールはデフォルト（全通信許可）のままで問題ありません
-2. 「セキュリティグループを作成」をクリックします
+5. アウトバウンドルールはデフォルト（全通信許可）のままで問題ありません
+6. 「セキュリティグループを作成」をクリックします
 
 ---
 
@@ -208,9 +208,9 @@ EC2 にリモートで接続するための「鍵」を事前に作成します�
 - サイズを `30` GB に変更します
 - ボリュームタイプは `gp3` のままでよいです
 
-1. 右側「インスタンスを起動」ボタンをクリックします
-2. 「インスタンスを正常に起動しました」と表示されれば完了です
-3. 「すべてのインスタンスを表示」でインスタンス一覧に戻り、状態が「実行中」になるまで待ちます（1〜2 分）
+3. 右側「インスタンスを起動」ボタンをクリックします
+4. 「インスタンスを正常に起動しました」と表示されれば完了です
+5. 「すべてのインスタンスを表示」でインスタンス一覧に戻り、状態が「実行中」になるまで待ちます（1〜2 分）
 
 ---
 
@@ -426,7 +426,7 @@ cp .env.example .env
 vi .env
 ```
 
-> `**vi` の基本操作**:
+> **vi の基本操作**:
 >
 > - `i` キーで編集モードに入る（文字を入力できるようになる）
 > - `Esc` キーで編集モードを抜ける
@@ -446,6 +446,9 @@ vi .env
 # ─────────────────────────────────────────────────────
 COMPOSE_FILE=infra/compose/docker-compose.prod.yml
 
+# フロントエンドコンテナの Node.js バージョン
+NODE_VERSION=20
+
 # ─────────────────────────────────────────────────────
 # データベース接続情報
 # ─────────────────────────────────────────────────────
@@ -460,7 +463,8 @@ DB_PASSWORD=<強力なパスワード>
 # ランダムな文字列（32文字以上）。下記のコマンドで生成できる
 # コマンド: openssl rand -base64 32
 JWT_SECRET=<ランダムな文字列>
-JWT_EXPIRATION_MS=28800000   # 8時間
+# 8時間（インラインコメント不可。値のみ記載すること）
+JWT_EXPIRATION_MS=28800000
 
 # ─────────────────────────────────────────────────────
 # CORS（アクセス許可するオリジン）
@@ -547,7 +551,7 @@ docker compose ps
 ```
 NAME                  STATUS
 skilize-db-1          running (healthy)
-skilize-backend-1     running
+skilize-backend-1     running (healthy)
 skilize-ai-1          running
 skilize-nginx-1       running
 ```
@@ -590,26 +594,23 @@ curl http://localhost/api/health
 
 ### 9.3 初期管理者ログインとセキュリティ設定
 
-Flyway によって初期データ（`V4__test_data.sql`）が投入され、以下のユーザーが使えます。
+Flyway（`V2__required_data.sql`）によって管理者ユーザーが作成され、以下のアカウントでログインできます。
 
+| ユーザーID  | 初期パスワード | ロール |
+| --------- | ----------- | ----- |
+| `admin`   | `admin`     | ADMIN |
 
-| ユーザーID   | パスワード    | ロール     |
-| -------- | -------- | ------- |
-| `admin`  | `admin`  | ADMIN   |
-| `tl01`   | `tl01`   | TL      |
-| `user01` | `user01` | GENERAL |
-| `user02` | `user02` | GENERAL |
-
+> **本番環境に tl01・user01・user02 は作成されません。**  
+> これらのテストユーザーは `V4__test_data.sql`（`db/testdata/` 配置）で管理されており、本番 Flyway マイグレーション（`classpath:db/migration`）の対象外です。
 
 **本番運用開始前に必ず以下を実施してください:**
 
-1. `**admin` でログインし、パスワードを変更する**
-  ログイン後、右上のメニューから「パスワード変更」を選択します
-2. **本番ユーザーを登録する**
+1. **`admin` でログインし、パスワードを変更する**  
+  ログイン後、右上のメニューから「パスワード変更」を選択します  
+  （`is_initial_password=true` のため、パスワード変更画面に自動遷移します）
+2. **本番ユーザーを登録する**  
   ADMIN メニュー →「ユーザー管理」から実際に使用するユーザーを登録します  
-   初期パスワードは自動生成され、登録完了画面に一度だけ表示されます
-3. **テストユーザーを無効化する**
-  `tl01`・`user01`・`user02` はテスト用のため、本番では「ユーザー管理」から無効化します
+  初期パスワードは自動生成され、登録完了画面に一度だけ表示されます
 
 ---
 
@@ -875,11 +876,7 @@ EC2 インスタンスを停止・起動するたびにパブリック IP アド
 
 ### 12.1 初回セットアップ時の読み替え
 
-「
-
-1. Elastic IP の設定」をスキップし、以降の手順内に出てくる `<Elastic-IP>` はすべて
-
-EC2 インスタンス一覧の「パブリック IPv4 アドレス」（例: `13.115.xxx.xxx`）に読み替えてください。
+「3. Elastic IP の設定」をスキップし、以降の手順内に出てくる `<Elastic-IP>` はすべて EC2 インスタンス一覧の「パブリック IPv4 アドレス」（例: `13.115.xxx.xxx`）に読み替えてください。
 
 ---
 
@@ -1114,7 +1111,7 @@ docker compose logs backend | grep -i flyway
 ```
 
 **原因**: マイグレーション済みのファイル（`V1__` 〜）を後から編集した場合に発生します。  
-**対処**: 編集したファイルを元に戻すか、新しいバージョン（`V8__xxx.sql` など）で変更を追加します。
+**対処**: 編集したファイルを元に戻すか、新しいバージョン（`V9__xxx.sql` など）で変更を追加します。
 
 ---
 
@@ -1160,22 +1157,41 @@ sudo systemctl status docker   # Docker が動いているか確認
 sudo systemctl enable docker   # 自動起動が無効なら有効化
 ```
 
-アプリの自動起動を設定するには `/etc/rc.local` に起動コマンドを追加します:
+アプリの自動起動を設定するには、systemd サービスユニットを作成します（Amazon Linux 2023 は systemd ベースのため `/etc/rc.local` より確実です）:
 
 ```bash
-sudo vi /etc/rc.local
+sudo vi /etc/systemd/system/skilize.service
 ```
 
-以下を追記します:
+以下の内容を貼り付けます:
 
-```bash
-cd /home/ec2-user/skilize && docker compose up -d
+```ini
+[Unit]
+Description=Skilize Docker Compose Application
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/ec2-user/skilize
+ExecStart=/usr/bin/docker compose up -d
+ExecStop=/usr/bin/docker compose down
+TimeoutStartSec=300
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-保存後、実行権限を付与します:
+保存後、サービスを有効化します:
 
 ```bash
-sudo chmod +x /etc/rc.local
+sudo systemctl daemon-reload
+sudo systemctl enable skilize.service
+sudo systemctl start skilize.service
+
+# 状態確認
+sudo systemctl status skilize.service
 ```
 
 ---
