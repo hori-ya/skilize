@@ -1138,6 +1138,26 @@ docker compose logs backend
 
 ---
 
+### Flyway マイグレーションが実行されない（テーブルが作成されない）
+
+**症状**: バックエンドは起動するが `\dt` でテーブルが存在しない。ログに Flyway の出力がない。
+
+**原因**: Spring Boot 4.x の `FlywayAutoConfiguration` が起動しないケースが確認されています。  
+本プロジェクトでは `FlywayConfig.java`（`shared/infrastructure/`）で明示的に Flyway Bean を定義することで回避済みです。
+
+もし発生した場合はバックエンドのビルドが古いイメージを使っていないか確認します:
+
+```bash
+docker compose build backend
+docker compose up -d backend
+sleep 60
+docker compose logs backend | grep -i flyway
+```
+
+`Successfully applied N migrations` が表示されれば正常です。
+
+---
+
 ### Flyway マイグレーションエラー
 
 ```bash

@@ -54,10 +54,6 @@ public class AuthService {
      */
     @Transactional
     public void changePassword(ChangePasswordCommand command, User currentUser) {
-        // admin アカウントはシステム設定のため変更不可（初期状態を維持する運用方針）
-        if ("admin".equals(currentUser.getUserId())) {
-            throw new AuthException("FORBIDDEN", "このアカウントはパスワードを変更できません");
-        }
         // SecurityContext のユーザーは JPA 管理外の可能性があるため ID で再フェッチしてトランザクション内で更新する
         // （JPA の管理外エンティティへの変更は DB に保存されない）
         User user = userRepository.findById(currentUser.getId()).orElseThrow();

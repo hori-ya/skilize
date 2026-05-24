@@ -213,21 +213,6 @@ class AuthControllerTest {
                     .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
         }
 
-        @Test
-        void 異常系_パスワード変更禁止アカウント_403を返す() throws Exception {
-            when(authApplicationMapper.toCommand(any(com.skilize.auth.presentation.request.ChangePasswordRequest.class)))
-                    .thenReturn(new ChangePasswordCommand("old", "newpass12"));
-            doThrow(new AuthException("FORBIDDEN", "このアカウントはパスワードを変更できません"))
-                    .when(authService).changePassword(any(), any());
-
-            mockMvc.perform(post("/api/auth/change-password")
-                            .with(user(generalUser))
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content(objectMapper.writeValueAsString(
-                                    Map.of("currentPassword", "old", "newPassword", "newpass12"))))
-                    .andExpect(status().isForbidden())
-                    .andExpect(jsonPath("$.code").value("FORBIDDEN"));
-        }
     }
 
     // ═══════════════════════════════════════════════════════════
