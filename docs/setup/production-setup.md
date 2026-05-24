@@ -813,6 +813,7 @@ git push origin main
 | `npm ci` 失敗 | `package-lock.json` がコミットされていない | `apps/frontend/package-lock.json` をコミットする |
 | `Could not find class ...` | テストクラスのパッケージ名が変わった | ワークフローの `--tests` 引数のクラス名を修正する |
 | バックエンドのコンパイルエラー | 本番コードに構文エラーがある | エラーメッセージを元にコードを修正する |
+| `rolldownVersion is missing` | vite.config.ts に vitest の `test` 設定が混在している | `vitest.config.ts` を分離して `vite.config.ts` から `test` を削除する |
 
 ---
 
