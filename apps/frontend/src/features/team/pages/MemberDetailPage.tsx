@@ -5,7 +5,8 @@ import {
   getItSkillDetails, getQualificationDetails,
   getSeminarDetails, getGoals, getComparison, getGoalReview,
 } from '../../inventory/api/inventoryApi';
-import { getItSkills } from '../../../shared/api/masterApi';
+import { getItSkills, getFiscalYears } from '../../../shared/api/masterApi';
+import type { FiscalYear } from '../../../shared/types/master';
 import { getInterview, saveInterview, getPrevYearInterview } from '../../interview/api/interviewApi';
 import type {
   InventorySummary, ItSkillDetailItem, QualificationDetailItem,
@@ -119,15 +120,22 @@ export default function MemberDetailPage() {
   const [tlSaveError, setTlSaveError] = useState<string | null>(null);
   const [companySaveError, setCompanySaveError] = useState<string | null>(null);
 
+  const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
+
   // Filter states
   const [itSkillSearch, setItSkillSearch] = useState('');
   const [itSkillCategory1Filter, setItSkillCategory1Filter] = useState('');
+  const [itSkillCategory2Filter, setItSkillCategory2Filter] = useState('');
   const [itSkillDiffFilter, setItSkillDiffFilter] = useState<'' | 'up' | 'down' | 'new'>('');
-  const [qualSearch, setQualSearch] = useState('');
-  const [seminarSearch, setSeminarSearch] = useState('');
+  const [qualNameSearch, setQualNameSearch] = useState('');
+  const [qualCategoryFilter, setQualCategoryFilter] = useState('');
+  const [qualFiscalYearFilter, setQualFiscalYearFilter] = useState('');
+  const [seminarNameSearch, setSeminarNameSearch] = useState('');
+  const [seminarCategoryFilter, setSeminarCategoryFilter] = useState('');
+  const [seminarFiscalYearFilter, setSeminarFiscalYearFilter] = useState('');
   const [seminarTypeFilter, setSeminarTypeFilter] = useState<'' | 'AD' | 'FREE'>('');
-  const [goalCategoryFilter, setGoalCategoryFilter] = useState<'' | 'IT_SKILL' | 'QUALIFICATION' | 'AD'>('');
   const [goalSearch, setGoalSearch] = useState('');
+  const [goalCategoryFilter, setGoalCategoryFilter] = useState<'' | 'IT_SKILL' | 'QUALIFICATION' | 'AD'>('');
 
   const dragRef = useRef<{ onMove: (e: MouseEvent) => void; onUp: () => void } | null>(null);
 
@@ -200,12 +208,17 @@ export default function MemberDetailPage() {
   useEffect(() => {
     setItSkillSearch('');
     setItSkillCategory1Filter('');
+    setItSkillCategory2Filter('');
     setItSkillDiffFilter('');
-    setQualSearch('');
-    setSeminarSearch('');
+    setQualNameSearch('');
+    setQualCategoryFilter('');
+    setQualFiscalYearFilter('');
+    setSeminarNameSearch('');
+    setSeminarCategoryFilter('');
+    setSeminarFiscalYearFilter('');
     setSeminarTypeFilter('');
-    setGoalCategoryFilter('');
     setGoalSearch('');
+    setGoalCategoryFilter('');
   }, [selectedId]);
 
   useEffect(() => {
@@ -213,6 +226,7 @@ export default function MemberDetailPage() {
       setInventories(res.data);
       if (res.data.length > 0) setSelectedId(res.data[0].id);
     });
+    getFiscalYears().then(res => setFiscalYears(res.data)).catch(() => {});
   }, [userIdNum]);
 
   useEffect(() => {
@@ -393,34 +407,53 @@ export default function MemberDetailPage() {
   const hasPrevYear = comparison?.hasPrevYear ?? false;
   const itSkillColCount = 3 + (hasPrevYear ? 2 : 0) + (isTlOrAdmin ? 1 : 0);
 
+  const itSkillCat2Options = useMemo(() => {
+    const sourceGroups = itSkillCategory1Filter
+      ? itSkillTree.groups.filter(g => g.cat1 === itSkillCategory1Filter)
+      : itSkillTree.groups;
+    const seen = new Set<string>();
+    for (const g of sourceGroups) {
+      for (const cg of g.cat2Groups) {
+        if (cg.cat2) seen.add(cg.cat2);
+      }
+    }
+    return Array.from(seen);
+  }, [itSkillTree, itSkillCategory1Filter]);
+
   const filteredItSkillTree = useMemo(() => {
     const searchLower = itSkillSearch.toLowerCase();
     const filteredGroups = itSkillTree.groups
       .filter(g => !itSkillCategory1Filter || g.cat1 === itSkillCategory1Filter)
       .map(g => ({
         cat1: g.cat1,
-        cat2Groups: g.cat2Groups.map(cg => ({
-          cat2: cg.cat2,
-          items: cg.items.filter(item => {
-            if (searchLower && !item.itSkillName?.toLowerCase().includes(searchLower)) return false;
-            if (itSkillDiffFilter) {
-              const comp = comparisonMap.get(item.id);
-              if (itSkillDiffFilter === 'new' && comp !== undefined) return false;
-              if (itSkillDiffFilter === 'up' && (comp === undefined || (comp.diff ?? 0) <= 0)) return false;
-              if (itSkillDiffFilter === 'down' && (comp === undefined || (comp.diff ?? 0) >= 0)) return false;
-            }
-            return true;
-          }),
-        })).filter(cg => cg.items.length > 0),
+        cat2Groups: g.cat2Groups
+          .filter(cg => !itSkillCategory2Filter || cg.cat2 === itSkillCategory2Filter)
+          .map(cg => ({
+            cat2: cg.cat2,
+            items: cg.items.filter(item => {
+              if (searchLower && !item.itSkillName?.toLowerCase().includes(searchLower)) return false;
+              if (itSkillDiffFilter) {
+                const comp = comparisonMap.get(item.id);
+                if (itSkillDiffFilter === 'new' && comp !== undefined) return false;
+                if (itSkillDiffFilter === 'up' && (comp === undefined || (comp.diff ?? 0) <= 0)) return false;
+                if (itSkillDiffFilter === 'down' && (comp === undefined || (comp.diff ?? 0) >= 0)) return false;
+              }
+              return true;
+            }),
+          })).filter(cg => cg.items.length > 0),
       }))
       .filter(g => g.cat2Groups.length > 0);
-    const filteredCustom = itSkillCategory1Filter || itSkillDiffFilter === 'up' || itSkillDiffFilter === 'down'
-      ? []
-      : itSkillTree.customItems.filter(item =>
+    const filteredCustom = itSkillCategory1Filter === '__custom__'
+      ? itSkillTree.customItems.filter(item =>
           !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
-        );
+        )
+      : (itSkillCategory1Filter || itSkillCategory2Filter || itSkillDiffFilter === 'up' || itSkillDiffFilter === 'down')
+        ? []
+        : itSkillTree.customItems.filter(item =>
+            !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
+          );
     return { groups: filteredGroups, customItems: filteredCustom };
-  }, [itSkillTree, itSkillSearch, itSkillCategory1Filter, itSkillDiffFilter, comparisonMap]);
+  }, [itSkillTree, itSkillSearch, itSkillCategory1Filter, itSkillCategory2Filter, itSkillDiffFilter, comparisonMap]);
 
   const filteredItSkillCount = useMemo(() => {
     let count = 0;
@@ -430,29 +463,63 @@ export default function MemberDetailPage() {
     return count + filteredItSkillTree.customItems.length;
   }, [filteredItSkillTree]);
 
-  const filteredQualifications = useMemo(() => {
-    const searchLower = qualSearch.toLowerCase();
-    if (!searchLower) return qualificationDetails;
-    return qualificationDetails.filter(q => {
-      const name = (q.qualificationName ?? q.customQualificationName ?? '').toLowerCase();
-      const cat = (q.qualificationCategoryName ?? '').toLowerCase();
-      return name.includes(searchLower) || cat.includes(searchLower);
-    });
-  }, [qualificationDetails, qualSearch]);
+  const qualCategories = useMemo(() =>
+    [...new Set(qualificationDetails.map(q => q.qualificationCategoryName).filter((c): c is string => c !== null))].sort(),
+    [qualificationDetails]
+  );
 
-  const filteredSeminars = useMemo(() => {
-    const searchLower = seminarSearch.toLowerCase();
-    return seminarDetails.filter(s => {
-      if (seminarTypeFilter === 'AD' && s.adSeminarId === null) return false;
-      if (seminarTypeFilter === 'FREE' && s.adSeminarId !== null) return false;
+  const seminarAdCategories = useMemo(() =>
+    [...new Set(seminarDetails.filter(s => s.adSeminarId !== null).map(s => s.adSeminarCategoryName).filter((c): c is string => c !== null))].sort(),
+    [seminarDetails]
+  );
+
+  const filteredQualifications = useMemo(() => {
+    const searchLower = qualNameSearch.toLowerCase();
+    return qualificationDetails.filter(q => {
+      if (qualCategoryFilter) {
+        if (qualCategoryFilter === '__custom__') {
+          if (q.qualificationId !== null) return false;
+        } else {
+          if (q.qualificationCategoryName !== qualCategoryFilter) return false;
+        }
+      }
       if (searchLower) {
-        const name = (s.adSeminarName ?? s.seminarName ?? '').toLowerCase();
-        const cat = (s.adSeminarCategoryName ?? '').toLowerCase();
-        if (!name.includes(searchLower) && !cat.includes(searchLower)) return false;
+        const name = (q.qualificationName ?? q.customQualificationName ?? '').toLowerCase();
+        if (!name.includes(searchLower)) return false;
+      }
+      if (qualFiscalYearFilter) {
+        const fy = fiscalYears.find(f => String(f.id) === qualFiscalYearFilter);
+        if (fy) {
+          if (!q.acquiredYearMonth) return false;
+          const ym = q.acquiredYearMonth.slice(0, 7);
+          if (ym < fy.startDate.slice(0, 7) || ym > fy.endDate.slice(0, 7)) return false;
+        }
       }
       return true;
     });
-  }, [seminarDetails, seminarSearch, seminarTypeFilter]);
+  }, [qualificationDetails, qualNameSearch, qualCategoryFilter, qualFiscalYearFilter, fiscalYears]);
+
+  const filteredSeminars = useMemo(() => {
+    const searchLower = seminarNameSearch.toLowerCase();
+    return seminarDetails.filter(s => {
+      if (seminarTypeFilter === 'AD' && s.adSeminarId === null) return false;
+      if (seminarTypeFilter === 'FREE' && s.adSeminarId !== null) return false;
+      if (seminarCategoryFilter && s.adSeminarCategoryName !== seminarCategoryFilter) return false;
+      if (searchLower) {
+        const name = (s.adSeminarName ?? s.seminarName ?? '').toLowerCase();
+        if (!name.includes(searchLower)) return false;
+      }
+      if (seminarFiscalYearFilter) {
+        const fy = fiscalYears.find(f => String(f.id) === seminarFiscalYearFilter);
+        if (fy) {
+          if (!s.attendedYearMonth) return false;
+          const ym = s.attendedYearMonth.slice(0, 7);
+          if (ym < fy.startDate.slice(0, 7) || ym > fy.endDate.slice(0, 7)) return false;
+        }
+      }
+      return true;
+    });
+  }, [seminarDetails, seminarNameSearch, seminarTypeFilter, seminarCategoryFilter, seminarFiscalYearFilter, fiscalYears]);
 
   const filteredGoals = useMemo(() => {
     const searchLower = goalSearch.toLowerCase();
@@ -613,13 +680,28 @@ export default function MemberDetailPage() {
                         <select
                           className="history-filter-bar__select"
                           value={itSkillCategory1Filter}
-                          onChange={e => setItSkillCategory1Filter(e.target.value)}
+                          onChange={e => { setItSkillCategory1Filter(e.target.value); setItSkillCategory2Filter(''); }}
                         >
                           <option value="">{t('memberDetail.filter.category1All')}</option>
                           {itSkillTree.groups.map(({ cat1 }) => (
                             <option key={cat1} value={cat1}>{cat1}</option>
                           ))}
+                          {itSkillTree.customItems.length > 0 && (
+                            <option value="__custom__">{t('memberDetail.filter.custom')}</option>
+                          )}
                         </select>
+                        {itSkillCat2Options.length > 0 && (
+                          <select
+                            className="history-filter-bar__select"
+                            value={itSkillCategory2Filter}
+                            onChange={e => setItSkillCategory2Filter(e.target.value)}
+                          >
+                            <option value="">{t('memberDetail.filter.category2All')}</option>
+                            {itSkillCat2Options.map(cat2 => (
+                              <option key={cat2} value={cat2}>{cat2}</option>
+                            ))}
+                          </select>
+                        )}
                         {hasPrevYear && (
                           <select
                             className="history-filter-bar__select"
@@ -734,10 +816,33 @@ export default function MemberDetailPage() {
                         <div className="history-filter-bar">
                           <input
                             className="history-filter-bar__input"
-                            placeholder={t('memberDetail.filter.qualSearch')}
-                            value={qualSearch}
-                            onChange={e => setQualSearch(e.target.value)}
+                            placeholder={t('memberDetail.filter.qualNameSearch')}
+                            value={qualNameSearch}
+                            onChange={e => setQualNameSearch(e.target.value)}
                           />
+                          <select
+                            className="history-filter-bar__select"
+                            value={qualCategoryFilter}
+                            onChange={e => setQualCategoryFilter(e.target.value)}
+                          >
+                            <option value="">{t('memberDetail.filter.qualCategoryAll')}</option>
+                            {qualCategories.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))}
+                            {qualificationDetails.some(q => q.qualificationId === null) && (
+                              <option value="__custom__">{t('memberDetail.filter.custom')}</option>
+                            )}
+                          </select>
+                          <select
+                            className="history-filter-bar__select"
+                            value={qualFiscalYearFilter}
+                            onChange={e => setQualFiscalYearFilter(e.target.value)}
+                          >
+                            <option value="">{t('memberDetail.filter.qualFiscalYearAll')}</option>
+                            {fiscalYears.map(fy => (
+                              <option key={fy.id} value={String(fy.id)}>{fy.name}</option>
+                            ))}
+                          </select>
                           <span className="history-result-count">{filteredQualifications.length}件</span>
                         </div>
                         <StickyHorizontalScroll className="master-table-wrap">
@@ -786,18 +891,40 @@ export default function MemberDetailPage() {
                         <div className="history-filter-bar">
                           <input
                             className="history-filter-bar__input"
-                            placeholder={t('memberDetail.filter.seminarSearch')}
-                            value={seminarSearch}
-                            onChange={e => setSeminarSearch(e.target.value)}
+                            placeholder={t('memberDetail.filter.seminarNameSearch')}
+                            value={seminarNameSearch}
+                            onChange={e => setSeminarNameSearch(e.target.value)}
                           />
                           <select
                             className="history-filter-bar__select"
                             value={seminarTypeFilter}
-                            onChange={e => setSeminarTypeFilter(e.target.value as '' | 'AD' | 'FREE')}
+                            onChange={e => { setSeminarTypeFilter(e.target.value as '' | 'AD' | 'FREE'); setSeminarCategoryFilter(''); }}
                           >
                             <option value="">{t('memberDetail.filter.seminarTypeAll')}</option>
                             <option value="AD">AD</option>
                             <option value="FREE">{t('memberDetail.filter.seminarTypeFree')}</option>
+                          </select>
+                          {seminarTypeFilter !== 'FREE' && seminarAdCategories.length > 0 && (
+                            <select
+                              className="history-filter-bar__select"
+                              value={seminarCategoryFilter}
+                              onChange={e => setSeminarCategoryFilter(e.target.value)}
+                            >
+                              <option value="">{t('memberDetail.filter.seminarCategoryAll')}</option>
+                              {seminarAdCategories.map(cat => (
+                                <option key={cat} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                          )}
+                          <select
+                            className="history-filter-bar__select"
+                            value={seminarFiscalYearFilter}
+                            onChange={e => setSeminarFiscalYearFilter(e.target.value)}
+                          >
+                            <option value="">{t('memberDetail.filter.seminarFiscalYearAll')}</option>
+                            {fiscalYears.map(fy => (
+                              <option key={fy.id} value={String(fy.id)}>{fy.name}</option>
+                            ))}
                           </select>
                           <span className="history-result-count">{filteredSeminars.length}件</span>
                         </div>
@@ -844,6 +971,12 @@ export default function MemberDetailPage() {
                     ) : (
                       <>
                         <div className="history-filter-bar">
+                          <input
+                            className="history-filter-bar__input"
+                            placeholder={t('memberDetail.filter.goalSearch')}
+                            value={goalSearch}
+                            onChange={e => setGoalSearch(e.target.value)}
+                          />
                           <select
                             className="history-filter-bar__select"
                             value={goalCategoryFilter}
@@ -854,12 +987,6 @@ export default function MemberDetailPage() {
                             <option value="QUALIFICATION">{t('goalCategory.qualification')}</option>
                             <option value="AD">AD</option>
                           </select>
-                          <input
-                            className="history-filter-bar__input"
-                            placeholder={t('memberDetail.filter.goalSearch')}
-                            value={goalSearch}
-                            onChange={e => setGoalSearch(e.target.value)}
-                          />
                           <span className="history-result-count">
                             {filteredPrevGoals.length + filteredGoals.length}件
                           </span>
