@@ -142,7 +142,7 @@ apps/ai/                              ← Python FastAPI（AI モジュール・
 apps/backend/src/main/java/com/skilize/
 ├── shared/
 │   ├── domain/exception/           ← 共通例外（AuthException, GoalIncompleteException）
-│   ├── infrastructure/             ← SecurityConfig・JwtUtil・JWT/初期PWフィルター
+│   ├── infrastructure/             ← SecurityConfig・JwtUtil・JWT/初期PWフィルター・LoggingFilter（MDC）
 │   └── presentation/               ← GlobalExceptionHandler・ErrorResponse
 ├── auth/
 │   ├── presentation/               ← AuthController（request/ · response/ サブパッケージ）

@@ -6,6 +6,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -22,6 +24,7 @@ import java.io.IOException;
  * OncePerRequestFilter: サーブレットのフォワード・インクルード等でフィルターが二重実行されることを防ぐ
  * Spring 標準基底クラス。通常の @Component フィルターでは複数回実行される可能性がある。
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -57,11 +60,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         // SecurityContextHolder はスレッドローカルな認証ストア。
                         // ここにセットした情報がコントローラー・@PreAuthorize から参照される。
                         SecurityContextHolder.getContext().setAuthentication(auth);
+                        // 認証成功後に MDC の userId を更新する（LoggingFilter が "-" でセット済み）
+                        MDC.put(LoggingFilter.MDC_USER_ID, String.valueOf(user.getId()));
                     }
                 });
             }
         } catch (Exception e) {
             // トークンの解析・検証で例外が起きた場合は認証なしとして扱い、次フィルターへ委譲する
+            log.warn("JWT validation failed: {}", e.getMessage());
             SecurityContextHolder.clearContext();
         }
 

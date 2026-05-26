@@ -446,6 +446,53 @@ git config --global --unset https.proxy
 
 ---
 
+#### ステップ 0: 社内ルートCA証明書ファイルの取得
+
+社内ルートCA証明書は、通常 IT 部門によって PC に配布済みです。  
+以下の手順で OS の証明書ストアからエクスポートします。
+
+**Windows（certmgr.msc を使う方法）**
+
+1. `Win + R` で「ファイル名を指定して実行」を開き、`certmgr.msc` と入力して「OK」をクリックします
+2. 左ペインで「信頼されたルート証明機関」→「証明書」を開きます
+3. 一覧から社内のルートCA証明書を探します（「発行先」や「発行者」に会社名が含まれているものを選択します）
+4. 対象の証明書を右クリック → 「すべてのタスク」→「エクスポート」を選択します
+5. 「証明書のエクスポートウィザード」が起動します:
+   - 「次へ」をクリックします
+   - エクスポートファイルの形式で **「Base 64 encoded X.509 (.CER)」** を選択して「次へ」をクリックします
+   - ファイル名に `company-root-ca` を入力し、保存先を指定します
+   - 「完了」をクリックします
+6. エクスポートしたファイルを `infra/certs/company-root-ca.cer` にコピーします
+
+**Windows（PowerShell を使う方法）**
+
+```powershell
+# 信頼されたルート証明機関の一覧を確認（Subject に会社名が含まれるものを探す）
+Get-ChildItem -Path Cert:\LocalMachine\Root | Select-Object Subject, Thumbprint
+
+# 対象の証明書を PEM 形式でエクスポート（Thumbprint を書き換える）
+$cert = Get-ChildItem -Path Cert:\LocalMachine\Root | Where-Object { $_.Thumbprint -eq "ここにThumbprintを入力" }
+$bytes = $cert.Export([System.Security.Cryptography.X509Certificates.X509ContentType]::Cert)
+$b64   = [System.Convert]::ToBase64String($bytes, [System.Base64FormattingOptions]::InsertLineBreaks)
+$pem   = "-----BEGIN CERTIFICATE-----`n$b64`n-----END CERTIFICATE-----"
+[System.IO.File]::WriteAllText("$PWD\infra\certs\company-root-ca.cer", $pem)
+```
+
+> コマンドはプロジェクトルート（`skilize/`）で実行してください。
+
+**Mac**
+
+1. Spotlight（`Cmd + Space`）で「キーチェーンアクセス」を開きます
+2. 左ペインで「システム」または「システムのルート」を選択します
+3. 一覧から社内のルートCA証明書を探します（名前に会社名が含まれているものを選択します）
+4. 対象の証明書を右クリック（または `Control + クリック`）→「書き出す」を選択します
+5. フォーマットを **「証明書（.cer）」** のままにして保存します
+6. エクスポートしたファイルを `infra/certs/company-root-ca.cer` にコピーします
+
+> **証明書が見つからない場合**: IT 部門にルートCA証明書ファイルの入手方法を確認してください。
+
+---
+
 #### ステップ 1: 証明書ファイルの配置
 
 社内ルートCA証明書を以下のパスに配置します。  

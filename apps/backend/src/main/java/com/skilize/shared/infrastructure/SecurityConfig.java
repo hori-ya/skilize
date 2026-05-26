@@ -34,6 +34,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private final LoggingFilter loggingFilter;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final InitialPasswordFilter initialPasswordFilter;
 
@@ -62,10 +63,10 @@ public class SecurityConfig {
                         // 上記以外はすべて認証必須。ロール別制御は各コントローラーの @PreAuthorize が担う。
                         .anyRequest().authenticated()
                 )
-                // JwtAuthenticationFilter → InitialPasswordFilter の順でフィルターを適用する
-                // addFilterBefore: 既存フィルター（UsernamePasswordAuthenticationFilter）の前に挿入
-                // addFilterAfter: JwtAuthenticationFilter の直後に挿入（JWT 検証後でないと User オブジェクトが取れない）
+                // フィルター順: LoggingFilter(MDC) → JwtAuthenticationFilter(認証) → InitialPasswordFilter(初回PW)
+                // JwtAuthenticationFilter を先に登録してから、LoggingFilter を「その前」として参照する
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(loggingFilter, JwtAuthenticationFilter.class)
                 .addFilterAfter(initialPasswordFilter, JwtAuthenticationFilter.class);
 
         return http.build();

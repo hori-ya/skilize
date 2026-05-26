@@ -55,6 +55,7 @@ public class AiAnalysisService {
                 .map(existing -> { existing.resetToPending(); return existing; })
                 .orElseGet(() -> AiCareerAnalysis.createPending(userId, fiscalYearId));
         repository.save(analysis);
+        log.info("AI analysis triggered: userId={} fiscalYearId={}", userId, fiscalYearId);
         callAiService(userId, fiscalYearId);
     }
 

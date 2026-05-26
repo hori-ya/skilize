@@ -8,6 +8,7 @@ import com.skilize.user.domain.Role;
 import com.skilize.user.domain.User;
 import com.skilize.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.Optional;
  * ユーザーの作成・更新・パスワードリセットのビジネスロジック。ADMIN 操作が中心。
  * 新規作成時の初期パスワードはユーザーIDと同一（ログイン後に変更を強制する）。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService {
@@ -41,8 +43,10 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "このユーザーIDは既に使用されています");
         }
         // 初期パスワード = ユーザーID（BCrypt でハッシュ化。平文では保存しない）
-        return userRepository.save(User.create(userId, name, email, role, tlUserId,
+        User saved = userRepository.save(User.create(userId, name, email, role, tlUserId,
                 passwordEncoder.encode(userId)));
+        log.info("User created: userId={} role={}", userId, role);
+        return saved;
     }
 
     /** ユーザー情報（氏名・メール・ロール・上長・有効フラグ）を更新する。 */
@@ -51,7 +55,9 @@ public class UserService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         user.update(name, email, role, tlUserId, active);
-        return userRepository.save(user);
+        User saved = userRepository.save(user);
+        log.info("User updated: id={} userId={} role={} active={}", id, user.getUserId(), role, active);
+        return saved;
     }
 
     /**
@@ -67,6 +73,7 @@ public class UserService {
         String tempPassword = user.getUserId();
         user.resetPassword(passwordEncoder.encode(tempPassword));
         userRepository.save(user);
+        log.info("Password reset: id={} userId={}", id, user.getUserId());
         return tempPassword;
     }
 

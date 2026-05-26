@@ -133,16 +133,17 @@ class AuthServiceTest {
         }
 
         @Test
-        void 異常系_adminアカウント_FORBIDDENをスロー() {
-            User adminUser = User.create("admin", "Admin", null, Role.ADMIN, null, "hash");
+        void 正常系_adminアカウント_パスワードが更新されisInitialPasswordがfalseになる() {
+            User adminUser = User.create("admin", "Admin", null, Role.ADMIN, null, "$2a$12$hashedPassword");
+            ReflectionTestUtils.setField(adminUser, "id", 99);
+            when(userRepository.findById(99)).thenReturn(Optional.of(adminUser));
+            when(passwordEncoder.matches("oldpass", adminUser.getPasswordHash())).thenReturn(true);
+            when(passwordEncoder.encode("newpass12")).thenReturn("$2a$12$newHash");
 
-            assertThatThrownBy(() -> authService.changePassword(
-                    new ChangePasswordCommand("old", "newpass12"), adminUser))
-                    .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "FORBIDDEN");
+            authService.changePassword(new ChangePasswordCommand("oldpass", "newpass12"), adminUser);
 
-            // admin チェックで早期リターンするため findById を呼ばない
-            verify(userRepository, never()).findById(any());
+            assertThat(adminUser.isInitialPassword()).isFalse();
+            assertThat(adminUser.getPasswordHash()).isEqualTo("$2a$12$newHash");
         }
 
         @Test

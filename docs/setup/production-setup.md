@@ -285,6 +285,75 @@ ssh -i "C:\Users\<ユーザー名>\.ssh\skilize-key.pem" ec2-user@<Elastic-IP>
 
 ---
 
+### 4.3 Windows の場合（WinSCP を使う場合）
+
+WinSCP は Windows 向けのグラフィカルな SFTP/SCP クライアントです。  
+コマンド操作なしにドラッグ＆ドロップでファイルを転送でき、EC2 上のファイルをローカルのエディタで直接編集することもできます。
+
+> **PowerShell（4.2）との使い分け**: ファイルの転送・編集には WinSCP が便利です。`docker compose` などのコマンド実行には PowerShell または WinSCP の内蔵ターミナルを使います。
+
+#### インストール
+
+1. [winscp.net](https://winscp.net/eng/download.php) からインストーラーをダウンロードして実行します
+2. インストール完了後、WinSCP を起動します
+
+#### EC2 への接続
+
+1. 起動直後に「ログイン」ダイアログが開きます（開かない場合はメニュー「セッション」→「新しいセッション」を選択します）
+2. 以下を入力します:
+
+   | 項目 | 入力値 |
+   |---|---|
+   | ファイルプロトコル | SFTP |
+   | ホスト名 | EC2 のパブリック IP アドレス（例: `13.115.xxx.xxx`） |
+   | ポート番号 | 22 |
+   | ユーザー名 | `ec2-user` |
+   | パスワード | （空欄のまま） |
+
+3. 「高度な設定...」をクリックし、左メニューの「SSH」→「認証」を開きます
+4. 「秘密鍵ファイル」欄の「...」ボタンをクリックして、ダウンロードした `skilize-key.pem` を選択します
+   - 「OpenSSH 形式の秘密鍵を PuTTY 形式に変換しますか？」というダイアログが表示された場合は「はい」をクリックします
+   - 変換後の `.ppk` ファイルの保存先を指定して「保存」をクリックします（以後はこの `.ppk` を使用します）
+5. 「OK」をクリックして設定を閉じます
+6. 「保存」をクリックしてセッションを保存しておくと次回から入力が不要になります
+7. 「ログイン」をクリックします
+
+初回接続時に「サーバーのホストキーがキャッシュにありません」というダイアログが表示されます。  
+内容を確認して「はい」をクリックしてください。
+
+接続が成功すると、左側にローカル PC・右側に EC2 のファイルシステムが表示されます。
+
+#### ファイルの転送
+
+ファイルをパネル間でドラッグ＆ドロップするだけで転送できます。
+
+| 操作 | 方法 |
+|---|---|
+| `.env` のアップロード | ローカル（左）の `.env` を右パネルの `/home/ec2-user/skilize/` にドラッグ |
+| バックアップ SQL のダウンロード | 右パネルの `/home/ec2-user/backups/` 内ファイルを左パネルにドラッグ |
+| `infra/certs/` への証明書アップロード | ローカルの `.cer` ファイルを右パネルの対応パスにドラッグ |
+
+#### ファイルの直接編集
+
+EC2 上のテキストファイルをローカルのエディタで直接開いて編集できます。
+
+1. 右パネルで編集したいファイル（例: `/home/ec2-user/skilize/.env`）を右クリックします
+2. 「編集」を選択するとローカルのテキストエディタで開きます
+3. 編集して保存すると自動的に EC2 へ反映されます
+
+> **注意**: デフォルトのエディタは Windows メモ帳です。VS Code などに変更するには「オプション」→「環境設定」→「エディター」で設定してください。
+
+#### SSH ターミナルを開く
+
+WinSCP から SSH ターミナルを起動して `docker compose` コマンドなどを実行できます。
+
+1. 接続中に上部メニュー「コマンド」→「ターミナルを開く」を選択します（または `Ctrl+T`）
+2. ターミナルウィンドウが開き、コマンドを実行できます
+
+> ターミナルの動作が不安定な場合は PowerShell（4.2）での SSH 接続を使用してください。
+
+---
+
 ## 5. Docker・Git のインストール
 
 EC2 に SSH 接続した状態で、以下のコマンドを順番に実行します。
@@ -468,6 +537,10 @@ vi .env
 >
 > `vi` が難しければ `nano .env` を使うと、より直感的に編集できます。  
 > `nano` では `Ctrl+X` → `Y` → `Enter` で保存して終了できます。
+
+> **WinSCP を使う場合**: ターミナルコマンドを使わずに `.env` を編集できます。  
+> WinSCP で EC2 に接続後、右パネルで `/home/ec2-user/skilize/.env` を右クリック →「編集」を選択してください。  
+> ローカルのテキストエディタで編集・保存すると自動的に EC2 へ反映されます（「4.3 WinSCP を使う場合」参照）。
 
 ### 設定内容
 
@@ -1081,6 +1154,8 @@ scp -i ~/.ssh/skilize-key.pem ec2-user@<EC2のIP>:/home/ec2-user/backup_final.sq
 scp -i "C:\Users\<ユーザー名>\.ssh\skilize-key.pem" ec2-user@<EC2のIP>:/home/ec2-user/backup_final.sql .
 ```
 
+> **WinSCP を使う場合**: 接続後、右パネルで `/home/ec2-user/backup_final.sql` を選択し、左パネルの保存先にドラッグ＆ドロップするだけでダウンロードできます（「4.3 WinSCP を使う場合」参照）。
+
 ---
 
 **手順 2: EC2 インスタンスを終了する**
@@ -1212,7 +1287,242 @@ cat /home/ec2-user/backups/backup_YYYYMMDD.sql | docker compose exec -T db psql 
 
 ---
 
+### DB クライアントツールからの接続
+
+EC2 上の PostgreSQL（ポート 5432）はセキュリティグループで外部に公開していません。  
+ローカル PC の GUI ツールから接続するには **SSH トンネリング**が必要です。
+
+SSH トンネリングとは、SSH 接続を経由してリモートのポートをローカルに転送する仕組みです。  
+例えば「ローカル PC の 15432 → EC2 の localhost:5432」と転送することで、DB ツールが `localhost:15432` に接続するだけで EC2 上の PostgreSQL にアクセスできます。
+
+#### 接続情報
+
+| 項目 | 値 |
+|---|---|
+| ホスト（SSH トンネル越し） | `localhost` |
+| ポート（SSH トンネル越し） | `15432`（または任意の空きポート） |
+| データベース名 | `skilize` |
+| ユーザー名 | `skilize` |
+| パスワード | `.env` の `DB_PASSWORD` の値 |
+
+---
+
+#### A. psql（SSH 接続後にコマンドで操作）
+
+追加設定なしで使えます。EC2 に SSH 接続してからコンテナ内の psql を起動します。
+
+```bash
+cd /home/ec2-user/skilize
+docker compose exec db psql -U skilize -d skilize
+```
+
+接続後の基本操作:
+
+```sql
+\dt                    -- テーブル一覧を表示
+\d users               -- テーブル定義を表示
+SELECT user_id, role, is_active FROM users;
+\q                     -- 終了
+```
+
+---
+
+#### B. GUI ツールの前提設定（SSH トンネル用のポートマッピング）
+
+DBeaver・pgAdmin などの GUI ツールが SSH トンネルを使って EC2 の PostgreSQL に到達するには、  
+Docker コンテナのポート 5432 が **EC2 ホストの localhost** に公開されている必要があります。
+
+まず現在の設定を確認します（EC2 上で実行）:
+
+```bash
+grep -A 10 "^  db:" /home/ec2-user/skilize/infra/compose/docker-compose.prod.yml
+```
+
+`ports:` の記述がない場合は以下を追加します:
+
+```bash
+nano /home/ec2-user/skilize/infra/compose/docker-compose.prod.yml
+```
+
+`db` サービスに `ports` を追加します（`127.0.0.1` にのみバインドし、外部には公開しません）:
+
+```yaml
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+```
+
+> **セキュリティ**: `127.0.0.1:5432:5432` は EC2 のローカルホストにのみバインドします。  
+> セキュリティグループでポート 5432 を開けていない限り、外部から直接アクセスすることはできません。
+
+設定追加後、DB コンテナを再起動します:
+
+```bash
+cd /home/ec2-user/skilize
+docker compose up -d db
+```
+
+---
+
+#### C. pgAdmin
+
+PostgreSQL 公式の GUI ツールです（pgAdmin 4）。「SSH Tunnel」タブで SSH トンネルを直接設定できます。
+
+**インストール**: [pgadmin.org](https://www.pgadmin.org) からダウンロードしてインストールします
+
+**接続設定**
+
+1. 左ペインの「Servers」を右クリック →「Register」→「Server...」を選択します
+2. 「General」タブで「Name」に `Skilize Prod` などを入力します
+3. 「Connection」タブに以下を入力します:
+
+   | 項目 | 値 |
+   |---|---|
+   | Host name/address | `localhost` |
+   | Port | `5432` |
+   | Maintenance database | `skilize` |
+   | Username | `skilize` |
+   | Password | `.env` の `DB_PASSWORD` の値 |
+
+4. 「SSH Tunnel」タブを開き、「Use SSH tunneling」を有効にして以下を設定します:
+
+   | 項目 | 値 |
+   |---|---|
+   | Tunnel host | EC2 のパブリック IP アドレス |
+   | Tunnel port | `22` |
+   | Username | `ec2-user` |
+   | Authentication | `Identity file` |
+   | Identity file | `skilize-key.pem` のパスを指定 |
+
+5. 「Save」をクリックします
+
+---
+
+#### D. A5:SQL Mk-2
+
+Windows 向けの無料 DB クライアントツールです。PostgreSQL・SSH トンネルに対応しています。
+
+**インストール**: [a5m2.mmatsubara.com](https://a5m2.mmatsubara.com/) からダウンロードしてインストールします
+
+**接続設定**
+
+1. メニュー「データベース」→「データベースの追加と削除」を開きます
+2. 「追加」ボタンをクリックし、「PostgreSQL（直接接続）」を選択します
+3. 「基本」タブに以下を入力します:
+
+   | 項目 | 値 |
+   |---|---|
+   | ホスト名 | `localhost` |
+   | ポート番号 | `5432` |
+   | データベース名 | `skilize` |
+   | ユーザーID | `skilize` |
+   | パスワード | `.env` の `DB_PASSWORD` の値 |
+
+4. 「SSH2トンネル」タブを開き、以下を設定します:
+
+   | 項目 | 値 |
+   |---|---|
+   | SSH2トンネルを使用する | チェックを入れる |
+   | ホスト | EC2 のパブリック IP アドレス |
+   | ポート | `22` |
+   | ユーザー名 | `ec2-user` |
+   | 認証方式 | 「公開鍵認証」を選択 |
+   | 秘密鍵ファイル | `skilize-key.pem` のパスを指定 |
+
+5. 「テスト接続」をクリックして接続できることを確認し、「OK」をクリックします
+
+---
+
+#### E. VSCode（Database Client 拡張機能）
+
+VSCode の拡張機能「Database Client」を使う方法です。SSH トンネルを GUI 上で設定できます。
+
+**インストール**
+
+1. VSCode の拡張機能パネル（`Ctrl+Shift+X`）を開きます
+2. `Database Client`（発行元: Weijan Chen）を検索してインストールします
+   - 拡張機能 ID: `cweijan.vscode-database-client2`
+
+**接続設定**
+
+1. 左サイドバーに追加されたデータベースアイコンをクリックします
+2. 「+」ボタン →「PostgreSQL」を選択します
+3. 以下を入力します:
+
+   | 項目 | 値 |
+   |---|---|
+   | Host | `localhost` |
+   | Port | `5432` |
+   | Username | `skilize` |
+   | Password | `.env` の `DB_PASSWORD` の値 |
+   | Database | `skilize` |
+
+4. 「SSH」セクションを展開し、以下を設定します:
+
+   | 項目 | 値 |
+   |---|---|
+   | SSH Host | EC2 のパブリック IP アドレス |
+   | SSH Port | `22` |
+   | SSH Username | `ec2-user` |
+   | Private Key Path | `skilize-key.pem` のパスを指定 |
+
+5. 「Connect」をクリックします
+
+---
+
+#### F. VSCode（PostgreSQL 拡張機能）
+
+VSCode の拡張機能「PostgreSQL」を使う方法です。SSH トンネルのサポートがないため、先に手動でトンネルを確立してから接続します。
+
+**インストール**
+
+1. VSCode の拡張機能パネル（`Ctrl+Shift+X`）を開きます
+2. `PostgreSQL`（発行元: Chris Kolkman）を検索してインストールします
+   - 拡張機能 ID: `ckolkman.vscode-postgres`
+
+**ステップ 1: SSH トンネルを張る**
+
+別のターミナルで以下を実行し、接続したままにしておきます（`Ctrl+C` でトンネルが閉じます）:
+
+```bash
+# Mac/Linux
+ssh -L 15432:localhost:5432 -i ~/.ssh/skilize-key.pem ec2-user@<EC2のIP> -N
+
+# Windows PowerShell
+ssh -L 15432:localhost:5432 -i "C:\Users\<ユーザー名>\.ssh\skilize-key.pem" ec2-user@<EC2のIP> -N
+```
+
+`-N`: コマンドを実行せず SSH トンネルのみを確立するオプションです。
+
+**ステップ 2: VSCode から接続する**
+
+1. コマンドパレット（`Ctrl+Shift+P`）を開き、「PostgreSQL: Add Connection」を実行します
+2. 表示されるプロンプトに順番に入力します:
+
+   | プロンプト | 入力値 |
+   |---|---|
+   | Hostname | `localhost` |
+   | PostgreSQL port | `15432`（SSH トンネルのローカルポート） |
+   | Database | `skilize` |
+   | Username | `skilize` |
+   | Password | `.env` の `DB_PASSWORD` の値 |
+   | SSL mode | `disable` |
+
+3. 左サイドバーの「PostgreSQL Explorer」に接続が追加されたことを確認します
+
+---
+
+#### 注意事項
+
+- 本番 DB に対して UPDATE / DELETE などを直接実行する場合は、事前に必ずバックアップを取得してください
+- 使用後は SSH トンネルを終了してください（`Ctrl+C` またはターミナルを閉じる）
+- `DB_PASSWORD` は `.env` ファイルを直接確認するか、管理者に問い合わせてください
+
+---
+
 ### ログの確認
+
+**Docker コンテナのログ（コンソール出力）**
 
 ```bash
 # リアルタイムログ（全サービス）
@@ -1220,6 +1530,25 @@ docker compose logs -f
 
 # 直近 100 行のみ表示
 docker compose logs --tail=100 backend
+```
+
+**アプリケーションログファイル**
+
+バックエンドはコンテナ内の `/var/log/skilize/application.log` にもログを出力します。  
+日次ローテーション（30日保持）のため、過去ログも参照できます。
+
+```bash
+# 最新ログをリアルタイム表示
+docker compose exec backend tail -f /var/log/skilize/application.log
+
+# 直近 100 行を表示
+docker compose exec backend tail -100 /var/log/skilize/application.log
+
+# エラーのみ絞り込み
+docker compose exec backend grep "ERROR" /var/log/skilize/application.log
+
+# 特定の requestId で絞り込み（問い合わせ追跡）
+docker compose exec backend grep "<requestId>" /var/log/skilize/application.log
 ```
 
 ---

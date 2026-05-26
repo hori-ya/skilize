@@ -183,6 +183,9 @@ infrastructure → domain / application
 - DTO 命名: `XxxRequest` / `XxxResponse` / `XxxCommand` / `XxxQueryResult`（`XxxDto` という命名は使わない）
 - 特定クラス内でしか使わないネスト型は、親ファイル内に `record` としてまとめて定義してよい
 - **依存方向厳守**: Service は `presentation/request/` パッケージをインポートしない。Request → Command 変換は必ず Mapper 経由で行う
+- ログ出力は `@Slf4j`（Lombok）のみ使用（`System.out.println` 禁止）
+- ログには機密情報を含めない（パスワード・JWT・氏名・メールアドレス禁止）
+- 業務操作（マスタ更新・ユーザー管理・棚卸提出等）は INFO レベルで記録する
 
 **Frontend**
 - React 関数コンポーネント + hooks のみ
@@ -405,6 +408,8 @@ docker compose up db     # init.sql が再実行される
 - **`XxxDto` という命名のクラスを新規作成しない**（`XxxRequest` / `XxxResponse` / `XxxCommand` / `XxxQueryResult` のいずれかで命名する）
 - **Service メソッドの引数に `presentation/request/` のクラスを直接渡さない**（必ず Mapper で Command に変換してから渡す）
 - **Service クラスが `presentation` パッケージをインポートしない**（application → presentation の依存禁止）
+- **パスワード・パスワードハッシュ・JWTトークン・氏名・メールアドレス等の個人情報をログに出力しない**（機密情報漏洩防止）
+- ログ出力には `@Slf4j`（Lombok）を使用し、`System.out.println` 等の直接出力は使わない
 
 ---
 
@@ -454,7 +459,7 @@ docker compose up db     # init.sql が再実行される
 | ディレクトリ | 責務 |
 |---|---|
 | `com/skilize/shared/domain/exception/` | 共通例外（AuthException, GoalIncompleteException） |
-| `com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter |
+| `com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter・LoggingFilter（MDC requestId/userId セットアップ） |
 | `com/skilize/shared/presentation/` | GlobalExceptionHandler・ErrorResponse・ValidationErrorResponse |
 | `com/skilize/auth/presentation/` | AuthController |
 | `com/skilize/auth/presentation/request/` | LoginRequest・ChangePasswordRequest |

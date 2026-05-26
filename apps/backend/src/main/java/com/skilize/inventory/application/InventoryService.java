@@ -12,6 +12,7 @@ import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.domain.exception.GoalIncompleteException;
 import com.skilize.user.domain.User;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.util.stream.Collectors;
  * 明細の更新は全件洗い替え（deleteBy〜 → saveAll）で行う。
  * checkOwnership() で本人・TL・ADMIN のみが棚卸にアクセスできるよう制御する。
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class InventoryService {
@@ -189,7 +191,9 @@ public class InventoryService {
     public Inventory submit(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
         inv.submit();
-        return inventoryRepository.save(inv);
+        Inventory saved = inventoryRepository.save(inv);
+        log.info("Inventory submitted: inventoryId={}", inventoryId);
+        return saved;
     }
 
     // --- Comparison ---

@@ -46,7 +46,7 @@ src/main/java/com/skilize
 
 ├── shared
 │   ├── domain/exception/        ← AuthException, GoalIncompleteException
-│   ├── infrastructure/          ← SecurityConfig, JwtUtil, JwtAuthenticationFilter, InitialPasswordFilter
+│   ├── infrastructure/          ← SecurityConfig, JwtUtil, JwtAuthenticationFilter, InitialPasswordFilter, LoggingFilter
 │   └── presentation/            ← GlobalExceptionHandler, ErrorResponse, ValidationErrorResponse
 │
 ├── auth
@@ -261,7 +261,7 @@ shared/domain
 shared/infrastructure
 - Security
 - Config
-- Logging
+- Logging（LoggingFilter: MDC requestId/userId セットアップ）
 - Persistence Config
 ```
 
@@ -499,6 +499,41 @@ UserResponse
 4. business rule を domain へ移動
 5. DTO分離
 6. fat service分割
+
+---
+
+# Logging Rules
+
+## ログ基盤
+
+* SLF4J + Logback を使用する（`@Slf4j` by Lombok）
+* フォーマット: プレーンテキスト（開発・本番共通）
+* MDC: `LoggingFilter`（`shared/infrastructure/`）がリクエストごとに `requestId`（UUID）と `userId`（未認証時は `"-"`）をセット
+
+## ログレベル
+
+| レベル | 用途 |
+|--------|------|
+| ERROR | 5xx エラー・外部サービス障害 |
+| WARN | 認証失敗・権限エラー（4xx）・バリデーションエラー |
+| INFO | 正常な業務操作（マスタ更新・ユーザー管理・棚卸提出等） |
+| DEBUG | 開発環境のみ。本番は INFO 以上のみ出力 |
+
+## INFO ログを出力すべき操作
+
+* マスタ管理の書き込み操作（POST/PUT/DELETE/PATCH）
+* ユーザー管理（作成・更新・有効化・無効化・パスワードリセット）
+* カスタムスキル昇格（ITスキル・資格）
+* 棚卸提出（`POST /api/inventories/{id}/submit`）
+* AI分析トリガー・完了・失敗
+
+## ログ出力禁止事項
+
+以下の情報はログに出力しない:
+
+* パスワード・パスワードハッシュ（`password_hash`）
+* JWT トークン（`Authorization` ヘッダの値）
+* 氏名・メールアドレス等の個人情報
 
 ---
 

@@ -5,6 +5,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -18,6 +19,7 @@ import java.util.Set;
  * is_initial_password=true のユーザーは ALLOWED_PATHS 以外のリクエストをすべて 403 でブロックする。
  * JwtAuthenticationFilter の直後に配置されるため、認証済みユーザーのみが対象となる。
  */
+@Slf4j
 @Component
 public class InitialPasswordFilter extends OncePerRequestFilter {
 
@@ -46,6 +48,7 @@ public class InitialPasswordFilter extends OncePerRequestFilter {
         }
 
         if (user.isInitialPassword() && !ALLOWED_PATHS.contains(request.getServletPath())) {
+            log.warn("Initial password change required. Blocked path={}", request.getServletPath());
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write(BODY);
