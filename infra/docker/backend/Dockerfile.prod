@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-alpine AS builder
+FROM eclipse-temurin:21-jdk AS builder
 
 # 社内プロキシ対応（Gradle の依存関係ダウンロードに使用）
 ARG HTTP_PROXY
@@ -9,7 +9,8 @@ ARG CA_CERT_ENABLED=false
 
 # CA証明書のインストール（CA_CERT_ENABLED=true のときのみ実行）
 COPY infra/certs/ /tmp/certs/
-RUN apk add --no-cache ca-certificates && \
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
     if [ "$CA_CERT_ENABLED" = "true" ] && [ -f /tmp/certs/company-root-ca.cer ]; then \
       cp /tmp/certs/company-root-ca.cer /usr/local/share/ca-certificates/company-root-ca.crt && \
       update-ca-certificates; \
@@ -28,14 +29,16 @@ WORKDIR /app
 COPY apps/backend/ .
 RUN ./gradlew bootJar --no-daemon
 
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre
 WORKDIR /app
 
 # ヘルスチェック用ツール
-RUN apk add --no-cache wget
+RUN apt-get update && \
+    apt-get install -y wget --no-install-recommends && \
+    rm -rf /var/lib/apt/lists/*
 
 # 非 root ユーザーの作成
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
 COPY --from=builder /app/build/libs/*.jar app.jar
 RUN chown appuser:appgroup app.jar

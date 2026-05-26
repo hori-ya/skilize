@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jdk-alpine
+FROM eclipse-temurin:21-jdk
 
 # 社内プロキシ対応: docker compose build --build-arg HTTP_PROXY=... で渡す
 ARG HTTP_PROXY
@@ -9,7 +9,8 @@ ARG CA_CERT_ENABLED=false
 
 # CA証明書を最初にインストール（後続の wget HTTPS 通信に必要）
 COPY infra/certs/ /tmp/certs/
-RUN apk add --no-cache ca-certificates && \
+RUN apt-get update && \
+    apt-get install -y ca-certificates && \
     if [ "$CA_CERT_ENABLED" = "true" ] && [ -f /tmp/certs/company-root-ca.cer ]; then \
       cp /tmp/certs/company-root-ca.cer /usr/local/share/ca-certificates/company-root-ca.crt && \
       update-ca-certificates; \
@@ -17,7 +18,8 @@ RUN apk add --no-cache ca-certificates && \
 
 ENV GRADLE_VERSION=9.4.1
 
-RUN apk add --no-cache wget unzip && \
+RUN apt-get update && \
+    apt-get install -y wget unzip && \
     wget -q "https://services.gradle.org/distributions/gradle-${GRADLE_VERSION}-bin.zip" -O /tmp/gradle.zip && \
     unzip -q /tmp/gradle.zip -d /opt && \
     rm /tmp/gradle.zip && \
