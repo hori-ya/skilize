@@ -1872,15 +1872,17 @@ body {
   font-size: 12px;
   padding: 7px 14px;
   letter-spacing: 0.5px;
+  border-bottom: none;
 }
 
 .scoring-cat2-row td {
-  background: rgba(61, 109, 179, 0.10);
-  color: var(--color-primary);
+  background: linear-gradient(90deg, rgba(61, 109, 179, 0.18) 0%, rgba(80, 130, 200, 0.28) 100%);
+  color: #2a4a7f;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 11px;
   padding: 5px 22px;
-  border-bottom: 1px solid rgba(61, 109, 179, 0.15);
+  letter-spacing: 0.3px;
+  border-bottom: none;
 }
 
 .scoring-skill-row td.skill-name-cell {

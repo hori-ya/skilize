@@ -24,11 +24,12 @@ public record ItSkillResponse(int id, String name, int categoryId, Integer categ
                                String category2Name, String category3Name,
                                String description, int sortOrder, boolean isActive) {
 
-    public static ItSkillResponse from(ItSkill s, ItSkillCategory cat1) {
+    public static ItSkillResponse from(ItSkill s, ItSkillCategory cat1, ItSkillCategory cat2Category) {
         ItSkillCategory cat = s.getCategory();
         String cat2 = null, cat3 = null;
         if (cat.getLevel() == 3) {
             cat3 = cat.getName();
+            cat2 = cat2Category != null ? cat2Category.getName() : null;
         } else if (cat.getLevel() == 2) {
             cat2 = cat.getName();
         }

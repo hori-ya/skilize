@@ -64,7 +64,7 @@ public class MasterController {
                 ? itSkillRepository.findAllWithCategory()
                 : isActive ? itSkillRepository.findAllActiveWithCategory()
                            : itSkillRepository.findAllWithCategoryByActive(false);
-        return skills.stream().map(s -> ItSkillResponse.from(s, resolveCategory1(s))).toList();
+        return skills.stream().map(this::toItSkillResponse).toList();
     }
 
     /** ITスキルを新規作成する（ADMIN のみ）。resolveCategory1() で表示用の大分類を解決する。 */
@@ -72,8 +72,7 @@ public class MasterController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ItSkillResponse> createItSkill(@Valid @RequestBody ItSkillRequest req) {
         ItSkill saved = masterService.createItSkill(req.categoryId(), req.name(), req.description(), req.sortOrder());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ItSkillResponse.from(saved, resolveCategory1(saved)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toItSkillResponse(saved));
     }
 
     /** ITスキルを更新する（ADMIN のみ）。 */
@@ -82,7 +81,7 @@ public class MasterController {
     public ItSkillResponse updateItSkill(@PathVariable int id, @Valid @RequestBody ItSkillRequest req) {
         ItSkill skill = masterService.updateItSkill(id, req.categoryId(), req.name(),
                 req.description(), req.sortOrder(), req.active());
-        return ItSkillResponse.from(skill, resolveCategory1(skill));
+        return toItSkillResponse(skill);
     }
 
     /** カスタム入力されたが未マスタ登録のITスキル名を使用件数付きで返す（TL/ADMIN のみ）。 */
@@ -100,8 +99,7 @@ public class MasterController {
     public ResponseEntity<ItSkillResponse> promoteItSkill(@Valid @RequestBody PromoteItSkillRequest req) {
         ItSkill skill = masterService.promoteItSkill(req.customName(), req.categoryId(), req.name(),
                 req.description(), req.sortOrder());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ItSkillResponse.from(skill, resolveCategory1(skill)));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toItSkillResponse(skill));
     }
 
     /** 資格一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
@@ -277,5 +275,20 @@ public class MasterController {
                 .map(parent -> parent.getLevel() == 1 ? parent
                         : itSkillCategoryRepository.findById(parent.getParentId()).orElse(parent))
                 .orElse(cat);
+    }
+
+    /**
+     * ITスキルの表示用中分類（レベル2）を返すプライベートヘルパー。
+     * レベル3のスキルのみ親（レベル2）を取得して返す。それ以外は null を返す。
+     * （レベル2の場合は from() 内で cat 自身を cat2 として扱うため不要）
+     */
+    private ItSkillCategory resolveCategory2(ItSkill skill) {
+        ItSkillCategory cat = skill.getCategory();
+        if (cat.getLevel() != 3) return null;
+        return itSkillCategoryRepository.findById(cat.getParentId()).orElse(null);
+    }
+
+    private ItSkillResponse toItSkillResponse(ItSkill skill) {
+        return ItSkillResponse.from(skill, resolveCategory1(skill), resolveCategory2(skill));
     }
 }

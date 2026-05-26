@@ -161,7 +161,7 @@ export default function InventoryHistoryPage() {
 
   const itSkillTree = useMemo(() => {
     const skillMap = new Map(itSkillMaster.map(s => [s.id, s]));
-    const groups = new Map<string, ItSkillDetailItem[]>();
+    const map = new Map<string, Map<string, ItSkillDetailItem[]>>();
     const customItems: ItSkillDetailItem[] = [];
 
     const sortedDetails = [...itSkillDetails].sort((a, b) => {
@@ -178,10 +178,18 @@ export default function InventoryHistoryPage() {
       } else {
         const master = skillMap.get(detail.itSkillId);
         const cat1 = master?.category1Name ?? '未分類';
-        if (!groups.has(cat1)) groups.set(cat1, []);
-        groups.get(cat1)!.push(detail);
+        const cat2 = master?.category2Name ?? '';
+        if (!map.has(cat1)) map.set(cat1, new Map());
+        const cat2Map = map.get(cat1)!;
+        if (!cat2Map.has(cat2)) cat2Map.set(cat2, []);
+        cat2Map.get(cat2)!.push(detail);
       }
     }
+
+    const groups = Array.from(map.entries()).map(([cat1, cat2Map]) => ({
+      cat1,
+      cat2Groups: Array.from(cat2Map.entries()).map(([cat2, items]) => ({ cat2, items })),
+    }));
 
     return { groups, customItems };
   }, [itSkillDetails, itSkillMaster]);
@@ -195,21 +203,25 @@ export default function InventoryHistoryPage() {
 
   const filteredItSkillTree = useMemo(() => {
     const searchLower = itSkillSearch.toLowerCase();
-    const filteredGroups = new Map<string, ItSkillDetailItem[]>();
-    for (const [cat1, items] of itSkillTree.groups.entries()) {
-      if (itSkillCategory1Filter && cat1 !== itSkillCategory1Filter) continue;
-      const filtered = items.filter(item => {
-        if (searchLower && !item.itSkillName?.toLowerCase().includes(searchLower)) return false;
-        if (itSkillDiffFilter) {
-          const comp = comparisonMap.get(item.id);
-          if (itSkillDiffFilter === 'new' && comp !== undefined) return false;
-          if (itSkillDiffFilter === 'up' && (comp === undefined || (comp.diff ?? 0) <= 0)) return false;
-          if (itSkillDiffFilter === 'down' && (comp === undefined || (comp.diff ?? 0) >= 0)) return false;
-        }
-        return true;
-      });
-      if (filtered.length > 0) filteredGroups.set(cat1, filtered);
-    }
+    const filteredGroups = itSkillTree.groups
+      .filter(g => !itSkillCategory1Filter || g.cat1 === itSkillCategory1Filter)
+      .map(g => ({
+        cat1: g.cat1,
+        cat2Groups: g.cat2Groups.map(cg => ({
+          cat2: cg.cat2,
+          items: cg.items.filter(item => {
+            if (searchLower && !item.itSkillName?.toLowerCase().includes(searchLower)) return false;
+            if (itSkillDiffFilter) {
+              const comp = comparisonMap.get(item.id);
+              if (itSkillDiffFilter === 'new' && comp !== undefined) return false;
+              if (itSkillDiffFilter === 'up' && (comp === undefined || (comp.diff ?? 0) <= 0)) return false;
+              if (itSkillDiffFilter === 'down' && (comp === undefined || (comp.diff ?? 0) >= 0)) return false;
+            }
+            return true;
+          }),
+        })).filter(cg => cg.items.length > 0),
+      }))
+      .filter(g => g.cat2Groups.length > 0);
     const filteredCustom = itSkillCategory1Filter || itSkillDiffFilter === 'up' || itSkillDiffFilter === 'down'
       ? []
       : itSkillTree.customItems.filter(item =>
@@ -220,7 +232,9 @@ export default function InventoryHistoryPage() {
 
   const filteredItSkillCount = useMemo(() => {
     let count = 0;
-    for (const items of filteredItSkillTree.groups.values()) count += items.length;
+    for (const { cat2Groups } of filteredItSkillTree.groups) {
+      for (const { items } of cat2Groups) count += items.length;
+    }
     return count + filteredItSkillTree.customItems.length;
   }, [filteredItSkillTree]);
 
@@ -346,7 +360,7 @@ export default function InventoryHistoryPage() {
                           onChange={e => setItSkillCategory1Filter(e.target.value)}
                         >
                           <option value="">{t('historyPage.filter.category1All')}</option>
-                          {Array.from(itSkillTree.groups.keys()).map(cat1 => (
+                          {itSkillTree.groups.map(({ cat1 }) => (
                             <option key={cat1} value={cat1}>{cat1}</option>
                           ))}
                         </select>
@@ -392,11 +406,18 @@ export default function InventoryHistoryPage() {
                             </tr>
                           ) : (
                             <>
-                              {Array.from(filteredItSkillTree.groups.entries()).map(([cat1, items]) => (
+                              {filteredItSkillTree.groups.map(({ cat1, cat2Groups }) => (
                                 <Fragment key={cat1}>
                                   <tr className="scoring-cat1-row">
                                     <td colSpan={itSkillColCount}>{cat1}</td>
                                   </tr>
+                                  {cat2Groups.map(({ cat2, items }) => (
+                                    <Fragment key={`${cat1}-${cat2}`}>
+                                      {cat2 && (
+                                        <tr className="scoring-cat2-row">
+                                          <td colSpan={itSkillColCount}>{cat2}</td>
+                                        </tr>
+                                      )}
                                   {items.map(detail => {
                                     const comp = comparisonMap.get(detail.id);
                                     return (
@@ -437,6 +458,8 @@ export default function InventoryHistoryPage() {
                                       </tr>
                                     );
                                   })}
+                                    </Fragment>
+                                  ))}
                                 </Fragment>
                               ))}
                               {filteredItSkillTree.customItems.length > 0 && (
