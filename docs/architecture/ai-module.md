@@ -48,14 +48,38 @@ AIキャリア分析機能のために追加する Python ベースのマイク�
 
 ```
 apps/ai/
-├── main.py                     ← FastAPI エントリーポイント（/analyze エンドポイント）
-├── analyzer.py                 ← LangChain 分析ロジック・プロンプト構築
-├── db.py                       ← PostgreSQL 接続・棚卸データ取得クエリ
-├── prompts/
-│   └── career_analysis.py      ← プロンプトテンプレート定義
 ├── requirements.txt
-└── Dockerfile
+└── app/
+    ├── __init__.py
+    ├── main.py                              ← FastAPI エントリーポイント・ルーター登録
+    ├── api/
+    │   ├── __init__.py
+    │   ├── v1/
+    │   │   ├── __init__.py
+    │   │   └── career_analysis.py          ← POST /analyze エンドポイント
+    │   └── dependencies.py                 ← X-Internal-Key 内部認証
+    ├── core/
+    │   ├── __init__.py
+    │   └── config.py                       ← 環境変数管理（pydantic-settings）
+    ├── schemas/
+    │   ├── __init__.py
+    │   ├── career_analysis.py              ← Pydantic リクエスト型（AnalyzeRequest）
+    │   └── chat.py                         ← Pydantic 型（ChatRequest / ChatResponse / ChatMessage）
+    └── services/
+        ├── __init__.py
+        ├── llm.py                          ← LLM インスタンス初期化（OpenAI / Anthropic 切り替え）
+        ├── career_analysis_service.py      ← 分析ロジック・DB 操作・フォーマッター
+        ├── chat_service.py                 ← チャット処理・モード別プロンプト選択
+        └── prompts/
+            ├── __init__.py
+            ├── career_analysis_prompt.py   ← キャリア分析プロンプトテンプレート
+            └── chat_prompts.py             ← 通常・文書校正・キャリア相談・ヘルプ用プロンプト
+
+tests/
+└── test_chat_service.py                    ← chat_service ユニットテスト（LLM/DB モック化）
 ```
+
+> AI チャット API の詳細仕様は [10-ai-chat.md](./api/10-ai-chat.md) を参照。
 
 ---
 
@@ -141,19 +165,15 @@ LangChain はすべてのプロバイダーが同一の `BaseChatModel` イン�
 Python 側の初期化コード（概念）:
 
 ```python
-# analyzer.py
-import os
-from langchain_openai import ChatOpenAI
-from langchain_anthropic import ChatAnthropic
+# app/services/llm.py
+from app.core.config import settings
 
 def build_llm():
-    provider = os.getenv("LLM_PROVIDER", "openai")
-    model    = os.getenv("LLM_MODEL", "gpt-4o")
-
-    if provider == "anthropic":
-        return ChatAnthropic(model=model)
-    else:  # デフォルト: openai
-        return ChatOpenAI(model=model)
+    if settings.llm_provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+        return ChatAnthropic(model=settings.llm_model)
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(model=settings.llm_model)
 ```
 
 ### 6.2 対応プロバイダーと環境変数

@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
 import { useTranslation } from 'react-i18next';
 import SkilizeLogo from '../../shared/ui/SkilizeLogo';
+import AiSupportWidget from '../../features/ai-support/components/AiSupportWidget';
 
 export default function NavBar() {
   const { user, logout } = useAuth();
@@ -114,6 +115,7 @@ export default function NavBar() {
           </button>
         )}
         <button className="navbar__logout-btn" onClick={handleLogout}>{t('action.logout')}</button>
+        <AiSupportWidget />
       </div>
     </nav>
   );

@@ -7,6 +7,7 @@ import authJa from './locales/ja/auth.json';
 import inventoryJa from './locales/ja/inventory.json';
 import teamJa from './locales/ja/team.json';
 import masterJa from './locales/ja/master.json';
+import aiSupportJa from './locales/ja/ai-support.json';
 
 i18n
   .use(initReactI18next)
@@ -21,6 +22,7 @@ i18n
         inventory: inventoryJa,
         team: teamJa,
         master: masterJa,
+        'ai-support': aiSupportJa,
       },
     },
     interpolation: {

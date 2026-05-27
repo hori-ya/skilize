@@ -1,0 +1,38 @@
+{
+  "button": {
+    "label": "AI",
+    "ariaLabel": "AIサポートを開く"
+  },
+  "panel": {
+    "title": "AI サポート",
+    "close": "閉じる"
+  },
+  "mode": {
+    "label": "モード選択",
+    "normal": "通常",
+    "proofreading": "文書校正",
+    "career": "キャリア相談",
+    "help": "ヘルプ"
+  },
+  "placeholder": {
+    "normal": "何でもお気軽にご質問ください。業務上の疑問・技術的な相談など幅広く対応します。",
+    "proofreading": "校正したい文章を入力してください。ビジネス文書として自然な表現に整えます。",
+    "career": "キャリアの方向性や目標設定についてご相談ください。棚卸データをもとにアドバイスします。",
+    "help": "Skilize の操作方法についてご不明な点をお気軽にご質問ください。"
+  },
+  "message": {
+    "you": "あなた",
+    "ai": "AI",
+    "thinking": "考え中..."
+  },
+  "input": {
+    "placeholder": "メッセージを入力... (Ctrl+Enter で送信)",
+    "ariaLabel": "メッセージ入力欄",
+    "send": "送信",
+    "sending": "送信中...",
+    "shortcut": "Ctrl+Enter で送信"
+  },
+  "error": {
+    "failed": "申し訳ありません。AIの応答取得に失敗しました。しばらく時間をおいて再度お試しください。"
+  }
+}

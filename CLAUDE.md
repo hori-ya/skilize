@@ -395,6 +395,24 @@ docker compose up db     # init.sql が再実行される
 
 ---
 
+## Development Rules: Doc & Test Sync (開発ルール：設計書・テスト同期)
+
+**ソースを変更する際は、必ず以下の3つを同時に修正すること（必須）:**
+
+1. **設計書の更新**: 影響する `docs/architecture/` 配下のドキュメントを修正する
+   - 新しい API エンドポイントは `docs/architecture/api/` に追加
+   - フォルダ構成・フローが変わる場合は `ai-module.md` / `overview.md` 等を更新
+   - CLAUDE.md のディレクトリ責務テーブルも合わせて更新
+2. **自動テストの更新**: 影響するテストコードを修正・追加する
+   - **Backend**: `apps/backend/src/test/` の `*Test.java` を更新
+   - **Frontend**: `apps/frontend/src/features/**/*.test.tsx` を更新
+   - **Python**: `apps/ai/tests/` の `test_*.py` を更新
+3. **i18n の更新**: フロントエンドに新しい UI テキストが追加される場合は `src/i18n/locales/ja/` の JSON を必ず更新する
+
+> ソース変更のみでドキュメント・テストを更新しないプルリクエストは受け入れない。
+
+---
+
 ## Forbidden Rules (禁止ルール)
 
 - `User` エンティティに `@Setter` を付けない（フィールドはドメインメソッドで変更）
@@ -524,7 +542,26 @@ docker compose up db     # init.sql が再実行される
 | `apps/frontend/src/features/team/` | チーム照会・メンバー詳細・全ユーザー照会（API / 型 / ページ） |
 | `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー管理） |
 | `apps/frontend/src/features/interview/` | 面談機能の API 呼び出し・型定義（ページは features/team に統合） |
+| `apps/frontend/src/features/ai-support/` | AI サポートチャット機能（ボタン・パネル UI / API / 型定義） |
 | `apps/frontend/src/i18n/` | i18next 初期設定（`index.ts`）と翻訳 JSON ファイル（`locales/ja/`） |
+
+### Python AI サービス（FastAPI）
+
+| ディレクトリ | 責務 |
+|---|---|
+| `apps/ai/app/main.py` | FastAPI エントリーポイント・ルーター登録・バリデーションエラーハンドラー |
+| `apps/ai/app/api/v1/career_analysis.py` | `POST /analyze` エンドポイント（バックグラウンドタスクで分析を起動し 202 を即返す） |
+| `apps/ai/app/api/dependencies.py` | `X-Internal-Key` ヘッダーによる内部認証 |
+| `apps/ai/app/core/config.py` | 環境変数管理（pydantic-settings の `Settings`） |
+| `apps/ai/app/schemas/career_analysis.py` | Pydantic リクエスト型（`AnalyzeRequest`） |
+| `apps/ai/app/services/llm.py` | `LLM_PROVIDER` 環境変数で OpenAI / Anthropic を切り替える `build_llm()` |
+| `apps/ai/app/services/career_analysis_service.py` | 分析オーケストレーション・PostgreSQL への DB 操作・データフォーマッター・LangChain チェーン実行 |
+| `apps/ai/app/services/prompts/career_analysis_prompt.py` | LLM へ送るシステムプロンプトとユーザープロンプトテンプレート定義 |
+| `apps/ai/app/api/v1/chat.py` | `POST /chat` エンドポイント（同期・Spring Boot からのプロキシ受付） |
+| `apps/ai/app/schemas/chat.py` | Pydantic 型（`ChatRequest` / `ChatResponse` / `ChatMessage`） |
+| `apps/ai/app/services/chat_service.py` | チャット処理・モード別プロンプト選択・キャリアモード DB 取得 |
+| `apps/ai/app/services/prompts/chat_prompts.py` | 通常・文書校正・キャリア相談・ヘルプ各モードのシステムプロンプト |
+| `apps/ai/tests/test_chat_service.py` | chat_service のユニットテスト（LLM/DB モック化） |
 
 ### インフラ
 
