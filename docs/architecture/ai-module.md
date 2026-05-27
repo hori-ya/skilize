@@ -300,10 +300,20 @@ AI_SERVICE_URL=http://ai:8000
 com.skilize.ai/
 ├── presentation/
 │   ├── AiAnalysisController.java      ← GET /api/users/me/ai-analyses 等
-│   └── AiAnalysisResponse.java        ← record（fiscalYear, status, analysisResult）
+│   ├── AiChatController.java          ← POST /api/ai/chat（フロントエンドからのチャット受付）
+│   └── request/
+│       └── AiChatRequest.java         ← チャットリクエスト DTO（バリデーション付き）
 ├── application/
 │   ├── AiAnalysisService.java         ← 取得ロジック + Python 呼び出し（@Async）
-│   └── InventoryCompletedEventListener.java  ← @EventListener
+│   ├── AiChatService.java             ← Python FastAPI /chat への同期転送（90s タイムアウト）
+│   ├── InventoryCompletedEventListener.java  ← @EventListener
+│   ├── command/
+│   │   └── AiChatCommand.java         ← チャット Service 入力（userId 付き）
+│   ├── mapper/
+│   │   └── AiChatApplicationMapper.java ← AiChatRequest → AiChatCommand 変換
+│   └── query/
+│       ├── AiAnalysisQueryResult.java
+│       └── AiChatQueryResult.java     ← チャット応答（response, mode）
 └── domain/
     ├── AiCareerAnalysis.java           ← Entity
     ├── AiAnalysisStatus.java           ← Enum（PENDING/PROCESSING/COMPLETED/FAILED）

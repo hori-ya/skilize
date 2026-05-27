@@ -116,16 +116,33 @@ apps/frontend/src/
     │   └── pages/                    ← FiscalYearMasterPage / SkillLevelMasterPage
     │                                    ItSkillMasterPage / QualificationMasterPage
     │                                    AdSeminarMasterPage / UserMasterPage
-    └── interview/
-        ├── api/interviewApi.ts       ← 面談メモ API（getInterview / saveInterview / getPrevYearInterview）
-        └── types/index.ts            ← InterviewMemo / DetailNoteItem / DetailType 型
+    ├── interview/
+    │   ├── api/interviewApi.ts       ← 面談メモ API（getInterview / saveInterview / getPrevYearInterview）
+    │   └── types/index.ts            ← InterviewMemo / DetailNoteItem / DetailType 型
+    └── ai-support/
+        ├── api/aiSupportApi.ts       ← AI チャット API（postAiChat）
+        ├── components/AiSupportWidget.tsx ← AI ボタン・パネル UI
+        ├── types/index.ts            ← AiMode / ChatMessage / AiChatRequest / AiChatResponse
+        └── store.ts                  ← モジュールレベルの状態保持（ページ遷移をまたいで復元）
 
 apps/ai/                              ← Python FastAPI（AI モジュール・内部サービス）
-├── main.py                           ← FastAPI エントリーポイント
-├── analyzer.py                       ← LangChain 分析ロジック
-├── db.py                             ← PostgreSQL 接続・棚卸データ取得
-├── prompts/career_analysis.py        ← プロンプトテンプレート
-└── requirements.txt
+├── requirements.txt
+└── app/
+    ├── main.py                       ← FastAPI エントリーポイント・ルーター登録
+    ├── api/v1/
+    │   ├── career_analysis.py        ← POST /analyze（非同期・fire-and-forget）
+    │   └── chat.py                   ← POST /chat（同期・チャット応答）
+    ├── core/config.py                ← 環境変数管理（pydantic-settings）
+    ├── schemas/
+    │   ├── career_analysis.py        ← AnalyzeRequest
+    │   └── chat.py                   ← ChatRequest / ChatResponse / ChatMessage
+    └── services/
+        ├── llm.py                    ← LLM インスタンス初期化（OpenAI / Anthropic 切り替え）
+        ├── career_analysis_service.py ← 分析オーケストレーション・DB 操作
+        ├── chat_service.py           ← チャット処理・モード別プロンプト選択
+        └── prompts/
+            ├── career_analysis_prompt.py ← キャリア分析プロンプト
+            └── chat_prompts.py       ← 通常・校正・キャリア・ヘルプ用プロンプト
 ```
 
 **依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）  

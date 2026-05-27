@@ -136,9 +136,12 @@ com.skilize
 │   └── application/            ← InterviewService（面談メモ保存）
 │       └── command/            ← DetailNoteCommand
 └── ai/
-    ├── presentation/           ← AiAnalysisController（QueryResult を直接返す）
-    ├── application/            ← AiAnalysisService（非同期AI分析）・InventoryCompletedEventListener
-    │   └── query/              ← AiAnalysisQueryResult
+    ├── presentation/           ← AiAnalysisController・AiChatController
+    │   └── request/            ← AiChatRequest
+    ├── application/            ← AiAnalysisService（非同期AI分析）・AiChatService・InventoryCompletedEventListener
+    │   ├── command/            ← AiChatCommand
+    │   ├── mapper/             ← AiChatApplicationMapper
+    │   └── query/              ← AiAnalysisQueryResult・AiChatQueryResult
     └── domain/                 ← AiCareerAnalysis エンティティ・Repository
 ```
 
@@ -263,6 +266,9 @@ POST   /api/inventories/{id}/goal-review/complete
 GET    /api/inventories/{id}/goals
 PUT    /api/inventories/{id}/goals
 POST   /api/inventories/{id}/goals/complete
+
+# AI チャット
+POST   /api/ai/chat
 
 # AI分析
 GET    /api/users/me/ai-analyses
@@ -395,6 +401,18 @@ docker compose up db     # init.sql が再実行される
 
 ---
 
+## Development Rules: Design First (開発ルール：設計先行)
+
+**実装・改修を行う前に、必ず設計を先に作成・修正すること（必須）:**
+
+1. **新機能・仕様変更**: 実装コードを書き始める前に、該当する設計書（`docs/architecture/api/` や `docs/architecture/ai-module.md` 等）を作成・更新する
+2. **バグ修正**: 原因と修正方針を設計書の該当箇所に反映させてから修正する（軽微なバグは省略可）
+3. **リファクタリング**: フォルダ構成・依存関係が変わる場合は `overview.md` / `CLAUDE.md` を先に更新する
+
+> 設計書なきコード変更のプルリクエストは受け入れない。
+
+---
+
 ## Development Rules: Doc & Test Sync (開発ルール：設計書・テスト同期)
 
 **ソースを変更する際は、必ず以下の3つを同時に修正すること（必須）:**
@@ -521,9 +539,12 @@ docker compose up db     # init.sql が再実行される
 | `com/skilize/interview/presentation/response/` | InterviewResponse・DetailNoteResponse |
 | `com/skilize/interview/application/` | InterviewService（面談メモ保存ロジック） |
 | `com/skilize/interview/application/command/` | DetailNoteCommand |
-| `com/skilize/ai/presentation/` | AiAnalysisController（QueryResult を直接返す） |
-| `com/skilize/ai/application/` | AiAnalysisService（非同期AI分析トリガー・結果取得）・InventoryCompletedEventListener |
-| `com/skilize/ai/application/query/` | AiAnalysisQueryResult |
+| `com/skilize/ai/presentation/` | AiAnalysisController（QueryResult を直接返す）・AiChatController（POST /api/ai/chat） |
+| `com/skilize/ai/presentation/request/` | AiChatRequest |
+| `com/skilize/ai/application/` | AiAnalysisService（非同期AI分析トリガー・結果取得）・AiChatService（Python同期転送）・InventoryCompletedEventListener |
+| `com/skilize/ai/application/command/` | AiChatCommand |
+| `com/skilize/ai/application/mapper/` | AiChatApplicationMapper（AiChatRequest→AiChatCommand 変換） |
+| `com/skilize/ai/application/query/` | AiAnalysisQueryResult・AiChatQueryResult |
 | `com/skilize/ai/domain/` | AiCareerAnalysis エンティティ・AiAnalysisStatus・AiCareerAnalysisRepository |
 | `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
 | `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |

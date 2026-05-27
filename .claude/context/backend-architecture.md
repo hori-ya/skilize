@@ -127,11 +127,16 @@ src/main/java/com/skilize
 │
 └── ai
     ├── presentation/
-    │   └── AiAnalysisController.java  ← QueryResult を直接返す
+    │   ├── AiAnalysisController.java  ← QueryResult を直接返す
+    │   ├── AiChatController.java      ← POST /api/ai/chat
+    │   └── request/                   ← AiChatRequest
     ├── application/
     │   ├── AiAnalysisService.java
-    │   ├── AiAnalysisEventListener.java
-    │   └── query/               ← AiAnalysisQueryResult
+    │   ├── AiChatService.java         ← Python FastAPI への同期転送
+    │   ├── InventoryCompletedEventListener.java
+    │   ├── command/             ← AiChatCommand
+    │   ├── mapper/              ← AiChatApplicationMapper
+    │   └── query/               ← AiAnalysisQueryResult・AiChatQueryResult
     └── domain/                  ← AiCareerAnalysis・AiAnalysisStatus・AiCareerAnalysisRepository
 ```
 

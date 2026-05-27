@@ -57,7 +57,8 @@ src/
 │   ├── inventory/               ← ダッシュボード・棚卸・グラフ
 │   ├── team/                    ← チーム照会・メンバー詳細
 │   ├── master/                  ← マスタ管理ページ群
-│   └── interview/               ← 面談メモ API・型（UI は team に統合）
+│   ├── interview/               ← 面談メモ API・型（UI は team に統合）
+│   └── ai-support/              ← AI サポートチャット（ウィジェット・API・型・モジュールストア）
 │
 └── i18n/
     ├── index.ts                 ← i18next 初期化
