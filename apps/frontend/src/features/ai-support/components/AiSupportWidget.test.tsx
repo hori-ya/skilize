@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AiSupportWidget from './AiSupportWidget';
 import { postAiChat } from '../api/aiSupportApi';
+import { setAiSupportState } from '../store';
 
 // ─── モック定義 ───────────────────────────────────────────────
 
@@ -37,6 +38,7 @@ function renderWidget() {
 describe('AiSupportWidget', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    setAiSupportState({ open: false, mode: 'NORMAL', history: [] });
   });
 
   describe('ボタン表示', () => {

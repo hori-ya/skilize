@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -67,6 +68,7 @@ class AiChatControllerTest {
                 .doFilterInternal(any(HttpServletRequest.class), any(HttpServletResponse.class), any(FilterChain.class));
 
         generalUser = User.create("user01", "テストユーザー", null, Role.GENERAL, null, "hash");
+        ReflectionTestUtils.setField(generalUser, "id", 1);
     }
 
     // ═══════════════════════════════════════════════════════════

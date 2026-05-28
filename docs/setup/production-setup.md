@@ -34,8 +34,10 @@
 10. [GitHub Actions による CI](#10-github-actions-による-ci)
 11. [RDS 移行手順](#11-rds-移行手順)
 12. [Elastic IP を使用しない場合の手順（試用期間向け）](#12-elastic-ip-を使用しない場合の手順試用期間向け)
-13. [運用手順](#13-運用手順)
-14. [トラブルシューティング](#14-トラブルシューティング)
+13. [HTTPS 対応（アプローチ B: ALB + ACM）](#13-https-対応アプローチ-b-alb--acm)
+14. [HTTPS 対応（アプローチ C: Let's Encrypt + Certbot）](#14-https-対応アプローチ-c-lets-encrypt--certbot)
+15. [運用手順](#15-運用手順)
+16. [トラブルシューティング](#16-トラブルシューティング)
 
 ---
 
@@ -1199,11 +1201,529 @@ scp -i "C:\Users\<ユーザー名>\.ssh\skilize-key.pem" ec2-user@<EC2のIP>:/ho
 ---
 
 **本番稼働開始時**: 改めて「[2. EC2 インスタンスの作成](#2-ec2-インスタンスの作成)」から手順を実施してください。  
-DB データは手順 1 のバックアップから「[13. 運用手順 > バックアップからのリストア](#バックアップからのリストア)」でリストアできます。
+DB データは手順 1 のバックアップから「[15. 運用手順 > バックアップからのリストア](#バックアップからのリストア)」でリストアできます。
 
 ---
 
-## 13. 運用手順
+## 13. HTTPS 対応（アプローチ B: ALB + ACM）
+
+Application Load Balancer で TLS を終端し、AWS Certificate Manager の証明書を無料・自動更新で管理する方法です。
+
+**特徴**
+- 証明書の取得・更新が完全自動（ACM 管理）
+- EC2 側のアプリ設定変更が最小限（docker-compose・nginx の変更不要）
+- ALB の追加費用が発生（約 $20〜/月）
+- 公開ドメインと Route 53 または外部 DNS が必要
+
+---
+
+### 13.1 前提条件の確認
+
+- 公開ドメインが取得済みで、Route 53 または外部 DNS で管理されていること
+- EC2 に Elastic IP が割り当て済みであること（「3. Elastic IP の設定」参照）
+
+---
+
+### 13.2 ACM で証明書を申請する
+
+1. AWS マネジメントコンソールで「**Certificate Manager（ACM）**」を検索して開きます
+2. **リージョンが「東京（ap-northeast-1）」になっていることを確認します**（ALB と同じリージョンが必要）
+3. 「証明書をリクエスト」→「パブリック証明書をリクエスト」→「次へ」をクリックします
+4. 「完全修飾ドメイン名」に使用するドメインを入力します（例: `skilize.example.com`）
+5. 「検証方法」は「**DNS 検証**」を選択します
+6. 「リクエスト」をクリックします
+
+**DNS 検証レコードを追加する**
+
+申請後、証明書の詳細画面に `CNAME 名` と `CNAME 値` が表示されます。
+
+| DNS プロバイダー | 操作 |
+|---|---|
+| Route 53 | 証明書詳細画面の「Route 53 でレコードを作成」ボタンをクリックすると自動設定されます |
+| 外部 DNS（お名前.com 等） | 表示された CNAME 名・CNAME 値を DNS プロバイダーの管理画面で手動追加します |
+
+DNS が反映されると（最長 30 分）、証明書のステータスが「**発行済み**」に変わります。  
+「発行済み」になるまで次の手順に進まないでください。
+
+---
+
+### 13.3 ターゲットグループを作成する
+
+ALB が EC2 にリクエストを転送するための設定です。
+
+1. EC2 →「ターゲットグループ」→「ターゲットグループの作成」をクリックします
+2. 以下を設定します:
+
+   | 項目 | 設定値 |
+   |---|---|
+   | ターゲットタイプ | インスタンス |
+   | ターゲットグループ名 | `skilize-tg` |
+   | プロトコル | HTTP |
+   | ポート | 80 |
+   | ヘルスチェックパス | `/api/health` |
+
+3. 「次へ」→ インスタンス一覧から `skilize-prod` を選択 →「保留中として以下を含める」をクリックします
+4. 「ターゲットグループの作成」をクリックします
+
+---
+
+### 13.4 セキュリティグループを設定する
+
+**ALB 用セキュリティグループを作成する**
+
+1. EC2 →「セキュリティグループ」→「セキュリティグループを作成」をクリックします
+2. 以下を入力します:
+   - **名前**: `skilize-alb-sg`
+   - **説明**: `Skilize ALB security group`
+3. インバウンドルールを追加します:
+
+   | タイプ | ポート | ソース | 説明（AWS 入力値） |
+   |---|---|---|---|
+   | HTTP | 80 | 0.0.0.0/0 | `ALB HTTP inbound` |
+   | HTTPS | 443 | 0.0.0.0/0 | `ALB HTTPS inbound` |
+
+4. 「セキュリティグループを作成」をクリックします
+
+**EC2 の HTTP 許可を ALB のみに制限する**
+
+これにより、ALB を経由せずに EC2 に直接 HTTP アクセスすることを防げます。
+
+1. `skilize-sg` を開き、「インバウンドルールを編集」をクリックします
+2. 既存の「HTTP（ポート 80 / 0.0.0.0/0）」ルールを削除します
+3. 以下のルールを追加します:
+
+   | タイプ | ポート | ソース | 説明（AWS 入力値） |
+   |---|---|---|---|
+   | HTTP | 80 | `skilize-alb-sg`（セキュリティグループを選択） | `HTTP from ALB only` |
+
+4. 「ルールを保存」をクリックします
+
+---
+
+### 13.5 ALB を作成する
+
+1. EC2 →「ロードバランサー」→「ロードバランサーの作成」→「Application Load Balancer」の「作成」をクリックします
+2. 以下を設定します:
+
+   | 項目 | 設定値 |
+   |---|---|
+   | 名前 | `skilize-alb` |
+   | スキーム | インターネット向け |
+   | IP アドレスタイプ | IPv4 |
+   | VPC | EC2 と同じ VPC（デフォルト VPC） |
+   | アベイラビリティゾーン | 東京リージョンの AZ を **2 つ以上**チェック |
+   | セキュリティグループ | `skilize-alb-sg`（`default` は削除） |
+
+3. **リスナーとルーティング**を設定します:
+
+   | プロトコル | ポート | デフォルトアクション |
+   |---|---|---|
+   | HTTP | 80 | `https://#{host}:443/#{path}?#{query}` にリダイレクト（301） |
+   | HTTPS | 443 | `skilize-tg` に転送 |
+
+   HTTPS リスナーの「デフォルト SSL/TLS 証明書」では、13.2 で発行した ACM 証明書を選択します。
+
+4. 「ロードバランサーの作成」をクリックします（作成完了まで数分かかります）
+
+5. 作成完了後、ALB の「DNS 名」をメモします（例: `skilize-alb-xxxxxxxx.ap-northeast-1.elb.amazonaws.com`）
+
+---
+
+### 13.6 DNS レコードを ALB に向ける
+
+**Route 53 を使用している場合**
+
+1. Route 53 →「ホストゾーン」→ 対象ドメインを開きます
+2. 「レコードを作成」をクリックします
+3. 以下を設定します:
+   - **レコード名**: `skilize`（サブドメインを使う場合。ルートドメインの場合は空欄）
+   - **レコードタイプ**: A
+   - **エイリアス**: ON
+   - **トラフィックのルーティング先**: Application Load Balancer → アジアパシフィック（東京） → `skilize-alb` を選択
+4. 「レコードを作成」をクリックします
+
+**外部 DNS を使用している場合**
+
+DNS プロバイダーの管理画面で以下の CNAME レコードを追加します:
+
+| 名前 | タイプ | 値 |
+|---|---|---|
+| `skilize` | CNAME | ALB の DNS 名（例: `skilize-alb-xxxxxxxx.ap-northeast-1.elb.amazonaws.com`） |
+
+---
+
+### 13.7 .env の FRONTEND_ORIGIN を更新する
+
+EC2 に SSH 接続して実行します:
+
+```bash
+cd /home/ec2-user/skilize
+nano .env
+```
+
+以下の行を HTTPS の URL に更新します:
+
+```env
+FRONTEND_ORIGIN=https://skilize.example.com
+```
+
+バックエンドを再起動して CORS 設定を反映します:
+
+```bash
+docker compose restart backend
+```
+
+---
+
+### 13.8 動作確認
+
+1. ブラウザで `http://skilize.example.com` にアクセスします
+2. 自動的に `https://` にリダイレクトされることを確認します
+3. ブラウザのアドレスバーに錠前アイコンが表示されることを確認します
+4. ログインできることを確認します
+
+---
+
+## 14. HTTPS 対応（アプローチ C: Let's Encrypt + Certbot）
+
+> **【重要】公開 FQDN が必須です**  
+> Let's Encrypt は **自動更新の有無に関わらず**、インターネットから到達可能な公開 FQDN が必ず必要です。  
+> EC2 の IP アドレスや内部ドメインへの証明書発行はできません。  
+> ドメインの A レコードが EC2 に向いており、ポート 80 がインターネットから到達可能な状態で実施してください。
+
+**特徴**
+- 証明書の取得・更新が無料
+- 追加の AWS インフラ不要（ALB 費用なし）
+- 有効期限が 90 日（本番では自動更新必須、試用期間中は手動更新でも可）
+- 公開 FQDN とポート 80 のインターネット到達性が必要
+
+---
+
+### 14.1 DNS を EC2 に向ける
+
+ドメインの A レコードを EC2 のパブリック IP アドレスに向けます。
+
+| レコードタイプ | 名前 | 値 |
+|---|---|---|
+| A | `skilize`（サブドメインの場合） | EC2 のパブリック IP アドレス |
+
+DNS が反映されるまで最長 30 分かかります。反映を確認してから次の手順に進みます:
+
+```bash
+# EC2 上で実行（nslookup が使えない場合: sudo dnf install -y bind-utils）
+nslookup skilize.example.com
+# EC2 の IP アドレスが返れば OK
+```
+
+---
+
+### 14.2 リポジトリの設定を変更する（ローカル PC で実施）
+
+**infra/docker/nginx/nginx.prod.conf を更新する**
+
+まず証明書取得のための一時設定（HTTP + ACME チャレンジ対応）に置き換えます。  
+既存の内容全体を以下に置き換えてください:
+
+```nginx
+# HTTP サーバー（証明書取得前の一時設定）
+server {
+    listen 8080;
+    server_tokens off;
+
+    # ACME チャレンジ（certbot が証明書取得時に使用する）
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header X-Frame-Options        "SAMEORIGIN"                      always;
+    add_header X-Content-Type-Options "nosniff"                         always;
+    add_header X-XSS-Protection       "1; mode=block"                   always;
+    add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+
+    gzip            on;
+    gzip_vary       on;
+    gzip_min_length 1024;
+    gzip_types      text/plain text/css application/javascript application/json image/svg+xml;
+
+    location /api/ {
+        proxy_pass         http://backend:8080;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires   1y;
+        add_header Cache-Control          "public, immutable";
+        add_header X-Frame-Options        "SAMEORIGIN"                      always;
+        add_header X-Content-Type-Options "nosniff"                         always;
+        add_header X-XSS-Protection       "1; mode=block"                   always;
+        add_header Referrer-Policy        "strict-origin-when-cross-origin" always;
+        try_files  $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+**infra/compose/docker-compose.prod.yml の nginx サービスに追記する**
+
+`nginx` サービスに HTTPS ポートと certbot ボリュームを追加し、`certbot` サービスを追加します:
+
+```yaml
+  nginx:
+    build:
+      context: ../../
+      dockerfile: infra/docker/frontend/Dockerfile.prod
+      args:
+        NODE_VERSION: ${NODE_VERSION:-20}
+        HTTP_PROXY: ${HTTP_PROXY:-}
+        HTTPS_PROXY: ${HTTPS_PROXY:-}
+        NO_PROXY: ${NO_PROXY:-}
+        CA_CERT_ENABLED: ${CA_CERT_ENABLED:-false}
+    ports:
+      - "80:8080"
+      - "443:8443"                                      # 追加
+    volumes:                                             # 追加
+      - /home/ec2-user/certs/letsencrypt:/etc/letsencrypt:ro
+      - /home/ec2-user/certs/www:/var/www/certbot:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: always
+
+  certbot:                                               # 追加（nginx の後に記述）
+    image: certbot/certbot
+    volumes:
+      - /home/ec2-user/certs/letsencrypt:/etc/letsencrypt
+      - /home/ec2-user/certs/www:/var/www/certbot
+```
+
+変更をコミット・プッシュします:
+
+```bash
+git add infra/docker/nginx/nginx.prod.conf infra/compose/docker-compose.prod.yml
+git commit -m "HTTPS対応: certbot + nginx ACME設定追加"
+git push origin main
+```
+
+---
+
+### 14.3 EC2 で証明書を取得する
+
+EC2 に SSH 接続して実行します。
+
+**ステップ 1: certbot 用ディレクトリを作成する**
+
+```bash
+mkdir -p /home/ec2-user/certs/letsencrypt
+mkdir -p /home/ec2-user/certs/www
+```
+
+**ステップ 2: 最新コードを取得してデプロイする**
+
+```bash
+cd /home/ec2-user/skilize
+git pull origin main
+docker compose up --build -d nginx
+```
+
+**ステップ 3: 証明書を取得する**
+
+```bash
+docker compose run --rm certbot certonly \
+  --webroot \
+  --webroot-path=/var/www/certbot \
+  --email <メールアドレス> \
+  --agree-tos \
+  --no-eff-email \
+  -d skilize.example.com
+```
+
+`<メールアドレス>` は証明書失効通知を受け取るアドレスです。  
+`-d` には実際のドメイン名を指定してください。
+
+成功すると以下のように表示されます:
+
+```
+Successfully received certificate.
+Certificate is saved at: /home/ec2-user/certs/letsencrypt/live/skilize.example.com/fullchain.pem
+Key is saved at:         /home/ec2-user/certs/letsencrypt/live/skilize.example.com/privkey.pem
+```
+
+---
+
+### 14.4 HTTPS 対応の nginx 設定に切り替える（ローカル PC で実施）
+
+`infra/docker/nginx/nginx.prod.conf` を HTTPS 対応版に更新します。  
+`skilize.example.com` はすべて実際のドメイン名に変更してください:
+
+```nginx
+# HTTP → HTTPS リダイレクト
+server {
+    listen 8080;
+    server_tokens off;
+
+    # ACME チャレンジ（証明書更新時に引き続き使用する）
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS サーバー
+server {
+    listen 8443 ssl;
+    server_tokens off;
+
+    ssl_certificate     /etc/letsencrypt/live/skilize.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/skilize.example.com/privkey.pem;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 1d;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    add_header Strict-Transport-Security "max-age=63072000"           always;
+    add_header X-Frame-Options           "SAMEORIGIN"                  always;
+    add_header X-Content-Type-Options    "nosniff"                     always;
+    add_header X-XSS-Protection          "1; mode=block"               always;
+    add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+
+    gzip            on;
+    gzip_vary       on;
+    gzip_min_length 1024;
+    gzip_types      text/plain text/css application/javascript application/json image/svg+xml;
+
+    location /api/ {
+        proxy_pass         http://backend:8080;
+        proxy_set_header   Host              $host;
+        proxy_set_header   X-Real-IP         $remote_addr;
+        proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header   X-Forwarded-Proto https;
+        proxy_read_timeout 60s;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires   1y;
+        add_header Cache-Control             "public, immutable";
+        add_header Strict-Transport-Security "max-age=63072000"           always;
+        add_header X-Frame-Options           "SAMEORIGIN"                  always;
+        add_header X-Content-Type-Options    "nosniff"                     always;
+        add_header X-XSS-Protection          "1; mode=block"               always;
+        add_header Referrer-Policy           "strict-origin-when-cross-origin" always;
+        try_files  $uri =404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+コミット・プッシュします:
+
+```bash
+git add infra/docker/nginx/nginx.prod.conf
+git commit -m "HTTPS: nginx 設定を SSL 対応版に更新"
+git push origin main
+```
+
+EC2 でデプロイします:
+
+```bash
+cd /home/ec2-user/skilize
+git pull origin main
+docker compose up --build -d nginx
+```
+
+---
+
+### 14.5 .env を更新する
+
+```bash
+nano /home/ec2-user/skilize/.env
+```
+
+`FRONTEND_ORIGIN` を HTTPS に変更します:
+
+```env
+FRONTEND_ORIGIN=https://skilize.example.com
+```
+
+バックエンドを再起動します:
+
+```bash
+docker compose restart backend
+```
+
+---
+
+### 14.6 証明書の自動更新を設定する（本番運用では必須）
+
+Let's Encrypt 証明書の有効期限は **90 日**です。
+
+> **試用期間中**: 自動更新の設定は任意です。ただし取得から **60 日を目安**に「14.7 手動更新」の手順で更新してください（期限切れするとアクセス不能になります）。  
+> **本番運用開始後**: 必ず自動更新を設定してください。
+
+EC2 で cron を設定します:
+
+```bash
+crontab -e
+```
+
+以下を追記します（`i` で編集モード → 貼り付け → `Esc` → `:wq` で保存）:
+
+```
+0 3 * * * cd /home/ec2-user/skilize && docker compose run --rm certbot renew --quiet && docker compose exec nginx nginx -s reload
+```
+
+毎日 AM 3:00 に実行されます。certbot は有効期限が 30 日未満になった場合のみ更新するため、毎日実行しても問題ありません。
+
+---
+
+### 14.7 手動更新（試用期間中の更新手順）
+
+有効期限が切れる前（取得から 60 日後を目安）に EC2 上で実行します:
+
+```bash
+cd /home/ec2-user/skilize
+
+# 現在の証明書の有効期限を確認する
+docker compose run --rm certbot certificates
+
+# 証明書を更新する（有効期限 30 日未満の場合のみ更新される）
+docker compose run --rm certbot renew
+
+# nginx をリロードして新しい証明書を適用する
+docker compose exec nginx nginx -s reload
+```
+
+---
+
+### 14.8 動作確認
+
+1. ブラウザで `http://skilize.example.com` にアクセスします
+2. 自動的に `https://` にリダイレクトされることを確認します
+3. ブラウザのアドレスバーに錠前アイコンが表示されることを確認します
+4. ログインできることを確認します
+
+---
+
+## 15. 運用手順
 
 ### アプリケーションの停止・再起動
 
@@ -1565,7 +2085,7 @@ docker image prune -f
 
 ---
 
-## 14. トラブルシューティング
+## 16. トラブルシューティング
 
 ### バックエンドが起動しない
 

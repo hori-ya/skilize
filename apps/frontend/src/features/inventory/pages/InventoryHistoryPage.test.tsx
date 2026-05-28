@@ -71,6 +71,7 @@ function setupDefaultMocks() {
   mockInventoryApi.getGoals.mockResolvedValue({ data: { items: [] } } as never);
   mockInventoryApi.getComparison.mockResolvedValue({ data: comparisonWithPrevYear } as never);
   mockMasterApi.getItSkills.mockResolvedValue({ data: itSkillMaster } as never);
+  mockMasterApi.getFiscalYears.mockResolvedValue({ data: [] } as never);
 }
 
 function renderPage() {
@@ -100,6 +101,7 @@ describe('InventoryHistoryPage', () => {
   it('正常系_棚卸データなし_noDataメッセージが表示される', async () => {
     mockInventoryApi.getMyInventories.mockResolvedValue({ data: [] } as never);
     mockInventoryApi.getMyAiAnalyses.mockResolvedValue({ data: [] } as never);
+    mockMasterApi.getFiscalYears.mockResolvedValue({ data: [] } as never);
 
     renderPage();
 
