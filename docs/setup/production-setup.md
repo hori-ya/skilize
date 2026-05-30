@@ -34,8 +34,8 @@
 10. [GitHub Actions による CI](#10-github-actions-による-ci)
 11. [RDS 移行手順](#11-rds-移行手順)
 12. [Elastic IP を使用しない場合の手順（試用期間向け）](#12-elastic-ip-を使用しない場合の手順試用期間向け)
-13. [HTTPS 対応（アプローチ B: ALB + ACM）](#13-https-対応アプローチ-b-alb--acm)
-14. [HTTPS 対応（アプローチ C: Let's Encrypt + Certbot）](#14-https-対応アプローチ-c-lets-encrypt--certbot)
+13. [HTTPS 対応（ALB + ACM）](#13-https-対応-alb--acm)
+14. [HTTPS 対応（Let's Encrypt + Certbot）](#14-https-対応-lets-encrypt--certbot)
 15. [運用手順](#15-運用手順)
 16. [トラブルシューティング](#16-トラブルシューティング)
 
@@ -1205,7 +1205,7 @@ DB データは手順 1 のバックアップから「[15. 運用手順 > バッ
 
 ---
 
-## 13. HTTPS 対応（アプローチ B: ALB + ACM）
+## 13. HTTPS 対応（ALB + ACM）
 
 Application Load Balancer で TLS を終端し、AWS Certificate Manager の証明書を無料・自動更新で管理する方法です。
 
@@ -1384,7 +1384,7 @@ docker compose restart backend
 
 ---
 
-## 14. HTTPS 対応（アプローチ C: Let's Encrypt + Certbot）
+## 14. HTTPS 対応（Let's Encrypt + Certbot）
 
 > **【重要】公開 FQDN が必須です**  
 > Let's Encrypt は **自動更新の有無に関わらず**、インターネットから到達可能な公開 FQDN が必ず必要です。  

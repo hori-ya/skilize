@@ -1,6 +1,8 @@
 # テスト実行ガイド
 
-このドキュメントでは、バックエンド（Spring Boot）とフロントエンド（React）のテストコードの実行方法を説明します。
+このドキュメントでは、バックエンド（Spring Boot）、フロントエンド（React）、Python AI サービスのテストコードの実行方法を説明します。
+
+> **テスト仕様書**（各テストケースの前提条件・期待結果）は [`test-spec.md`](test-spec.md) を参照。
 
 ---
 
@@ -14,6 +16,8 @@
 | `JwtUtilTest.java` | JwtUtil（トークン生成・検証） | 単体テスト |
 | `AuthControllerTest.java` | AuthController（Web レイヤー） | Web レイヤーテスト |
 | `InventoryServiceComparisonTest.java` | InventoryService#getComparison（前年度比較） | 単体テスト |
+| `AiChatServiceTest.java` | AiChatService（AI 無効時の制御） | 単体テスト |
+| `AiChatControllerTest.java` | AiChatController（POST /api/ai/chat） | Web レイヤーテスト |
 
 ### 実行方法
 
@@ -35,6 +39,8 @@ gradlew.bat test
 ./gradlew test --tests "com.skilize.auth.presentation.AuthControllerTest"
 ./gradlew test --tests "com.skilize.shared.infrastructure.JwtUtilTest"
 ./gradlew test --tests "com.skilize.inventory.application.InventoryServiceComparisonTest"
+./gradlew test --tests "com.skilize.ai.application.AiChatServiceTest"
+./gradlew test --tests "com.skilize.ai.presentation.AiChatControllerTest"
 ```
 
 **テスト結果の確認**
@@ -59,6 +65,7 @@ apps/backend/build/reports/tests/test/index.html
 |---|---|---|
 | `LoginPage.test.tsx` | ログイン画面 | 正常系ログイン・リダイレクト・エラーメッセージ・ローディング状態 |
 | `InventoryHistoryPage.test.tsx` | 棚卸照会画面 | カスタムスキル表示・上昇/下降フィルター時の非表示・新規フィルター時の表示 |
+| `AiSupportWidget.test.tsx` | AI サポートウィジェット | パネル開閉・モード切替・メッセージ送受信・会話履歴管理 |
 
 ### セットアップ（初回のみ）
 
@@ -88,6 +95,39 @@ npm run test:watch
 - **API モック** — `vi.mock('../api/inventoryApi')` 等でモジュールごと差し替え
 - **認証コンテキスト** — `useAuth` フックをモック化して任意の認証状態を再現
 - **i18next** — `useTranslation` をモック化し `t(key)` がキーをそのまま返す形で検証
+
+---
+
+## Python AI テスト（pytest）
+
+### テストファイル一覧
+
+| ファイル | テスト対象 | テスト内容 |
+|---|---|---|
+| `test_chat_service.py` | chat_service（チャットロジック）| システムプロンプト選択・キャリア文脈フォーマット・LLM 呼び出し・会話履歴制限 |
+
+### 実行方法
+
+```bash
+cd apps/ai
+pytest tests/
+```
+
+**特定ファイルのみ実行**
+```bash
+pytest tests/test_chat_service.py
+```
+
+**詳細ログを表示**
+```bash
+pytest tests/ -v
+```
+
+### テスト設計方針
+
+- **pytest** をテストランナーとして使用
+- `unittest.mock.patch` で外部依存（LLM・DB）をモック化
+- LLM 呼び出しはすべてモック化されるため、API キーなしで実行可能
 
 ---
 

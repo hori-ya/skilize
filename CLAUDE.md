@@ -425,6 +425,7 @@ docker compose up db     # init.sql が再実行される
    - **Backend**: `apps/backend/src/test/` の `*Test.java` を更新
    - **Frontend**: `apps/frontend/src/features/**/*.test.tsx` を更新
    - **Python**: `apps/ai/tests/` の `test_*.py` を更新
+   - テストコードを追加・変更・削除した場合は、`docs/testing/test-spec.md` のテスト仕様書も必ず同時に更新する（テスト ID・テスト名・前提条件・期待結果を最新の状態に保つこと）
 3. **i18n の更新**: フロントエンドに新しい UI テキストが追加される場合は `src/i18n/locales/ja/` の JSON を必ず更新する
 
 > ソース変更のみでドキュメント・テストを更新しないプルリクエストは受け入れない。
