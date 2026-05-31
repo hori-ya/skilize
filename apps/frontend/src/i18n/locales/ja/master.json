@@ -331,6 +331,21 @@
       "categoryNameLabel": "分類名"
     }
   },
+  "excel": {
+    "download": "Excel 出力",
+    "upload": "Excel 取込",
+    "importing": "取込中...",
+    "importResultTitle": "取込完了",
+    "importResultCreated": "登録",
+    "importResultUpdated": "更新",
+    "importResultDeleted": "削除",
+    "importResultUnit": "件",
+    "importResultOk": "OK",
+    "importError": "取込エラー",
+    "importErrorClose": "閉じる",
+    "importErrorDetail": "{{sheet}}シート {{row}}行目 {{column}}列: {{message}}",
+    "importErrorOverflow": "エラーが多すぎます。ファイルを修正してから再度取込してください。"
+  },
   "user": {
     "pageTitle": "ユーザー管理",
     "listTitle": "ユーザー一覧",

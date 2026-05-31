@@ -9,7 +9,8 @@ docs/testing/
 ├── backend/          ← Spring Boot / JUnit 5
 │   ├── auth.md       ← 認証（JWT・ログイン・パスワード管理）
 │   ├── inventory.md  ← 棚卸（前年度比較・差分計算）
-│   └── ai-chat.md    ← AI チャット（有効/無効制御・チャット API）
+│   ├── ai-chat.md    ← AI チャット（有効/無効制御・チャット API）
+│   └── master-excel.md ← マスタ Excel 出力・取込
 ├── frontend/         ← Vitest + React Testing Library
 │   ├── auth.md       ← 認証（ログイン画面）
 │   ├── inventory.md  ← 棚卸（棚卸照会・フィルタリング）
@@ -25,12 +26,13 @@ docs/testing/
 | [backend/auth.md](backend/auth.md) | JwtUtil / AuthService / AuthController | 24 件 |
 | [backend/inventory.md](backend/inventory.md) | InventoryService#getComparison | 5 件 |
 | [backend/ai-chat.md](backend/ai-chat.md) | AiChatService / AiChatController | 8 件 |
+| [backend/master-excel.md](backend/master-excel.md) | ItSkillExcelImporter / MasterExcelController | 13 件 |
 | [frontend/auth.md](frontend/auth.md) | LoginPage | 10 件 |
 | [frontend/inventory.md](frontend/inventory.md) | InventoryHistoryPage | 9 件 |
 | [frontend/ai-support.md](frontend/ai-support.md) | AiSupportWidget | 12 件 |
 | [ai/chat-service.md](ai/chat-service.md) | chat_service.py | 14 件 |
 
-**合計**: 10 テストファイル・約 82 テストケース
+**合計**: 11 テストファイル・約 95 テストケース
 
 ## テスト ID 体系
 
@@ -42,6 +44,8 @@ docs/testing/
 | `BE-ISC-` | バックエンド / InventoryService（Comparison）|
 | `BE-ACHS-` | バックエンド / AiChatService |
 | `BE-ACHC-` | バックエンド / AiChatController |
+| `BE-MEI-` | バックエンド / ItSkillExcelImporter |
+| `BE-MEC-` | バックエンド / MasterExcelController |
 | `FE-LP-` | フロントエンド / LoginPage |
 | `FE-IHP-` | フロントエンド / InventoryHistoryPage |
 | `FE-ASW-` | フロントエンド / AiSupportWidget |

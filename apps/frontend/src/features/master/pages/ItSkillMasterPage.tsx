@@ -1,12 +1,13 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
-import type { ItSkillCategory, ItSkill, CustomUnregisteredItem } from '../../../shared/types/master';
+import type { ItSkillCategory, ItSkill, CustomUnregisteredItem, MasterImportError, MasterImportResult } from '../../../shared/types/master';
 import {
   getItSkillCategories, createItSkillCategory, updateItSkillCategory,
   getItSkills, createItSkill, updateItSkill,
   getCustomUnregisteredItSkills, promoteItSkill,
+  downloadItSkillExcel, uploadItSkillExcel,
 } from '../../../shared/api/masterApi';
 import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
@@ -698,6 +699,10 @@ export default function ItSkillMasterPage() {
   const [skills, setSkills] = useState<ItSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<MasterImportResult | null>(null);
+  const [importErrors, setImportErrors] = useState<MasterImportError[] | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadAll = () => {
     setLoading(true);
@@ -711,6 +716,30 @@ export default function ItSkillMasterPage() {
   };
 
   useEffect(() => { loadAll(); }, []);
+
+  const handleDownload = async () => {
+    const res = await downloadItSkillExcel();
+    const url = URL.createObjectURL(res.data);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'ItSkillMaster.xlsx'; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const res = await uploadItSkillExcel(file);
+      setImportResult(res.data);
+      loadAll();
+    } catch (err: unknown) {
+      const errors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
+        ?.response?.data?.errors;
+      setImportErrors(errors ?? []);
+    } finally { setImporting(false); }
+  };
 
   if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
 
@@ -746,6 +775,80 @@ export default function ItSkillMasterPage() {
           )}
         </section>
       </main>
+
+      <div className="excel-fab">
+        <button className="excel-fab__btn" onClick={handleDownload}>
+          {t('excel.download')}
+        </button>
+        <button className="excel-fab__btn" onClick={() => fileInputRef.current?.click()}
+          disabled={importing}>
+          {importing ? t('excel.importing') : t('excel.upload')}
+        </button>
+        <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }}
+          onChange={handleUpload} />
+      </div>
+
+      {importResult !== null && createPortal(
+        <div className="modal-overlay" onClick={() => setImportResult(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 360 }}>
+            <div className="modal__header">
+              <h3>{t('excel.importResultTitle')}</h3>
+              <button className="modal__close" onClick={() => setImportResult(null)}>×</button>
+            </div>
+            <div className="modal__body">
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
+                <tbody>
+                  {[
+                    { label: t('excel.importResultCreated'), value: importResult.created },
+                    { label: t('excel.importResultUpdated'), value: importResult.updated },
+                    { label: t('excel.importResultDeleted'), value: importResult.deleted },
+                  ].map(row => (
+                    <tr key={row.label} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                      <td style={{ padding: '10px 8px', color: 'var(--color-text-muted)' }}>{row.label}</td>
+                      <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, fontSize: 18 }}>
+                        {row.value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 2 }}>{t('excel.importResultUnit')}</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="modal__footer">
+              <button className="btn btn--primary" onClick={() => setImportResult(null)}>
+                {t('excel.importResultOk')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {importErrors !== null && createPortal(
+        <div className="modal-overlay" onClick={() => setImportErrors(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
+            <div className="modal__header">
+              <h3>{t('excel.importError')}</h3>
+              <button className="modal__close" onClick={() => setImportErrors(null)}>×</button>
+            </div>
+            <div className="modal__body" style={{ maxHeight: 400, overflowY: 'auto' }}>
+              {importErrors.length === 0
+                ? <p>{t('common.loadFailed')}</p>
+                : importErrors.map((e, i) => (
+                  <p key={i} style={{ fontSize: 13, margin: '4px 0', color: 'var(--color-danger)' }}>
+                    {e.sheet && e.row ? t('excel.importErrorDetail', { sheet: e.sheet, row: e.row, column: e.column, message: e.message })
+                      : e.message}
+                  </p>
+                ))}
+            </div>
+            <div className="modal__footer">
+              <button className="btn btn--secondary" onClick={() => setImportErrors(null)}>
+                {t('excel.importErrorClose')}
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

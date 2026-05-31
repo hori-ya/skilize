@@ -108,3 +108,22 @@ export interface CustomUnregisteredItem {
   customName: string;
   usageCount: number;
 }
+
+export interface MasterImportResult {
+  created: number;
+  updated: number;
+  deleted: number;
+}
+
+export interface MasterImportError {
+  sheet: string;
+  row: number;
+  column: string;
+  message: string;
+}
+
+export interface MasterImportErrorResponse {
+  code: string;
+  message: string;
+  errors: MasterImportError[];
+}

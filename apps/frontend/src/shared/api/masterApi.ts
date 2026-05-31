@@ -3,7 +3,7 @@
  * isActive パラメーターを省略した場合はすべて（有効・無効含む）を取得する。
  */
 import apiClient from './client';
-import type { FiscalYear, FiscalYearSettings, FiscalYearRequest, SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory, CustomUnregisteredItem } from '../types/master';
+import type { FiscalYear, FiscalYearSettings, FiscalYearRequest, SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory, CustomUnregisteredItem, MasterImportResult } from '../types/master';
 
 export const getFiscalYears = () => apiClient.get<FiscalYear[]>('/fiscal-years');
 export const getCurrentFiscalYear = () => apiClient.get<FiscalYear>('/fiscal-years/current');
@@ -58,6 +58,23 @@ export const getCustomUnregisteredQualifications = () =>
   apiClient.get<CustomUnregisteredItem[]>('/qualifications/custom-unregistered');
 export const promoteQualification = (data: { customName: string; categoryId: number | null; name: string; description: string | null; sortOrder: number }) =>
   apiClient.post<Qualification>('/qualifications/promote', data);
+
+// Excel 出力（Blob レスポンス）
+export const downloadItSkillExcel = () =>
+  apiClient.get<Blob>('/master-excel/it-skills/download', { responseType: 'blob' });
+export const downloadQualificationExcel = () =>
+  apiClient.get<Blob>('/master-excel/qualifications/download', { responseType: 'blob' });
+export const downloadAdSeminarExcel = () =>
+  apiClient.get<Blob>('/master-excel/ad-seminars/download', { responseType: 'blob' });
+
+// Excel 取込（multipart/form-data）
+const buildFormData = (file: File) => { const fd = new FormData(); fd.append('file', file); return fd; };
+export const uploadItSkillExcel = (file: File) =>
+  apiClient.post<MasterImportResult>('/master-excel/it-skills/upload', buildFormData(file));
+export const uploadQualificationExcel = (file: File) =>
+  apiClient.post<MasterImportResult>('/master-excel/qualifications/upload', buildFormData(file));
+export const uploadAdSeminarExcel = (file: File) =>
+  apiClient.post<MasterImportResult>('/master-excel/ad-seminars/upload', buildFormData(file));
 
 export const getFiscalYearSettings = () => apiClient.get<FiscalYearSettings>('/fiscal-year-settings');
 export const updateFiscalYearSettings = (data: { fiscalYearStartMonth: number }) =>

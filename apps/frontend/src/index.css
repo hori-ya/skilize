@@ -85,6 +85,52 @@ body {
   transform: translateY(10px);
 }
 
+/* ===== Excel FAB (固定 Excel 出力・取込ボタン) ===== */
+/* scroll-top-btn: right=28px / width=48px → 右端から 88px 離して重複回避 */
+.excel-fab {
+  position: fixed;
+  bottom: 28px;
+  right: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 490;
+}
+
+.excel-fab__btn {
+  height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(79, 142, 247, 0.40);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--color-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: background 0.12s, box-shadow 0.12s, transform 0.12s;
+  user-select: none;
+}
+
+.excel-fab__btn:hover {
+  background: var(--color-primary-soft);
+  box-shadow: 0 4px 16px rgba(79, 142, 247, 0.22), 0 1px 4px rgba(0, 0, 0, 0.10);
+  transform: translateY(-1px);
+}
+
+.excel-fab__btn:active {
+  transform: translateY(0);
+}
+
+.excel-fab__btn:disabled {
+  opacity: 0.60;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* ===== Loading ===== */
 .loading-screen {
   min-height: 100vh;

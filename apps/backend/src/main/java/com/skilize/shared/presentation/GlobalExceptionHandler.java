@@ -1,5 +1,6 @@
 package com.skilize.shared.presentation;
 
+import com.skilize.master.infrastructure.excel.ExcelFormatException;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.domain.exception.GoalIncompleteException;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,13 @@ public class GlobalExceptionHandler {
         log.warn("HTTP error: status={} code={} message={}", e.getStatusCode().value(), code, message);
         return ResponseEntity.status(e.getStatusCode())
                 .body(new ErrorResponse(code, message));
+    }
+
+    @ExceptionHandler(ExcelFormatException.class)
+    public ResponseEntity<ErrorResponse> handleExcelFormat(ExcelFormatException e) {
+        log.warn("Excel format error: {}", e.getMessage());
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse("EXCEL_FORMAT_ERROR", e.getMessage()));
     }
 
     @ExceptionHandler(GoalIncompleteException.class)
