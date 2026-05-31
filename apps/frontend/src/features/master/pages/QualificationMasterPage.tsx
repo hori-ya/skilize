@@ -521,6 +521,7 @@ export default function QualificationMasterPage() {
   const [qualifications, setQualifications] = useState<Qualification[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<MasterImportResult | null>(null);
   const [importErrors, setImportErrors] = useState<MasterImportError[] | null>(null);
@@ -528,7 +529,7 @@ export default function QualificationMasterPage() {
 
   const loadAll = () => {
     setLoading(true);
-    Promise.all([getQualificationCategories(), getQualifications()])
+    return Promise.all([getQualificationCategories(), getQualifications()])
       .then(([catRes, qualRes]) => {
         setCategories(catRes.data);
         setQualifications(qualRes.data);
@@ -540,11 +541,16 @@ export default function QualificationMasterPage() {
   useEffect(() => { loadAll(); }, []);
 
   const handleDownload = async () => {
-    const res = await downloadQualificationExcel();
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'QualificationMaster.xlsx'; a.click();
-    URL.revokeObjectURL(url);
+    setDownloading(true);
+    try {
+      const res = await downloadQualificationExcel();
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'QualificationMaster.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(t('excel.downloadFailed'));
+    } finally { setDownloading(false); }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -554,12 +560,18 @@ export default function QualificationMasterPage() {
     setImporting(true);
     try {
       const res = await uploadQualificationExcel(file);
+      await loadAll();
       setImportResult(res.data);
-      loadAll();
     } catch (err: unknown) {
-      const errors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
+      const apiErrors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
         ?.response?.data?.errors;
-      setImportErrors(errors ?? []);
+      if (apiErrors) {
+        setImportErrors(apiErrors);
+      } else {
+        const message = (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? t('excel.uploadFailed');
+        setImportErrors([{ sheet: '', row: 0, column: '', message }]);
+      }
     } finally { setImporting(false); }
   };
 
@@ -599,14 +611,16 @@ export default function QualificationMasterPage() {
       </main>
 
       <div className="excel-fab">
-        <button className="excel-fab__btn" onClick={handleDownload}>
-          {t('excel.download')}
+        <button className="excel-fab__btn" onClick={handleDownload} disabled={downloading}>
+          {downloading ? t('excel.downloading') : t('excel.download')}
         </button>
         <button className="excel-fab__btn" onClick={() => fileInputRef.current?.click()}
           disabled={importing}>
           {importing ? t('excel.importing') : t('excel.upload')}
         </button>
-        <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }}
+        <input ref={fileInputRef} type="file" accept=".xlsx"
+          aria-label={t('excel.upload')}
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }}
           onChange={handleUpload} />
       </div>
 

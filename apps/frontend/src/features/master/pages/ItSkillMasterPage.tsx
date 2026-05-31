@@ -699,14 +699,16 @@ export default function ItSkillMasterPage() {
   const [skills, setSkills] = useState<ItSkill[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [downloading, setDownloading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<MasterImportResult | null>(null);
   const [importErrors, setImportErrors] = useState<MasterImportError[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // ⑥: Promise を返してリロード完了を呼び出し元で await できるようにする
   const loadAll = () => {
     setLoading(true);
-    Promise.all([getItSkillCategories(), getItSkills()])
+    return Promise.all([getItSkillCategories(), getItSkills()])
       .then(([catRes, skillRes]) => {
         setCategories(catRes.data);
         setSkills(skillRes.data);
@@ -717,12 +719,18 @@ export default function ItSkillMasterPage() {
 
   useEffect(() => { loadAll(); }, []);
 
+  // ⑫: エラーハンドリングを追加
   const handleDownload = async () => {
-    const res = await downloadItSkillExcel();
-    const url = URL.createObjectURL(res.data);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'ItSkillMaster.xlsx'; a.click();
-    URL.revokeObjectURL(url);
+    setDownloading(true);
+    try {
+      const res = await downloadItSkillExcel();
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'ItSkillMaster.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError(t('excel.downloadFailed'));
+    } finally { setDownloading(false); }
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -732,12 +740,19 @@ export default function ItSkillMasterPage() {
     setImporting(true);
     try {
       const res = await uploadItSkillExcel(file);
+      await loadAll(); // ⑥: リロード完了後にモーダルを表示
       setImportResult(res.data);
-      loadAll();
     } catch (err: unknown) {
-      const errors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
+      // ⑤: ネットワークエラー等でエラー配列が取れない場合も適切なメッセージを表示
+      const apiErrors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
         ?.response?.data?.errors;
-      setImportErrors(errors ?? []);
+      if (apiErrors) {
+        setImportErrors(apiErrors);
+      } else {
+        const message = (err as { response?: { data?: { message?: string } } })
+          ?.response?.data?.message ?? t('excel.uploadFailed');
+        setImportErrors([{ sheet: '', row: 0, column: '', message }]);
+      }
     } finally { setImporting(false); }
   };
 
@@ -777,14 +792,17 @@ export default function ItSkillMasterPage() {
       </main>
 
       <div className="excel-fab">
-        <button className="excel-fab__btn" onClick={handleDownload}>
-          {t('excel.download')}
+        <button className="excel-fab__btn" onClick={handleDownload} disabled={downloading}>
+          {downloading ? t('excel.downloading') : t('excel.download')}
         </button>
         <button className="excel-fab__btn" onClick={() => fileInputRef.current?.click()}
           disabled={importing}>
           {importing ? t('excel.importing') : t('excel.upload')}
         </button>
-        <input ref={fileInputRef} type="file" accept=".xlsx" style={{ display: 'none' }}
+        {/* ⑬: display:none の代わりに視覚的に隠すことでスクリーンリーダーからアクセス可能にする */}
+        <input ref={fileInputRef} type="file" accept=".xlsx"
+          aria-label={t('excel.upload')}
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }}
           onChange={handleUpload} />
       </div>
 

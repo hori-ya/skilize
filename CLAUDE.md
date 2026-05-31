@@ -107,10 +107,15 @@ com.skilize
 │   │   └── mapper/             ← InventoryApplicationMapper
 │   └── domain/                 ← エンティティ・Repository・列挙型
 ├── master/
-│   ├── presentation/           ← MasterController
+│   ├── presentation/           ← MasterController・MasterExcelController
 │   │   ├── request/            ← SkillLevelRequest・ItSkillRequest 等
-│   │   └── response/           ← SkillLevelResponse・ItSkillResponse 等
-│   └── domain/                 ← マスタエンティティ・Repository
+│   │   └── response/           ← SkillLevelResponse・ItSkillResponse 等・MasterImportResponse
+│   ├── application/            ← MasterService・MasterExcelService（@Transactional）
+│   │   └── query/              ← MasterImportQueryResult・MasterImportErrorDetail
+│   ├── domain/                 ← マスタエンティティ・Repository
+│   └── infrastructure/
+│       └── excel/              ← ExcelStyleHelper・ExcelFormatException
+│                                  ItSkill/Qualification/AdSeminar の Exporter・Importer
 ├── fiscalyear/
 │   ├── presentation/           ← FiscalYearController
 │   │   ├── request/            ← FiscalYearRequest・FiscalYearSettingsRequest
@@ -291,6 +296,14 @@ GET    /api/interviews/inventory/{inventoryId}
 PUT    /api/interviews/inventory/{inventoryId}
 GET    /api/interviews/inventory/{inventoryId}/prev-year
 
+# マスタ Excel 出力・取込（ADMIN）
+GET    /api/master-excel/it-skills/download
+POST   /api/master-excel/it-skills/upload
+GET    /api/master-excel/qualifications/download
+POST   /api/master-excel/qualifications/upload
+GET    /api/master-excel/ad-seminars/download
+POST   /api/master-excel/ad-seminars/upload
+
 # マスタ（TL/ADMIN）
 GET    /api/it-skills
 POST   /api/it-skills
@@ -408,6 +421,7 @@ docker compose up db     # init.sql が再実行される
 1. **新機能・仕様変更**: 実装コードを書き始める前に、該当する設計書（`docs/architecture/api/` や `docs/architecture/ai-module.md` 等）を作成・更新する
 2. **バグ修正**: 原因と修正方針を設計書の該当箇所に反映させてから修正する（軽微なバグは省略可）
 3. **リファクタリング**: フォルダ構成・依存関係が変わる場合は `overview.md` / `CLAUDE.md` を先に更新する
+4. **実装フェーズでの仕様変更**: 実装中に設計書の仕様から変更が生じた場合（UI 表示方法・レスポンス形式・i18n キー等）は、**PR 作成前に設計書を実装の内容に合わせて更新する**（設計書と実装の乖離を残したまま PR を作らない）
 
 > 設計書なきコード変更のプルリクエストは受け入れない。
 
@@ -419,13 +433,18 @@ docker compose up db     # init.sql が再実行される
 
 1. **設計書の更新**: 影響する `docs/architecture/` 配下のドキュメントを修正する
    - 新しい API エンドポイントは `docs/architecture/api/` に追加
+   - **新規 API ドキュメントファイル（`docs/architecture/api/NN-xxx.md`）を追加した場合は、`docs/architecture/api/00-conventions.md` の「APIドキュメント一覧」にも必ず追記する**
    - フォルダ構成・フローが変わる場合は `ai-module.md` / `overview.md` 等を更新
-   - CLAUDE.md のディレクトリ責務テーブルも合わせて更新
+   - CLAUDE.md を更新する際は以下の **2 箇所両方** を漏れなく更新する:
+     - `Backend Architecture` セクションのパッケージ構成ツリー図（`com.skilize` のツリー）
+     - `Directory Responsibilities` セクションのテーブル
 2. **自動テストの更新**: 影響するテストコードを修正・追加する
    - **Backend**: `apps/backend/src/test/` の `*Test.java` を更新
    - **Frontend**: `apps/frontend/src/features/**/*.test.tsx` を更新
    - **Python**: `apps/ai/tests/` の `test_*.py` を更新
-   - テストコードを追加・変更・削除した場合は、`docs/testing/test-spec.md` のテスト仕様書も必ず同時に更新する（テスト ID・テスト名・前提条件・期待結果を最新の状態に保つこと）
+   - テストコードを追加・変更・削除した場合は、`docs/testing/test-spec.md` と `docs/testing/{backend|frontend|ai}/` の該当ファイルも必ず同時に更新する
+   - **`docs/testing/test-spec.md` のテストケース数はテスト ID の連番最大値から算出する**（例: `BE-MEC-009` まであれば9件）。目視での概算は不整合の原因になるため禁止する
+   - **テストファイル数と合計テストケース数の両方を正確に更新すること**（「約 N 件」の N は実際の合計を計算した値にする）
 3. **i18n の更新**: フロントエンドに新しい UI テキストが追加される場合は `src/i18n/locales/ja/` の JSON を必ず更新する
 
 > ソース変更のみでドキュメント・テストを更新しないプルリクエストは受け入れない。
@@ -517,10 +536,13 @@ docker compose up db     # init.sql が再実行される
 | `com/skilize/inventory/application/query/` | ComparisonQueryResult・GoalReviewQueryResult |
 | `com/skilize/inventory/application/mapper/` | InventoryApplicationMapper（Request→Command 変換） |
 | `com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
-| `com/skilize/master/presentation/` | MasterController |
+| `com/skilize/master/presentation/` | MasterController・MasterExcelController |
 | `com/skilize/master/presentation/request/` | SkillLevelRequest・ItSkillRequest・ItSkillCategoryRequest・ItSkillCategoryUpdateRequest・QualificationRequest・AdSeminarRequest・PromoteItSkillRequest・PromoteQualificationRequest・SimpleCategoryRequest |
-| `com/skilize/master/presentation/response/` | SkillLevelResponse・ItSkillResponse・ItSkillCategoryResponse・QualificationResponse・QualificationCategoryResponse・AdSeminarResponse・AdSeminarCategoryResponse・SeminarCategoryResponse・CustomUnregisteredResponse |
+| `com/skilize/master/presentation/response/` | SkillLevelResponse・ItSkillResponse・ItSkillCategoryResponse・QualificationResponse・QualificationCategoryResponse・AdSeminarResponse・AdSeminarCategoryResponse・SeminarCategoryResponse・CustomUnregisteredResponse・MasterImportResponse |
+| `com/skilize/master/application/` | MasterService（マスタ CRUD）・MasterExcelService（Excel 出力・取込） |
+| `com/skilize/master/application/query/` | MasterImportQueryResult・MasterImportErrorDetail |
 | `com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
+| `com/skilize/master/infrastructure/excel/` | ExcelStyleHelper・ExcelFormatException・ItSkillExcelExporter・ItSkillExcelImporter・QualificationExcelExporter・QualificationExcelImporter・AdSeminarExcelExporter・AdSeminarExcelImporter |
 | `com/skilize/fiscalyear/presentation/` | FiscalYearController |
 | `com/skilize/fiscalyear/presentation/request/` | FiscalYearRequest・FiscalYearSettingsRequest |
 | `com/skilize/fiscalyear/presentation/response/` | FiscalYearResponse・FiscalYearSettingsResponse |

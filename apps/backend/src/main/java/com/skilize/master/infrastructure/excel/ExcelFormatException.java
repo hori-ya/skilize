@@ -5,4 +5,8 @@ public class ExcelFormatException extends RuntimeException {
     public ExcelFormatException(String message) {
         super(message);
     }
+
+    public ExcelFormatException(String message, Throwable cause) {
+        super(message, cause);
+    }
 }

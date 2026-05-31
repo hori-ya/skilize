@@ -334,7 +334,10 @@
   "excel": {
     "download": "Excel 出力",
     "upload": "Excel 取込",
+    "downloading": "出力中...",
     "importing": "取込中...",
+    "downloadFailed": "Excel の出力に失敗しました",
+    "uploadFailed": "Excel の取込に失敗しました。再度お試しください",
     "importResultTitle": "取込完了",
     "importResultCreated": "登録",
     "importResultUpdated": "更新",

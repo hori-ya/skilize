@@ -417,20 +417,24 @@ export interface MasterImportErrorResponse {
 
 対象ページ: `ItSkillMasterPage.tsx`、`QualificationMasterPage.tsx`、`AdSeminarMasterPage.tsx`
 
-各ページのヘッダー部分に「Excel 出力」「Excel 取込」ボタンを追加する。
+各ページの右下に固定表示（`position: fixed`）の Excel ボタン群（`.excel-fab`）を配置する。  
+「先頭に戻るボタン」（`right: 28px`）と重複しないよう `right: 88px` に配置し、縦並びとする。
 
 ```
-[タイトル]  ----  [Excel 出力] [Excel 取込]  [既存の追加ボタン]
+画面右下（固定表示）
+  [Excel 出力]  ← .excel-fab__btn
+  [Excel 取込]  ← .excel-fab__btn
+                      ↑ right: 88px
+  [  ↑  ]             ← scroll-top-btn (right: 28px)
 ```
 
 **Excel 出力ボタン**
 - クリック → ダウンロード API 呼び出し → `<a download>` でファイル保存
-- ローディング中は無効化
 
 **Excel 取込ボタン**
 - クリック → `<input type="file" accept=".xlsx">` をトリガー
 - ファイル選択後 → アップロード API 呼び出し
-- 成功: `「N 件登録・M 件更新・D 件削除しました」` トースト表示 → データ再取得
+- 成功: 取込完了モーダルを表示（登録・更新・削除の件数を表形式で表示、OK ボタンで閉じる）
 - エラー: エラーモーダルでエラー一覧を表示（シート・行番号・列・メッセージ）
 
 ### 5.4 i18n（`src/i18n/locales/ja/master.json` への追加）
@@ -441,9 +445,16 @@ export interface MasterImportErrorResponse {
     "download": "Excel 出力",
     "upload": "Excel 取込",
     "importing": "取込中...",
-    "importSuccess": "{{created}}件登録・{{updated}}件更新・{{deleted}}件削除しました",
+    "importResultTitle": "取込完了",
+    "importResultCreated": "登録",
+    "importResultUpdated": "更新",
+    "importResultDeleted": "削除",
+    "importResultUnit": "件",
+    "importResultOk": "OK",
     "importError": "取込エラー",
-    "importErrorDetail": "{{sheet}} シート {{row}} 行目 {{column}} 列: {{message}}"
+    "importErrorClose": "閉じる",
+    "importErrorDetail": "{{sheet}}シート {{row}}行目 {{column}}列: {{message}}",
+    "importErrorOverflow": "エラーが多すぎます。ファイルを修正してから再度取込してください。"
   }
 }
 ```
@@ -482,16 +493,13 @@ export interface MasterImportErrorResponse {
 
 | テスト対象 | テストクラス | 検証内容 |
 |-----------|------------|---------|
-| `ItSkillExcelImporter` | `ItSkillExcelImporterTest` | 正常パース・必須項目欠如・型不正・シート欠如 |
-| `MasterExcelService` (IT) | `MasterExcelServiceItSkillTest` | 新規登録・更新・論理削除・sort_order 設定・バリデーションエラー収集・ロールバック |
-| `MasterExcelService` (資格) | `MasterExcelServiceQualificationTest` | 同上（未分類 null 対応含む）|
-| `MasterExcelService` (AD) | `MasterExcelServiceAdSeminarTest` | 同上 |
-| `MasterExcelController` | `MasterExcelControllerTest` | 権限（ADMIN のみ）・ダウンロード Content-Type・400 エラー形式 |
+| `ItSkillExcelImporter` | `ItSkillExcelImporterTest` | 正常パース・空行スキップ・有効列=無効・有効列省略・シート欠如 |
+| `MasterExcelController` | `MasterExcelControllerTest` | 権限（ADMIN のみ）・ダウンロード Content-Type・取込成功・バリデーションエラー・ファイル形式不正 |
 
 ### フロントエンド（`apps/frontend/src/features/master/`）
 
 - 出力ボタンのクリックで API が呼ばれることの確認（モック）
-- 取込成功時のトースト表示・データ再フェッチ
+- 取込成功時の結果モーダル表示（件数確認）・データ再フェッチ
 - 取込エラー時のエラーモーダル表示
 
 ---

@@ -1,8 +1,8 @@
 package com.skilize.master.presentation;
 
 import com.skilize.master.application.MasterExcelService;
-import com.skilize.master.application.query.MasterImportErrorDetail;
 import com.skilize.master.application.query.MasterImportQueryResult;
+import com.skilize.master.infrastructure.excel.ExcelFormatException;
 import com.skilize.master.presentation.response.MasterImportResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +32,8 @@ public class MasterExcelController {
 
     private static final MediaType XLSX_MEDIA_TYPE =
             MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+    /** 最大ファイルサイズ: 10MB */
+    private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
 
     private final MasterExcelService masterExcelService;
 
@@ -46,6 +48,7 @@ public class MasterExcelController {
 
     @PostMapping(value = "/it-skills/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadItSkills(@RequestParam("file") MultipartFile file) {
+        validateUploadFile(file);
         log.info("ITスキルマスタ Excel 取込: filename={}", file.getOriginalFilename());
         MasterImportQueryResult result = masterExcelService.importItSkillExcel(file);
         return toImportResponse(result);
@@ -62,6 +65,7 @@ public class MasterExcelController {
 
     @PostMapping(value = "/qualifications/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadQualifications(@RequestParam("file") MultipartFile file) {
+        validateUploadFile(file);
         log.info("参考資格マスタ Excel 取込: filename={}", file.getOriginalFilename());
         MasterImportQueryResult result = masterExcelService.importQualificationExcel(file);
         return toImportResponse(result);
@@ -78,12 +82,30 @@ public class MasterExcelController {
 
     @PostMapping(value = "/ad-seminars/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadAdSeminars(@RequestParam("file") MultipartFile file) {
+        validateUploadFile(file);
         log.info("ADマスタ Excel 取込: filename={}", file.getOriginalFilename());
         MasterImportQueryResult result = masterExcelService.importAdSeminarExcel(file);
         return toImportResponse(result);
     }
 
     // ─── ヘルパー ────────────────────────────────────────────────────────────────
+
+    /**
+     * アップロードファイルの事前検証。
+     * サイズ上限（10MB）と拡張子（.xlsx のみ）をチェックし、不正なら ExcelFormatException をスローする。
+     */
+    private void validateUploadFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            throw new ExcelFormatException("ファイルが空です");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new ExcelFormatException("ファイルサイズが上限（10MB）を超えています");
+        }
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
+            throw new ExcelFormatException("Excel ファイル（.xlsx）をアップロードしてください");
+        }
+    }
 
     private ResponseEntity<byte[]> excelResponse(byte[] bytes, String filename) {
         String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");

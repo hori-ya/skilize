@@ -26,13 +26,13 @@ docs/testing/
 | [backend/auth.md](backend/auth.md) | JwtUtil / AuthService / AuthController | 24 件 |
 | [backend/inventory.md](backend/inventory.md) | InventoryService#getComparison | 5 件 |
 | [backend/ai-chat.md](backend/ai-chat.md) | AiChatService / AiChatController | 8 件 |
-| [backend/master-excel.md](backend/master-excel.md) | ItSkillExcelImporter / MasterExcelController | 13 件 |
+| [backend/master-excel.md](backend/master-excel.md) | ItSkillExcelImporter / MasterExcelController | 15 件 |
 | [frontend/auth.md](frontend/auth.md) | LoginPage | 10 件 |
 | [frontend/inventory.md](frontend/inventory.md) | InventoryHistoryPage | 9 件 |
 | [frontend/ai-support.md](frontend/ai-support.md) | AiSupportWidget | 12 件 |
 | [ai/chat-service.md](ai/chat-service.md) | chat_service.py | 14 件 |
 
-**合計**: 11 テストファイル・約 95 テストケース
+**合計**: 12 テストファイル・約 97 テストケース
 
 ## テスト ID 体系
 

@@ -69,13 +69,13 @@ public class MasterExcelService {
         ItSkillExcelImporter.ItSkillImportData data = itSkillImporter.parse(file);
         List<MasterImportErrorDetail> errors = new ArrayList<>();
 
-        // 既存 DB データを取得
-        Map<Integer, ItSkillCategory> dbCategories = itSkillCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(ItSkillCategory::getId, c -> c));
+        // 既存 DB データを取得（カテゴリは後続のスキル保存でも参照するためミュータブルなマップ）
+        Map<Integer, ItSkillCategory> dbCategories = new HashMap<>(itSkillCategoryRepository.findAll()
+                .stream().collect(Collectors.toMap(ItSkillCategory::getId, c -> c)));
         Map<Integer, ItSkill> dbSkills = itSkillRepository.findAll()
                 .stream().collect(Collectors.toMap(ItSkill::getId, s -> s));
 
-        // バリデーション
+        // バリデーション（全行のエラーを収集してから判定）
         validateItSkillCategories(data.categoryRows(), dbCategories, errors);
         validateItSkills(data.skillRows(), dbCategories, dbSkills, errors);
 
@@ -83,7 +83,7 @@ public class MasterExcelService {
             return MasterImportQueryResult.ofErrors(errors);
         }
 
-        // カテゴリ保存
+        // カテゴリ保存（⑩: 新規保存後は dbCategories に追加してスキル保存で再利用）
         Set<Integer> excelCategoryIds = new HashSet<>();
         int catCreated = 0, catUpdated = 0;
 
@@ -103,7 +103,9 @@ public class MasterExcelService {
                 if (Boolean.FALSE.equals(row.active())) {
                     newCat.update(newCat.getName(), newCat.getSortOrder(), false);
                 }
-                itSkillCategoryRepository.save(newCat);
+                // 保存後の ID を dbCategories に追加（二重 findAll 不要）
+                ItSkillCategory saved = itSkillCategoryRepository.save(newCat);
+                dbCategories.put(saved.getId(), saved);
                 catCreated++;
             }
         }
@@ -118,16 +120,12 @@ public class MasterExcelService {
             }
         }
 
-        // スキル保存（カテゴリ保存後に実行）
-        // DB 上の最新カテゴリ情報を再取得
-        Map<Integer, ItSkillCategory> updatedCategories = itSkillCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(ItSkillCategory::getId, c -> c));
-
+        // スキル保存（dbCategories を再利用）
         Set<Integer> excelSkillIds = new HashSet<>();
         int skillCreated = 0, skillUpdated = 0;
 
         for (ItSkillExcelImporter.SkillRow row : data.skillRows()) {
-            ItSkillCategory category = updatedCategories.get(row.categoryId());
+            ItSkillCategory category = dbCategories.get(row.categoryId());
             if (row.id() != null) {
                 ItSkill skill = dbSkills.get(row.id());
                 boolean active = row.active() != null ? row.active() : skill.isActive();
@@ -166,8 +164,8 @@ public class MasterExcelService {
         QualificationExcelImporter.QualificationImportData data = qualificationImporter.parse(file);
         List<MasterImportErrorDetail> errors = new ArrayList<>();
 
-        Map<Integer, QualificationCategory> dbCategories = qualificationCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(QualificationCategory::getId, c -> c));
+        Map<Integer, QualificationCategory> dbCategories = new HashMap<>(qualificationCategoryRepository.findAll()
+                .stream().collect(Collectors.toMap(QualificationCategory::getId, c -> c)));
         Map<Integer, Qualification> dbQuals = qualificationRepository.findAll()
                 .stream().collect(Collectors.toMap(Qualification::getId, q -> q));
 
@@ -191,7 +189,8 @@ public class MasterExcelService {
             } else {
                 QualificationCategory newCat = QualificationCategory.create(row.name(), row.siblingOrder());
                 if (Boolean.FALSE.equals(row.active())) newCat.update(newCat.getName(), newCat.getSortOrder(), false);
-                qualificationCategoryRepository.save(newCat);
+                QualificationCategory saved = qualificationCategoryRepository.save(newCat);
+                dbCategories.put(saved.getId(), saved);
                 catCreated++;
             }
         }
@@ -205,13 +204,10 @@ public class MasterExcelService {
             }
         }
 
-        Map<Integer, QualificationCategory> updatedCategories = qualificationCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(QualificationCategory::getId, c -> c));
-
         Set<Integer> excelQualIds = new HashSet<>();
         int qualCreated = 0, qualUpdated = 0;
         for (QualificationExcelImporter.QualificationRow row : data.qualRows()) {
-            QualificationCategory cat = row.categoryId() != null ? updatedCategories.get(row.categoryId()) : null;
+            QualificationCategory cat = row.categoryId() != null ? dbCategories.get(row.categoryId()) : null;
             if (row.id() != null) {
                 Qualification q = dbQuals.get(row.id());
                 boolean active = row.active() != null ? row.active() : q.isActive();
@@ -249,8 +245,8 @@ public class MasterExcelService {
         AdSeminarExcelImporter.AdSeminarImportData data = adSeminarImporter.parse(file);
         List<MasterImportErrorDetail> errors = new ArrayList<>();
 
-        Map<Integer, AdSeminarCategory> dbCategories = adSeminarCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(AdSeminarCategory::getId, c -> c));
+        Map<Integer, AdSeminarCategory> dbCategories = new HashMap<>(adSeminarCategoryRepository.findAll()
+                .stream().collect(Collectors.toMap(AdSeminarCategory::getId, c -> c)));
         Map<Integer, AdSeminar> dbSeminars = adSeminarRepository.findAll()
                 .stream().collect(Collectors.toMap(AdSeminar::getId, s -> s));
 
@@ -274,7 +270,8 @@ public class MasterExcelService {
             } else {
                 AdSeminarCategory newCat = AdSeminarCategory.create(row.name(), row.siblingOrder());
                 if (Boolean.FALSE.equals(row.active())) newCat.update(newCat.getName(), newCat.getSortOrder(), false);
-                adSeminarCategoryRepository.save(newCat);
+                AdSeminarCategory saved = adSeminarCategoryRepository.save(newCat);
+                dbCategories.put(saved.getId(), saved);
                 catCreated++;
             }
         }
@@ -288,13 +285,10 @@ public class MasterExcelService {
             }
         }
 
-        Map<Integer, AdSeminarCategory> updatedCategories = adSeminarCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(AdSeminarCategory::getId, c -> c));
-
         Set<Integer> excelSeminarIds = new HashSet<>();
         int semCreated = 0, semUpdated = 0;
         for (AdSeminarExcelImporter.SeminarRow row : data.seminarRows()) {
-            AdSeminarCategory cat = row.categoryId() != null ? updatedCategories.get(row.categoryId()) : null;
+            AdSeminarCategory cat = row.categoryId() != null ? dbCategories.get(row.categoryId()) : null;
             if (row.id() != null) {
                 AdSeminar s = dbSeminars.get(row.id());
                 boolean active = row.active() != null ? row.active() : s.isActive();
@@ -326,29 +320,33 @@ public class MasterExcelService {
     }
 
     // ─── バリデーション ──────────────────────────────────────────────────────────
+    // ⑨: 各行のエラーをまとめてから追加することで、MAX_ERRORS 到達時に行の途中で切れないようにする
 
     private void validateItSkillCategories(List<ItSkillExcelImporter.CategoryRow> rows,
                                             Map<Integer, ItSkillCategory> dbMap,
                                             List<MasterImportErrorDetail> errors) {
         for (ItSkillExcelImporter.CategoryRow row : rows) {
-            if (errors.size() >= MAX_ERRORS) { addMaxErrorsMessage(errors); return; }
+            if (errors.size() >= MAX_ERRORS) break;
+            List<MasterImportErrorDetail> rowErrors = new ArrayList<>();
             if (row.name() == null || row.name().isBlank()) {
-                errors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "D", "カテゴリ名は必須です"));
+                rowErrors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "D", "カテゴリ名は必須です"));
             }
             if (row.id() != null && !dbMap.containsKey(row.id())) {
-                errors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "A",
+                rowErrors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "A",
                         "ID=" + row.id() + " のカテゴリが存在しません"));
             }
             if (row.parentId() != null && !dbMap.containsKey(row.parentId())) {
-                errors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "B",
+                rowErrors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "B",
                         "親カテゴリID=" + row.parentId() + " が存在しません"));
             }
             if (row.parentId() != null && dbMap.containsKey(row.parentId())
                     && dbMap.get(row.parentId()).getLevel() >= 3) {
-                errors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "B",
+                rowErrors.add(new MasterImportErrorDetail("IT分類", row.rowNum(), "B",
                         "L3 カテゴリの配下には子カテゴリを追加できません"));
             }
+            appendRowErrors(errors, rowErrors);
         }
+        if (errors.size() >= MAX_ERRORS) addMaxErrorsMessage(errors);
     }
 
     private void validateItSkills(List<ItSkillExcelImporter.SkillRow> rows,
@@ -356,36 +354,42 @@ public class MasterExcelService {
                                    Map<Integer, ItSkill> dbSkillMap,
                                    List<MasterImportErrorDetail> errors) {
         for (ItSkillExcelImporter.SkillRow row : rows) {
-            if (errors.size() >= MAX_ERRORS) { addMaxErrorsMessage(errors); return; }
+            if (errors.size() >= MAX_ERRORS) break;
+            List<MasterImportErrorDetail> rowErrors = new ArrayList<>();
             if (row.name() == null || row.name().isBlank()) {
-                errors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "F", "スキル名は必須です"));
+                rowErrors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "F", "スキル名は必須です"));
             }
             if (row.categoryId() == null) {
-                errors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "A", "カテゴリIDは必須です"));
+                rowErrors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "A", "カテゴリIDは必須です"));
             } else if (!dbCategoryMap.containsKey(row.categoryId())) {
-                errors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "A",
+                rowErrors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "A",
                         "カテゴリID=" + row.categoryId() + " が存在しません"));
             }
             if (row.id() != null && !dbSkillMap.containsKey(row.id())) {
-                errors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "E",
+                rowErrors.add(new MasterImportErrorDetail("ITスキル", row.rowNum(), "E",
                         "ID=" + row.id() + " のスキルが存在しません"));
             }
+            appendRowErrors(errors, rowErrors);
         }
+        if (errors.size() >= MAX_ERRORS) addMaxErrorsMessage(errors);
     }
 
     private void validateQualificationCategories(List<QualificationExcelImporter.CategoryRow> rows,
                                                   Map<Integer, QualificationCategory> dbMap,
                                                   List<MasterImportErrorDetail> errors) {
         for (QualificationExcelImporter.CategoryRow row : rows) {
-            if (errors.size() >= MAX_ERRORS) { addMaxErrorsMessage(errors); return; }
+            if (errors.size() >= MAX_ERRORS) break;
+            List<MasterImportErrorDetail> rowErrors = new ArrayList<>();
             if (row.name() == null || row.name().isBlank()) {
-                errors.add(new MasterImportErrorDetail("資格カテゴリ", row.rowNum(), "B", "カテゴリ名は必須です"));
+                rowErrors.add(new MasterImportErrorDetail("資格カテゴリ", row.rowNum(), "B", "カテゴリ名は必須です"));
             }
             if (row.id() != null && !dbMap.containsKey(row.id())) {
-                errors.add(new MasterImportErrorDetail("資格カテゴリ", row.rowNum(), "A",
+                rowErrors.add(new MasterImportErrorDetail("資格カテゴリ", row.rowNum(), "A",
                         "ID=" + row.id() + " のカテゴリが存在しません"));
             }
+            appendRowErrors(errors, rowErrors);
         }
+        if (errors.size() >= MAX_ERRORS) addMaxErrorsMessage(errors);
     }
 
     private void validateQualifications(List<QualificationExcelImporter.QualificationRow> rows,
@@ -393,34 +397,40 @@ public class MasterExcelService {
                                          Map<Integer, Qualification> dbQualMap,
                                          List<MasterImportErrorDetail> errors) {
         for (QualificationExcelImporter.QualificationRow row : rows) {
-            if (errors.size() >= MAX_ERRORS) { addMaxErrorsMessage(errors); return; }
+            if (errors.size() >= MAX_ERRORS) break;
+            List<MasterImportErrorDetail> rowErrors = new ArrayList<>();
             if (row.name() == null || row.name().isBlank()) {
-                errors.add(new MasterImportErrorDetail("参考資格", row.rowNum(), "D", "資格名は必須です"));
+                rowErrors.add(new MasterImportErrorDetail("参考資格", row.rowNum(), "D", "資格名は必須です"));
             }
             if (row.categoryId() != null && !dbCategoryMap.containsKey(row.categoryId())) {
-                errors.add(new MasterImportErrorDetail("参考資格", row.rowNum(), "A",
+                rowErrors.add(new MasterImportErrorDetail("参考資格", row.rowNum(), "A",
                         "カテゴリID=" + row.categoryId() + " が存在しません"));
             }
             if (row.id() != null && !dbQualMap.containsKey(row.id())) {
-                errors.add(new MasterImportErrorDetail("参考資格", row.rowNum(), "B",
+                rowErrors.add(new MasterImportErrorDetail("参考資格", row.rowNum(), "B",
                         "ID=" + row.id() + " の資格が存在しません"));
             }
+            appendRowErrors(errors, rowErrors);
         }
+        if (errors.size() >= MAX_ERRORS) addMaxErrorsMessage(errors);
     }
 
     private void validateAdSeminarCategories(List<AdSeminarExcelImporter.CategoryRow> rows,
                                               Map<Integer, AdSeminarCategory> dbMap,
                                               List<MasterImportErrorDetail> errors) {
         for (AdSeminarExcelImporter.CategoryRow row : rows) {
-            if (errors.size() >= MAX_ERRORS) { addMaxErrorsMessage(errors); return; }
+            if (errors.size() >= MAX_ERRORS) break;
+            List<MasterImportErrorDetail> rowErrors = new ArrayList<>();
             if (row.name() == null || row.name().isBlank()) {
-                errors.add(new MasterImportErrorDetail("ADカテゴリ", row.rowNum(), "B", "カテゴリ名は必須です"));
+                rowErrors.add(new MasterImportErrorDetail("ADカテゴリ", row.rowNum(), "B", "カテゴリ名は必須です"));
             }
             if (row.id() != null && !dbMap.containsKey(row.id())) {
-                errors.add(new MasterImportErrorDetail("ADカテゴリ", row.rowNum(), "A",
+                rowErrors.add(new MasterImportErrorDetail("ADカテゴリ", row.rowNum(), "A",
                         "ID=" + row.id() + " のカテゴリが存在しません"));
             }
+            appendRowErrors(errors, rowErrors);
         }
+        if (errors.size() >= MAX_ERRORS) addMaxErrorsMessage(errors);
     }
 
     private void validateAdSeminars(List<AdSeminarExcelImporter.SeminarRow> rows,
@@ -428,22 +438,37 @@ public class MasterExcelService {
                                      Map<Integer, AdSeminar> dbSeminarMap,
                                      List<MasterImportErrorDetail> errors) {
         for (AdSeminarExcelImporter.SeminarRow row : rows) {
-            if (errors.size() >= MAX_ERRORS) { addMaxErrorsMessage(errors); return; }
+            if (errors.size() >= MAX_ERRORS) break;
+            List<MasterImportErrorDetail> rowErrors = new ArrayList<>();
             if (row.name() == null || row.name().isBlank()) {
-                errors.add(new MasterImportErrorDetail("ADセミナー", row.rowNum(), "D", "AD名は必須です"));
+                rowErrors.add(new MasterImportErrorDetail("ADセミナー", row.rowNum(), "D", "AD名は必須です"));
             }
             if (row.categoryId() != null && !dbCategoryMap.containsKey(row.categoryId())) {
-                errors.add(new MasterImportErrorDetail("ADセミナー", row.rowNum(), "A",
+                rowErrors.add(new MasterImportErrorDetail("ADセミナー", row.rowNum(), "A",
                         "カテゴリID=" + row.categoryId() + " が存在しません"));
             }
             if (row.id() != null && !dbSeminarMap.containsKey(row.id())) {
-                errors.add(new MasterImportErrorDetail("ADセミナー", row.rowNum(), "C",
+                rowErrors.add(new MasterImportErrorDetail("ADセミナー", row.rowNum(), "C",
                         "ID=" + row.id() + " のADセミナーが存在しません"));
             }
+            appendRowErrors(errors, rowErrors);
         }
+        if (errors.size() >= MAX_ERRORS) addMaxErrorsMessage(errors);
+    }
+
+    /** 行単位のエラーを全量追加する（MAX_ERRORS を超えた分は切り捨て）。 */
+    private void appendRowErrors(List<MasterImportErrorDetail> errors, List<MasterImportErrorDetail> rowErrors) {
+        int remaining = MAX_ERRORS - errors.size();
+        if (remaining <= 0) return;
+        errors.addAll(rowErrors.subList(0, Math.min(rowErrors.size(), remaining)));
     }
 
     private void addMaxErrorsMessage(List<MasterImportErrorDetail> errors) {
-        errors.add(new MasterImportErrorDetail("", 0, "", "100 件を超えるエラーがあります。ファイルを修正してから再度取込してください。"));
+        // 重複追加を防ぐ
+        boolean alreadyAdded = errors.stream().anyMatch(e -> e.column().isEmpty());
+        if (!alreadyAdded) {
+            errors.add(new MasterImportErrorDetail("", 0, "",
+                    "100 件を超えるエラーがあります。ファイルを修正してから再度取込してください。"));
+        }
     }
 }
