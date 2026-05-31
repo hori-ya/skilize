@@ -239,8 +239,8 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
         <table className="master-table">
           <thead>
             <tr>
-              <th>{t('adSeminar.seminar.table.adName')}</th>
               <th style={{ width: 160 }}>{t('adSeminar.table.category')}</th>
+              <th>{t('adSeminar.seminar.table.adName')}</th>
               <th style={{ width: 200 }}>{t('adSeminar.table.description')}</th>
               <th style={{ width: 56 }}>{t('common.sortOrder')}</th>
               <th style={{ width: 72 }}>{t('common.status')}</th>
@@ -253,8 +253,8 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
             ) : (
               filtered.map(a => (
                 <tr key={a.id}>
-                  <td>{a.name}</td>
                   <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{a.categoryName ?? '—'}</td>
+                  <td>{a.name}</td>
                   <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {a.description ?? '—'}
                   </td>

@@ -10,8 +10,10 @@ public interface ItSkillCategoryRepository extends JpaRepository<ItSkillCategory
     List<ItSkillCategory> findByActiveTrueOrderBySortOrderAsc();
     /** 指定レベル（1=大分類, 2=中分類, 3=小分類）の有効な分類を返す。 */
     List<ItSkillCategory> findByLevelAndActiveTrueOrderBySortOrderAsc(short level);
-    /** 無効な分類を表示順昇順で返す。マスタ管理画面の無効フィルタに使用。 */
-    List<ItSkillCategory> findByActiveFalseOrderBySortOrderAsc();
-    /** 全分類を階層レベル昇順・表示順昇順で返す。マスタ管理画面の一覧表示に使用。 */
+    /** 無効な分類を階層レベル昇順・親分類ID昇順・表示順昇順で返す。マスタ管理画面の無効フィルタに使用。 */
+    List<ItSkillCategory> findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc();
+    /** 全分類を階層レベル昇順・表示順昇順で返す。レーダーチャート集計（ChartService）に使用。 */
     List<ItSkillCategory> findAllByOrderByLevelAscSortOrderAsc();
+    /** 全分類を階層レベル昇順・親分類ID昇順・表示順昇順で返す。マスタ管理画面の一覧表示に使用。 */
+    List<ItSkillCategory> findAllByOrderByLevelAscParentIdAscSortOrderAsc();
 }

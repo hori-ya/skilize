@@ -119,8 +119,8 @@
     "modalCategoryEdit": "分類編集",
     "modalPromote": "マスタ昇格",
     "tab": {
-      "categories": "IT分類管理（SCR-012）",
-      "skills": "ITスキル管理（SCR-009）",
+      "categories": "IT分類管理",
+      "skills": "ITスキル管理",
       "promote": "カスタム昇格"
     },
     "category": {

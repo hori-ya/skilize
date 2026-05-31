@@ -33,6 +33,11 @@ public class ItSkillCategory {
     @Column(name = "parent_id")
     private Integer parentId;
 
+    // 親分類エンティティ（読み取り専用。parentId と同じ parent_id カラムを参照。JPQL の LEFT JOIN 用）
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id", insertable = false, updatable = false)
+    private ItSkillCategory parent;
+
     // 階層レベル（1=大分類 / 2=中分類 / 3=小分類）
     @Column(nullable = false)
     private Short level;

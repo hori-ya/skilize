@@ -51,7 +51,7 @@
 
 ## GET /api/ad-seminars
 
-有効な AD マスタを全件返す。
+AD マスタを返す。
 
 **権限**: 全員
 
@@ -59,8 +59,16 @@
 
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
-| `isActive` | boolean | 省略で有効のみ |
+| `isActive` | boolean | `true`（有効のみ）/ `false`（無効のみ）/ 省略（全件） |
 | `categoryId` | int | ADセミナー分類でフィルタ（任意） |
+
+**ソート順**
+
+| `isActive` パラメータ | ソート順 | 用途 |
+|---|---|---|
+| 未指定（全件） | 分類 ASC NULLS LAST → sortOrder ASC | マスタ管理画面の一覧表示 |
+| `false`（無効のみ） | 分類 ASC NULLS LAST → sortOrder ASC | マスタ管理画面の無効フィルター |
+| `true`（有効のみ） | sortOrder ASC | 棚卸入力画面の選択肢（変更なし）|
 
 **Response 200**
 
@@ -406,6 +414,14 @@ ADセミナー分類を削除する。配下に有効なADマスタが存在す�
 ITスキル分類をツリー形式で返す。分類1→2→3 の階層構造。
 
 **権限**: TL / ADMIN
+
+**ソート順**
+
+| `isActive` パラメータ | ソート順 | 用途 |
+|---|---|---|
+| 未指定（全件） | level ASC → parentId ASC → sortOrder ASC | マスタ管理画面の一覧表示 |
+| `false`（無効のみ） | level ASC → parentId ASC → sortOrder ASC | マスタ管理画面の無効フィルター |
+| `true`（有効のみ） | sortOrder ASC | 棚卸入力画面の選択肢（変更なし）|
 
 **Response 200**
 

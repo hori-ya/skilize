@@ -57,13 +57,16 @@ public class MasterController {
         return SkillLevelResponse.from(masterService.updateSkillLevel(id, req.levelValue(), req.description(), req.active(), req.scoreWeight()));
     }
 
-    /** ITスキル一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
+    /**
+     * ITスキル一覧を返す。isActive で有効/無効を絞り込み可。
+     * 全件・無効のみは分類1→分類2→分類3→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。
+     */
     @GetMapping("/it-skills")
     public List<ItSkillResponse> getItSkills(@RequestParam(required = false) Boolean isActive) {
         List<ItSkill> skills = isActive == null
-                ? itSkillRepository.findAllWithCategory()
+                ? itSkillRepository.findAllOrderByHierarchy()
                 : isActive ? itSkillRepository.findAllActiveWithCategory()
-                           : itSkillRepository.findAllWithCategoryByActive(false);
+                           : itSkillRepository.findByActiveFalseOrderByHierarchy();
         return skills.stream().map(this::toItSkillResponse).toList();
     }
 
@@ -102,7 +105,7 @@ public class MasterController {
         return ResponseEntity.status(HttpStatus.CREATED).body(toItSkillResponse(skill));
     }
 
-    /** 資格一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
+    /** 資格一覧を返す。isActive で有効/無効を絞り込み可。全件・無効のみは分類→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。 */
     @GetMapping("/qualifications")
     public List<QualificationResponse> getQualifications(@RequestParam(required = false) Boolean isActive) {
         List<Qualification> list = isActive == null
@@ -173,7 +176,7 @@ public class MasterController {
                 masterService.updateQualificationCategory(id, req.name(), req.sortOrder(), req.active()));
     }
 
-    /** ADセミナー一覧を分類付きで返す。isActive で有効/無効を絞り込み可。 */
+    /** ADセミナー一覧を返す。isActive で有効/無効を絞り込み可。全件・無効のみは分類→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。 */
     @GetMapping("/ad-seminars")
     public List<AdSeminarResponse> getAdSeminars(@RequestParam(required = false) Boolean isActive) {
         List<AdSeminar> list = isActive == null
@@ -207,15 +210,16 @@ public class MasterController {
     }
 
     /**
-     * ITスキル分類一覧を階層順（level 昇順）・sortOrder 順で返す。
-     * isActive=null で全件、true で有効のみ、false で無効のみ。
+     * ITスキル分類一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。
+     * 全件・無効のみは階層レベル昇順→親分類ID昇順→表示順昇順でソートする。
+     * 有効のみは棚卸入力画面向けのため表示順昇順のみ。
      */
     @GetMapping("/it-skill-categories")
     public List<ItSkillCategoryResponse> getItSkillCategories(@RequestParam(required = false) Boolean isActive) {
         List<ItSkillCategory> cats = isActive == null
-                ? itSkillCategoryRepository.findAllByOrderByLevelAscSortOrderAsc()
+                ? itSkillCategoryRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc()
                 : isActive ? itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
-                           : itSkillCategoryRepository.findByActiveFalseOrderBySortOrderAsc();
+                           : itSkillCategoryRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc();
         return cats.stream().map(ItSkillCategoryResponse::from).toList();
     }
 

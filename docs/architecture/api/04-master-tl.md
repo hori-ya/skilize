@@ -32,7 +32,7 @@
 
 ## GET /api/it-skills
 
-有効な ITスキルを全件返す。棚卸入力画面・マスタ管理画面で使用。
+ITスキルを返す。棚卸入力画面・マスタ管理画面で使用。
 
 **権限**: 全員
 
@@ -40,8 +40,16 @@
 
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
-| `isActive` | boolean | `true`（有効のみ）/ `false`（無効のみ）/ 省略（有効のみ） |
+| `isActive` | boolean | `true`（有効のみ）/ `false`（無効のみ）/ 省略（全件） |
 | `category1Id` | int | 分類1でフィルタ（任意） |
+
+**ソート順**
+
+| `isActive` パラメータ | ソート順 | 用途 |
+|---|---|---|
+| 未指定（全件） | 分類1 ASC → 分類2 ASC → 分類3 ASC → sortOrder ASC | マスタ管理画面の一覧表示 |
+| `false`（無効のみ） | 分類1 ASC → 分類2 ASC → 分類3 ASC → sortOrder ASC | マスタ管理画面の無効フィルター |
+| `true`（有効のみ） | sortOrder ASC | 棚卸入力画面の選択肢（変更なし）|
 
 **Response 200**
 
@@ -238,7 +246,7 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 
 ## GET /api/qualifications
 
-有効な参考資格を全件返す。
+参考資格を返す。
 
 **権限**: 全員
 
@@ -246,8 +254,16 @@ ITスキルを論理削除（`isActive: false`）する。既存の棚卸デー�
 
 | パラメータ | 型 | 説明 |
 |-----------|-----|------|
-| `isActive` | boolean | 有効 / 無効フィルタ（省略で有効のみ） |
+| `isActive` | boolean | `true`（有効のみ）/ `false`（無効のみ）/ 省略（全件） |
 | `categoryId` | int | 資格分類でフィルタ（任意） |
+
+**ソート順**
+
+| `isActive` パラメータ | ソート順 | 用途 |
+|---|---|---|
+| 未指定（全件） | 分類 ASC NULLS LAST → sortOrder ASC | マスタ管理画面の一覧表示 |
+| `false`（無効のみ） | 分類 ASC NULLS LAST → sortOrder ASC | マスタ管理画面の無効フィルター |
+| `true`（有効のみ） | sortOrder ASC | 棚卸入力画面の選択肢（変更なし）|
 
 **Response 200**
 

@@ -240,8 +240,8 @@ function QualificationTab({ qualifications, categories, onReload }: {
         <table className="master-table">
           <thead>
             <tr>
-              <th>{t('qualification.table.name')}</th>
               <th style={{ width: 160 }}>{t('qualification.table.category')}</th>
+              <th>{t('qualification.table.name')}</th>
               <th style={{ width: 200 }}>{t('qualification.table.description')}</th>
               <th style={{ width: 56 }}>{t('common.sortOrder')}</th>
               <th style={{ width: 72 }}>{t('common.status')}</th>
@@ -254,8 +254,8 @@ function QualificationTab({ qualifications, categories, onReload }: {
             ) : (
               filtered.map(q => (
                 <tr key={q.id}>
-                  <td>{q.name}</td>
                   <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{q.categoryName ?? '—'}</td>
+                  <td>{q.name}</td>
                   <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {q.description ?? '—'}
                   </td>

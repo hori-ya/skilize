@@ -220,6 +220,8 @@ function SkillTab({ skills, categories, onReload }: {
 }) {
   const { t } = useTranslation('master');
   const [filterLv1, setFilterLv1] = useState<number | null>(null);
+  const [filterLv2, setFilterLv2] = useState<number | null>(null);
+  const [filterLv3, setFilterLv3] = useState<number | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<SkillModalMode>('create');
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -242,9 +244,19 @@ function SkillTab({ skills, categories, onReload }: {
     return parts.join(' › ') || `カテゴリID:${skill.categoryId}`;
   };
 
-  const filteredSkills = filterLv1
-    ? skills.filter(s => s.category1Id === filterLv1)
-    : skills;
+  const filteredSkills = useMemo(() => {
+    let result = skills;
+    if (filterLv1) result = result.filter(s => s.category1Id === filterLv1);
+    if (filterLv2) {
+      const ids = new Set<number>([
+        filterLv2,
+        ...categories.filter(c => c.level === 3 && c.parentId === filterLv2).map(c => c.id),
+      ]);
+      result = result.filter(s => ids.has(s.categoryId));
+    }
+    if (filterLv3) result = result.filter(s => s.categoryId === filterLv3);
+    return result;
+  }, [skills, filterLv1, filterLv2, filterLv3, categories]);
 
   const openCreate = () => {
     setForm({ lv1Id: null, lv2Id: null, lv3Id: null, name: '', description: '', sortOrder: '0', active: true });
@@ -300,14 +312,39 @@ function SkillTab({ skills, categories, onReload }: {
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <label className="master-label" style={{ minWidth: 'auto' }}>{t('itSkill.skill.filterLabel')}</label>
         <select className="master-select"
           value={filterLv1 ?? ''}
-          onChange={e => setFilterLv1(e.target.value === '' ? null : Number(e.target.value))}>
+          onChange={e => {
+            const v = e.target.value === '' ? null : Number(e.target.value);
+            setFilterLv1(v);
+            setFilterLv2(null);
+            setFilterLv3(null);
+          }}>
           <option value="">{t('common.allOption')}</option>
           {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
+        {filterLv1 && lv2Cats(filterLv1).length > 0 && (
+          <select className="master-select"
+            value={filterLv2 ?? ''}
+            onChange={e => {
+              const v = e.target.value === '' ? null : Number(e.target.value);
+              setFilterLv2(v);
+              setFilterLv3(null);
+            }}>
+            <option value="">{t('common.allOption')}</option>
+            {lv2Cats(filterLv1).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
+        {filterLv2 && lv3Cats(filterLv2).length > 0 && (
+          <select className="master-select"
+            value={filterLv3 ?? ''}
+            onChange={e => setFilterLv3(e.target.value === '' ? null : Number(e.target.value))}>
+            <option value="">{t('common.allOption')}</option>
+            {lv3Cats(filterLv2).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
         <button className="btn btn--primary btn--sm" onClick={openCreate} style={{ marginLeft: 'auto' }}>
           <IconPlus size={12} />{t('itSkill.addButton')}
         </button>
@@ -317,8 +354,8 @@ function SkillTab({ skills, categories, onReload }: {
         <table className="master-table">
           <thead>
             <tr>
-              <th>{t('itSkill.table.name')}</th>
               <th>{t('itSkill.form.categoryLabel')}</th>
+              <th>{t('itSkill.table.name')}</th>
               <th style={{ width: 200 }}>{t('itSkill.table.description')}</th>
               <th style={{ width: 56 }}>{t('common.sortOrder')}</th>
               <th style={{ width: 72 }}>{t('common.status')}</th>
@@ -331,8 +368,8 @@ function SkillTab({ skills, categories, onReload }: {
             ) : (
               filteredSkills.map(s => (
                 <tr key={s.id}>
-                  <td>{s.name}</td>
                   <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{skillCategoryPath(s)}</td>
+                  <td>{s.name}</td>
                   <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.description ?? '—'}
                   </td>
