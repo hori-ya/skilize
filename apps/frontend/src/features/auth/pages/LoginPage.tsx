@@ -33,7 +33,7 @@ export default function LoginPage() {
     } catch (err) {
       if (axios.isAxiosError(err)) {
         const code = err.response?.data?.code;
-        if (code === 'FORBIDDEN') {
+        if (code === 'ACCOUNT_DISABLED') {
           setError(t('error.accountDisabled'));
         } else {
           setError(t('error.invalidCredentials'));

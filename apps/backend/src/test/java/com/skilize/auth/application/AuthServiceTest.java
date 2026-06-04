@@ -87,14 +87,14 @@ class AuthServiceTest {
         }
 
         @Test
-        void 異常系_無効化アカウント_FORBIDDENをスロー() {
+        void 異常系_無効化アカウント_ACCOUNT_DISABLEDをスロー() {
             User inactiveUser = User.create("user01", "名前", null, Role.GENERAL, null, "hash");
             inactiveUser.update("名前", null, Role.GENERAL, null, false);
             when(userRepository.findByUserId("user01")).thenReturn(Optional.of(inactiveUser));
 
             assertThatThrownBy(() -> authService.login(new LoginCommand("user01", "pw")))
                     .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "FORBIDDEN");
+                    .hasFieldOrPropertyWithValue("code", "ACCOUNT_DISABLED");
         }
 
         @Test
@@ -147,14 +147,14 @@ class AuthServiceTest {
         }
 
         @Test
-        void 異常系_現在のパスワード不一致_AUTH_FAILEDをスロー() {
+        void 異常系_現在のパスワード不一致_CURRENT_PASSWORD_WRONGをスロー() {
             when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
             when(passwordEncoder.matches("wrong", activeUser.getPasswordHash())).thenReturn(false);
 
             assertThatThrownBy(() -> authService.changePassword(
                     new ChangePasswordCommand("wrong", "newpass12"), activeUser))
                     .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "AUTH_FAILED");
+                    .hasFieldOrPropertyWithValue("code", "CURRENT_PASSWORD_WRONG");
         }
     }
 

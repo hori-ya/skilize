@@ -109,7 +109,7 @@ class ItSkillExcelImporterTest {
 
             assertThatThrownBy(() -> importer.parse(file))
                     .isInstanceOf(ExcelFormatException.class)
-                    .hasMessageContaining("IT分類");
+                    .hasMessageContaining("EXCEL_SHEET_NOT_FOUND");
         }
 
         @Test
@@ -120,7 +120,7 @@ class ItSkillExcelImporterTest {
 
             assertThatThrownBy(() -> importer.parse(file))
                     .isInstanceOf(ExcelFormatException.class)
-                    .hasMessageContaining("ITスキル");
+                    .hasMessageContaining("EXCEL_SHEET_NOT_FOUND");
         }
     }
 

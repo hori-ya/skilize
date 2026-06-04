@@ -62,7 +62,9 @@ public class JwtUtil {
         try {
             getClaims(token);
             return true;
-        } catch (JwtException e) {
+        } catch (JwtException | IllegalArgumentException e) {
+            // JwtException: 改ざん・期限切れ等
+            // IllegalArgumentException: 空文字・null 等の不正な入力値
             return false;
         }
     }

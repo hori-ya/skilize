@@ -152,7 +152,7 @@ describe('LoginPage', () => {
   });
 
   it('異常系_アカウント無効_accountDisabledエラーメッセージが表示される', async () => {
-    mockLogin.mockRejectedValue(makeAxiosError('FORBIDDEN', 403));
+    mockLogin.mockRejectedValue(makeAxiosError('ACCOUNT_DISABLED', 403));
 
     renderLoginPage();
     await userEvent.type(screen.getByLabelText('loginForm.userIdLabel'), 'user01');

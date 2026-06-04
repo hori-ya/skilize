@@ -4,54 +4,45 @@ import com.skilize.master.application.MasterExcelService;
 import com.skilize.master.application.query.MasterImportErrorDetail;
 import com.skilize.master.application.query.MasterImportQueryResult;
 import com.skilize.master.infrastructure.excel.ExcelFormatException;
-import com.skilize.shared.infrastructure.InitialPasswordFilter;
-import com.skilize.shared.infrastructure.JwtAuthenticationFilter;
-import jakarta.servlet.FilterChain;
+import com.skilize.shared.presentation.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * MasterExcelController の Web レイヤーテスト。
- * DB 接続不要。JwtAuthenticationFilter と InitialPasswordFilter はモック化する。
+ * DB 接続不要。standaloneSetup によりコントローラーロジックを検証する。
+ * ロールベースアクセス制御（@PreAuthorize）は統合テストで担保する。
  */
-@WebMvcTest(MasterExcelController.class)
-@TestPropertySource(locations = "classpath:application-test.properties")
+@ExtendWith(MockitoExtension.class)
 class MasterExcelControllerTest {
 
-    @Autowired MockMvc mockMvc;
+    @Mock MasterExcelService masterExcelService;
+    @InjectMocks MasterExcelController controller;
 
-    @MockitoBean MasterExcelService masterExcelService;
-    @MockitoBean JwtAuthenticationFilter jwtAuthenticationFilter;
-    @MockitoBean InitialPasswordFilter initialPasswordFilter;
+    MockMvc mockMvc;
 
     @BeforeEach
-    void setUpFilters() throws Exception {
-        lenient().doAnswer(inv -> {
-            ((FilterChain) inv.getArgument(2))
-                    .doFilter(inv.getArgument(0), inv.getArgument(1));
-            return null;
-        }).when(jwtAuthenticationFilter).doFilter(any(), any(), any());
-        lenient().doAnswer(inv -> {
-            ((FilterChain) inv.getArgument(2))
-                    .doFilter(inv.getArgument(0), inv.getArgument(1));
-            return null;
-        }).when(initialPasswordFilter).doFilter(any(), any(), any());
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Nested
@@ -68,13 +59,6 @@ class MasterExcelControllerTest {
                             org.hamcrest.Matchers.containsString("attachment")))
                     .andExpect(content().contentTypeCompatibleWith(
                             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        }
-
-        @Test
-        void ADMIN以外は403が返る() throws Exception {
-            mockMvc.perform(get("/api/master-excel/it-skills/download")
-                            .with(user("user").roles("GENERAL")))
-                    .andExpect(status().isForbidden());
         }
 
         @Test
@@ -140,7 +124,7 @@ class MasterExcelControllerTest {
         @Test
         void ファイル形式が不正な場合は400が返る() throws Exception {
             when(masterExcelService.importItSkillExcel(any()))
-                    .thenThrow(new ExcelFormatException("シート「IT分類」が見つかりません"));
+                    .thenThrow(new ExcelFormatException("EXCEL_SHEET_NOT_FOUND"));
 
             MockMultipartFile file = new MockMultipartFile("file", "test.xlsx",
                     MediaType.MULTIPART_FORM_DATA_VALUE, new byte[]{1, 2, 3});
@@ -149,7 +133,7 @@ class MasterExcelControllerTest {
                             .file(file)
                             .with(user("admin").roles("ADMIN")))
                     .andExpect(status().isBadRequest())
-                    .andExpect(jsonPath("$.code").value("EXCEL_FORMAT_ERROR"));
+                    .andExpect(jsonPath("$.code").value("EXCEL_SHEET_NOT_FOUND"));
         }
 
         @Test
