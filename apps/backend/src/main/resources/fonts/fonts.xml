@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fontFamilies>
+    <fontFamily name="MSGothic">
+        <!-- msgothic.ttc: index 0 = MS Gothic -->
+        <normal>fonts/msgothic.ttc,0</normal>
+        <bold>fonts/msgothic.ttc,0</bold>
+        <italic>fonts/msgothic.ttc,0</italic>
+        <boldItalic>fonts/msgothic.ttc,0</boldItalic>
+        <pdfEncoding>Identity-H</pdfEncoding>
+        <pdfEmbedded>true</pdfEmbedded>
+    </fontFamily>
+</fontFamilies>

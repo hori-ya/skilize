@@ -2834,6 +2834,28 @@ body {
   color: var(--color-text-muted);
 }
 
+/* 印刷ボタン */
+.report-download-btn {
+  position: fixed;
+  bottom: 72px;
+  right: 84px;
+  z-index: 90;
+  background: var(--color-accent);
+  color: #fff;
+  border: none;
+  border-radius: 24px;
+  padding: 10px 18px;
+  min-width: 110px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: background 0.15s;
+}
+.report-download-btn:hover { background: #a0621e; }
+.report-download-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
 /* フローティングパネル */
 .interview-float-btn {
   position: fixed;
@@ -2845,8 +2867,10 @@ body {
   border: none;
   border-radius: 24px;
   padding: 10px 18px;
+  min-width: 110px;
   font-size: 13px;
   font-weight: 600;
+  text-align: center;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: background 0.15s;

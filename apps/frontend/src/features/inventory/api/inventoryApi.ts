@@ -77,3 +77,6 @@ export const completeGoal = (id: number) =>
 
 export const getMyAiAnalyses = () =>
   apiClient.get<AiAnalysis[]>('/users/me/ai-analyses');
+
+export const downloadInventoryReport = (id: number) =>
+  apiClient.get(`/inventories/${id}/report`, { responseType: 'blob' });

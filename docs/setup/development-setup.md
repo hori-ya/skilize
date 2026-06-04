@@ -8,6 +8,7 @@
    - [JDK 21（IDE デバッグ実行時のみ）](#13-jdk-21ide-デバッグ実行時のみ)
    - [Node.js（IDE デバッグ実行時のみ）](#14-nodejside-デバッグ実行時のみ)
    - [IDE のインストール](#15-ide-のインストール)
+   - [Jaspersoft Studio（帳票レイアウト設計時のみ）](#16-jaspersoft-studio帳票レイアウト設計時のみ)
 2. [リポジトリのクローン](#2-リポジトリのクローン)
 3. [環境変数の設定](#3-環境変数の設定)
 4. [社内プロキシ環境での設定](#4-社内プロキシ環境での設定)（プロキシ・CA 証明書・npm）
@@ -231,6 +232,158 @@ IDE（統合開発環境）はいずれか 1 つをインストールしてく�
    - インストール後、Eclipse を再起動します
 
 > Spring Tools 4 を入れることで、Spring Boot アプリを Eclipse から直接起動・デバッグできるようになります。
+
+---
+
+### 1.6 Jaspersoft Studio（帳票レイアウト設計時のみ）
+
+棚卸表などの帳票（PDF）レイアウトを視覚的に設計するためのツールです。  
+帳票出力機能のレイアウト設計を担当する場合にインストールしてください。  
+帳票機能を使わない場合はインストール不要です。
+
+#### インストール方法の選択
+
+| 方法 | 対象 | アカウント |
+|------|------|:---:|
+| A. スタンドアロン版（推奨） | IntelliJ / VSCode / Cursor 利用者 | **必要** |
+| B. Eclipse プラグイン版 | Eclipse 利用者 | 不要 |
+
+---
+
+#### A. スタンドアロン版のインストール（IntelliJ / VSCode / Cursor 利用者向け）
+
+> **Jaspersoft アカウントの作成が必要です（無料）。**  
+> ダウンロード前に以下の手順でアカウントを作成してください。
+
+**ステップ 1: アカウント作成**
+
+1. [Jaspersoft Community ダウンロードページ](https://community.jaspersoft.com/download-jaspersoft/) にアクセスします
+2. ダウンロードボタンをクリックすると、ログイン / 新規登録画面が表示されます
+3. 「Create an account」（または「Register」）を選択します
+4. メールアドレス・氏名・パスワードを入力して登録します
+5. 登録確認メールが届いたらリンクをクリックしてアカウントを有効化します
+
+**ステップ 2: ダウンロード・インストール**
+
+1. アカウントでログインした状態で、**Jaspersoft Studio Community Edition** の最新版をダウンロードします
+2. インストーラーに従ってインストールします
+
+> Jaspersoft Studio は Eclipse ベースのスタンドアロンアプリケーションです。  
+> 開発に使用している IDE（IntelliJ / VSCode 等）とは別のアプリケーションとしてインストールします。  
+> Community Edition は無料で使用できます。
+
+**確認**
+
+Jaspersoft Studio を起動し、ウェルカム画面が表示されれば OK です。
+
+---
+
+#### B. Eclipse プラグイン版のインストール（Eclipse 利用者向け）
+
+Eclipse Marketplace からインストールするため、**アカウント不要**です。
+
+1. Eclipse を起動します
+2. 「Help」→「Eclipse Marketplace...」を開きます
+3. 検索ボックスに `Jaspersoft Studio` と入力して「Go」をクリックします
+4. 検索結果から **Jaspersoft Studio Community Edition** を選択し、「Install」をクリックします
+5. ライセンス同意画面で「I accept the terms of the license agreements」を選択して「Finish」をクリックします
+6. インストール完了後、Eclipse を再起動します
+
+**確認**
+
+Eclipse を再起動後、「File」→「New」→「Other...」の一覧に「Jasper Report」が表示されれば OK です。
+
+#### 日本語化（部分対応）
+
+> **注意**: Jaspersoft Studio には公式の日本語ローカライズは提供されていません。  
+> Eclipse Babel Language Pack を適用すると、Eclipse プラットフォーム部分（File / Window メニュー・共通ダイアログ等）を日本語化できますが、**帳票デザイナーの主要パネル（Properties・Palette・Report Elements 等）は英語のまま**残ります。  
+> 実用上は英語のまま使用することを推奨します。
+
+部分的な日本語化を希望する場合は、以下の手順を実施します。
+
+**A. スタンドアロン版の場合**
+
+1. Jaspersoft Studio を起動します
+2. 「Help」→「Install New Software...」を開きます
+3. 「Work with」フィールドに以下の URL を入力して Enter を押します:
+
+   ```
+   https://download.eclipse.org/technology/babel/update-site/latest/
+   ```
+
+4. 一覧から「Babel Language Packs in Japanese」→「Japanese」にチェックを入れます
+5. 「Next」→「Finish」でインストールし、再起動します
+
+**B. Eclipse プラグイン版の場合**
+
+Eclipse 本体がすでに Babel Language Pack に対応している場合、Jaspersoft Studio プラグインのインストール後に Eclipse Platform の日本語化が自動で適用されます。  
+未適用の場合は「Help」→「Eclipse Marketplace」で `Babel Language Pack` を検索してインストールしてください。
+
+---
+
+#### プロジェクト設定
+
+Jaspersoft Studio でレイアウトを作成するための初期設定です。  
+プロジェクト自体はデフォルトのワークスペースに作成し、「リンクフォルダ」機能でバックエンドの `reports/` フォルダに直接紐付けます。  
+これにより、作成した `.jrxml` をコピーすることなくそのままバックエンドで使用できます。
+
+**ステップ 1: プロジェクトを作成する**
+
+1. Jaspersoft Studio を起動します
+2. ウェルカム画面を閉じてワークスペースを開きます
+3. 「File」→「New」→「Jasper Report Project」を開きます
+4. 「Project name」に任意の名前（例: `skilize-reports`）を入力します
+5. 「Finish」をクリックします（保存先はデフォルトのままで構いません）
+
+**ステップ 2: リンクフォルダでリポジトリの `reports/` を紐付ける**
+
+1. 作成したプロジェクトを右クリック → 「New」→「Folder」を開きます
+2. 「Folder name」に任意の名前（例: `reports`）を入力します
+3. **「Advanced >>」** をクリックして展開します
+4. **「Link to alternate location（Linked Folder）」** を選択します
+5. 「Browse...」でリポジトリの `reports` フォルダを指定します:
+
+   | OS | パス例 |
+   |----|--------|
+   | Windows | `C:\git\skilize\apps\backend\src\main\resources\reports` |
+   | Mac | `/Users/yourname/git/skilize/apps/backend/src/main/resources/reports` |
+
+6. 「Finish」をクリックします
+
+プロジェクト内にリンクフォルダが表示されます。このフォルダ内に `.jrxml` を保存すると、直接 `apps/backend/src/main/resources/reports/` に書き込まれます。
+
+> `.jrxml` は XML 形式のレイアウト定義ファイルです。バックエンドがこのファイルを読み込んで PDF を生成します。  
+> `.jrxml` は Git 管理対象とし、コミット・プッシュしてください。
+
+> **Eclipse メタデータについて**: Jaspersoft Studio はプロジェクト作成時に `.project`・`.classpath`・`.settings/` などの Eclipse メタデータファイルを生成しますが、これらは `.gitignore` 登録済みのため、誤ってコミットされることはありません。
+
+#### データソース設定（プレビュー用）
+
+Jaspersoft Studio のプレビュー機能でデータを確認したい場合は、ダミーデータのみ使用します。  
+実際のデータはバックエンド（Spring Boot）側で渡すため、本番 DB への接続設定は不要です。
+
+レポートパラメータのプレビューは「Preview」タブ → パラメータ値を手入力して確認できます。
+
+#### バージョンについての注意
+
+このプロジェクトのバックエンドは **JasperReports 6.21.3**（`build.gradle` で管理）を使用しています。  
+Jaspersoft Studio のバージョンは、使用する JasperReports バージョンと **メジャーバージョンを一致させる**ことで動作トラブルを防げます。
+
+| バックエンド（JasperReports） | 推奨 Jaspersoft Studio |
+|:---:|:---:|
+| 6.21.x | 6.21.x（Community） |
+
+バージョンが異なる場合でも `.jrxml` ファイルの互換性は高いですが、デザイナーの表示と実際の PDF 出力に差異が出る場合があります。
+
+#### 日本語フォントについての注意
+
+JasperReports の標準フォントは日本語に対応していません。  
+`.jrxml` レイアウト作成時に日本語フォントを指定する必要があります。対応方法は以下のとおりです。
+
+1. **Jaspersoft Studio での設定**: レポートの `fontFamily` プロパティに日本語対応フォント（例: `MS Gothic`・`IPA Gothic`）を指定します
+2. **バックエンドへのフォント配置**: バックエンド実装フェーズで、使用フォントを `apps/backend/src/main/resources/fonts/` に配置し、JasperReports に登録します
+
+> フォント対応はレイアウト（`.jrxml`）確認後の実装フェーズで対応します。
 
 ---
 

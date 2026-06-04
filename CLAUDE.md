@@ -140,14 +140,17 @@ com.skilize
 │   │   └── response/           ← InterviewResponse・DetailNoteResponse
 │   └── application/            ← InterviewService（面談メモ保存）
 │       └── command/            ← DetailNoteCommand
-└── ai/
-    ├── presentation/           ← AiAnalysisController・AiChatController
-    │   └── request/            ← AiChatRequest
-    ├── application/            ← AiAnalysisService（非同期AI分析）・AiChatService・InventoryCompletedEventListener
-    │   ├── command/            ← AiChatCommand
-    │   ├── mapper/             ← AiChatApplicationMapper
-    │   └── query/              ← AiAnalysisQueryResult・AiChatQueryResult
-    └── domain/                 ← AiCareerAnalysis エンティティ・Repository
+├── ai/
+│   ├── presentation/           ← AiAnalysisController・AiChatController
+│   │   └── request/            ← AiChatRequest
+│   ├── application/            ← AiAnalysisService（非同期AI分析）・AiChatService・InventoryCompletedEventListener
+│   │   ├── command/            ← AiChatCommand
+│   │   ├── mapper/             ← AiChatApplicationMapper
+│   │   └── query/              ← AiAnalysisQueryResult・AiChatQueryResult
+│   └── domain/                 ← AiCareerAnalysis エンティティ・Repository
+└── report/
+    ├── presentation/           ← ReportController（GET /api/inventories/{id}/report）
+    └── application/            ← ReportService（JasperReports を使った棚卸表 PDF 生成）
 ```
 
 **レイヤー責務**:
@@ -352,6 +355,9 @@ POST   /api/fiscal-years
 PUT    /api/fiscal-years/{id}
 GET    /api/fiscal-year-settings
 PUT    /api/fiscal-year-settings
+
+# 帳票出力
+GET    /api/inventories/{id}/report
 
 # ヘルスチェック
 GET    /api/health
@@ -569,6 +575,9 @@ docker compose up db     # init.sql が再実行される
 | `com/skilize/ai/application/mapper/` | AiChatApplicationMapper（AiChatRequest→AiChatCommand 変換） |
 | `com/skilize/ai/application/query/` | AiAnalysisQueryResult・AiChatQueryResult |
 | `com/skilize/ai/domain/` | AiCareerAnalysis エンティティ・AiAnalysisStatus・AiCareerAnalysisRepository |
+| `com/skilize/report/presentation/` | ReportController（棚卸表 PDF ダウンロードエンドポイント） |
+| `com/skilize/report/application/` | ReportService（JasperReports を使った棚卸表 PDF 生成） |
+| `apps/backend/src/main/resources/reports/` | 帳票レイアウトファイル（`.jrxml`）の格納フォルダ |
 | `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
 | `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |
 

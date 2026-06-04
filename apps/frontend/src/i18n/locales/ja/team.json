@@ -120,6 +120,10 @@
       "savingButton": "保存中...",
       "saveFailed": "保存に失敗しました"
     },
+    "report": {
+      "button": "🖨 棚卸表",
+      "downloading": "生成中..."
+    },
     "interview": {
       "panelTitle": "全体備忘録",
       "openButton": "📝 備忘録",

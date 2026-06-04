@@ -195,3 +195,4 @@
 | [09-ai-analysis.md](./09-ai-analysis.md) | `/api/users/me/ai-analyses`、`/api/users/{userId}/ai-analyses`（AIキャリア分析） |
 | [10-ai-chat.md](./10-ai-chat.md) | `/api/ai/chat`（AI チャット） |
 | [11-master-excel.md](./11-master-excel.md) | `/api/master-excel/**`（マスタ Excel 出力・取込、ADMIN） |
+| [12-report.md](./12-report.md) | `/api/inventories/{id}/report`（棚卸表 PDF 出力） |

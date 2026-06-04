@@ -4,6 +4,7 @@ import { getMemberInventories, getExpectations, saveTlExpectation, saveCompanyEx
 import {
   getItSkillDetails, getQualificationDetails,
   getSeminarDetails, getGoals, getComparison, getGoalReview,
+  downloadInventoryReport,
 } from '../../inventory/api/inventoryApi';
 import { getItSkills, getFiscalYears } from '../../../shared/api/masterApi';
 import type { FiscalYear } from '../../../shared/types/master';
@@ -121,6 +122,7 @@ export default function MemberDetailPage() {
   const [companySaveError, setCompanySaveError] = useState<string | null>(null);
 
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
+  const [downloading, setDownloading] = useState(false);
 
   // Filter states
   const [itSkillSearch, setItSkillSearch] = useState('');
@@ -351,6 +353,24 @@ export default function MemberDetailPage() {
       setCompanySaveError(t('memberDetail.expectation.saveFailed'));
     } finally {
       setCompanySaving(false);
+    }
+  }
+
+  async function handleDownloadReport() {
+    if (!selectedId) return;
+    setDownloading(true);
+    try {
+      const res = await downloadInventoryReport(selectedId);
+      const url = URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/pdf' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `inventory_report_${selectedId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // ダウンロード失敗は静かに無視（ネットワークエラー等）
+    } finally {
+      setDownloading(false);
     }
   }
 
@@ -1172,6 +1192,17 @@ export default function MemberDetailPage() {
           </>
         )}
       </main>
+
+      {/* ── 印刷ボタン ── */}
+      {selectedId && (
+        <button
+          className="report-download-btn"
+          onClick={handleDownloadReport}
+          disabled={downloading}
+        >
+          {downloading ? t('memberDetail.report.downloading') : t('memberDetail.report.button')}
+        </button>
+      )}
 
       {/* ── フローティング面談メモパネル（TL/ADMIN のみ） ── */}
       {isTlOrAdmin && selectedId && (

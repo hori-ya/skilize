@@ -34,3 +34,13 @@ infra/docker/*/data/
 infra/certs/*.cer
 infra/certs/*.crt
 infra/certs/*.pem
+
+# Jaspersoft Studio（Eclipse プロジェクトメタデータ）
+apps/backend/src/main/resources/reports/.project
+apps/backend/src/main/resources/reports/.classpath
+apps/backend/src/main/resources/reports/.settings/
+
+# Microsoft フォント（ライセンス上 Git 管理対象外。各自 Windows からコピーする）
+# 使用フォント: MS Gothic（msgothic.ttc, index 0）
+# コピー元: C:\Windows\Fonts\msgothic.ttc
+apps/backend/src/main/resources/fonts/*.ttc

@@ -26,6 +26,10 @@ public interface ItSkillDetailRepository extends JpaRepository<ItSkillDetail, In
     @Query("DELETE FROM ItSkillDetail d WHERE d.inventory.id = :inventoryId")
     void deleteByInventoryId(@Param("inventoryId") int inventoryId);
 
+    /** 帳票出力用: ITスキル・スキルレベル・カテゴリ・親カテゴリを一括取得する（N+1 回避）。 */
+    @Query("SELECT d FROM ItSkillDetail d LEFT JOIN FETCH d.itSkill s LEFT JOIN FETCH s.category c LEFT JOIN FETCH c.parent LEFT JOIN FETCH d.skillLevel WHERE d.inventory.id = :inventoryId")
+    List<ItSkillDetail> findByInventoryIdWithCategories(@Param("inventoryId") int inventoryId);
+
     /** カスタムスキル名のうち it_skills マスタに未登録のものを使用件数付きで返す。 */
     @Query("SELECT d.customSkillName, COUNT(d) FROM ItSkillDetail d " +
            "WHERE d.itSkill IS NULL AND d.customSkillName IS NOT NULL " +
