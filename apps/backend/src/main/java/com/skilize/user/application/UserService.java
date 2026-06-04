@@ -40,7 +40,7 @@ public class UserService {
     public User create(String userId, String name, String email, Role role, Integer tlUserId) {
         // ユーザーIDの重複チェック（users.user_id に UNIQUE 制約があるが、アプリ側でも事前確認する）
         if (userRepository.findByUserId(userId).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "このユーザーIDは既に使用されています");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "USER_ID_ALREADY_EXISTS");
         }
         // 初期パスワード = ユーザーID（BCrypt でハッシュ化。平文では保存しない）
         User saved = userRepository.save(User.create(userId, name, email, role, tlUserId,

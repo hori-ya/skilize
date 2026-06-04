@@ -32,16 +32,16 @@ public class AuthService {
     public LoginQueryResult login(LoginCommand command) {
         // ユーザーIDが存在しない場合もパスワード不一致と同じエラーメッセージを返す（ユーザー列挙攻撃対策）
         User user = userRepository.findByUserId(command.userId())
-                .orElseThrow(() -> new AuthException("AUTH_FAILED", "ユーザーIDまたはパスワードが違います"));
+                .orElseThrow(() -> new AuthException("AUTH_FAILED", ""));
 
         // 無効化済みアカウントは認証前に弾く
         if (!user.isActive()) {
-            throw new AuthException("FORBIDDEN", "このアカウントは無効化されています");
+            throw new AuthException("ACCOUNT_DISABLED", "");
         }
 
         // passwordEncoder.matches(): 入力値をハッシュ化して DB のハッシュと比較する（BCrypt の遅い照合が実行される）
         if (!passwordEncoder.matches(command.password(), user.getPasswordHash())) {
-            throw new AuthException("AUTH_FAILED", "ユーザーIDまたはパスワードが違います");
+            throw new AuthException("AUTH_FAILED", "");
         }
 
         // 認証成功。JWT を生成してユーザー情報と合わせてクエリ結果を組み立てる
@@ -58,7 +58,7 @@ public class AuthService {
         // （JPA の管理外エンティティへの変更は DB に保存されない）
         User user = userRepository.findById(currentUser.getId()).orElseThrow();
         if (!passwordEncoder.matches(command.currentPassword(), user.getPasswordHash())) {
-            throw new AuthException("AUTH_FAILED", "現在のパスワードが正しくありません");
+            throw new AuthException("CURRENT_PASSWORD_WRONG", "");
         }
         // passwordEncoder.encode(): 新しいパスワードを BCrypt でハッシュ化してから保存する
         user.changePassword(passwordEncoder.encode(command.newPassword()));

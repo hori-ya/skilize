@@ -64,7 +64,7 @@ public class AiChatService {
 
             if (response.statusCode() != 200) {
                 log.error("AI chat failed: status={} body={}", response.statusCode(), response.body());
-                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AIサービスが一時的に利用できません");
+                throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI_SERVICE_UNAVAILABLE");
             }
 
             Map<?, ?> body = OBJECT_MAPPER.readValue(response.body(), Map.class);

@@ -197,6 +197,11 @@ infrastructure → domain / application
 - ログ出力は `@Slf4j`（Lombok）のみ使用（`System.out.println` 禁止）
 - ログには機密情報を含めない（パスワード・JWT・氏名・メールアドレス禁止）
 - 業務操作（マスタ更新・ユーザー管理・棚卸提出等）は INFO レベルで記録する
+- **エラーメッセージの日本語はバックエンドに書かない**（日本語はフロントエンドの `errors.json` で一元管理する）
+  - 例外には日本語メッセージではなくエラーコード文字列を渡す（例: `"INVENTORY_NOT_FOUND"`）
+  - `ResponseStatusException` の detail、`AuthException` の message、`ExcelFormatException` のメッセージは全てエラーコード文字列にする
+  - バリデーションアノテーションの `message` 属性に日本語を書かない（デフォルトのアノテーション名がコードとして使われる）
+  - `GlobalExceptionHandler` がコードをそのままレスポンスの `code` フィールドに設定し、フロントエンドが `errors.json` で翻訳する
 
 **Frontend**
 - React 関数コンポーネント + hooks のみ
@@ -215,6 +220,10 @@ infrastructure → domain / application
   - 初期設定: `src/i18n/index.ts`（`main.tsx` でインポート）
   - 使用方法: `const { t } = useTranslation('namespace')` → `t('key.subKey')`
   - 共通文字列（ボタン・ラベル等）は `common` namespace に集約
+  - **APIエラーメッセージは `errors` namespace（`errors.json`）で管理する**
+    - バックエンドから返るエラーコード（`response.data.code`）を `errors:CODE` キーで翻訳する
+    - エラー取得には `shared/utils/apiError.ts` の `getApiErrorMessage()` / `getValidationErrors()` を使用する
+    - 新しいエラーコードを追加した際は必ず `errors.json` にも翻訳を追加する
 
 > フロントエンド実装時は `.claude/context/frontend-architecture.md` の詳細ルールも参照すること。
 
@@ -472,6 +481,8 @@ docker compose up db     # init.sql が再実行される
 - **Service クラスが `presentation` パッケージをインポートしない**（application → presentation の依存禁止）
 - **パスワード・パスワードハッシュ・JWTトークン・氏名・メールアドレス等の個人情報をログに出力しない**（機密情報漏洩防止）
 - ログ出力には `@Slf4j`（Lombok）を使用し、`System.out.println` 等の直接出力は使わない
+- **バックエンドの例外メッセージに日本語文字列を書かない**（エラーコード文字列のみ許可。日本語は `src/i18n/locales/ja/errors.json` で管理）
+- **フロントエンドで `errors.json` に存在しないエラーコードを表示しない**（新しいエラーコードを追加したら必ず `errors.json` にも翻訳を追加する）
 
 ---
 
@@ -589,6 +600,7 @@ docker compose up db     # init.sql が再実行される
 | `apps/frontend/src/app/layouts/` | NavBar（グローバルナビゲーション） |
 | `apps/frontend/src/shared/api/` | Axios クライアント・マスタデータ API（複数 feature で共有） |
 | `apps/frontend/src/shared/types/` | マスタデータ型定義（複数 feature で共有） |
+| `apps/frontend/src/shared/utils/apiError.ts` | APIエラーコード取得・翻訳ユーティリティ（`getApiErrorMessage` / `getValidationErrors`） |
 | `apps/frontend/src/shared/ui/` | ルートガード（PrivateRoute・TlAdminRoute・AdminRoute）・ScrollToTopButton |
 | `apps/frontend/src/features/auth/` | ログイン・初回パスワード変更・マイページパスワード変更（API / 型 / ページ） |
 | `apps/frontend/src/features/inventory/` | ダッシュボード・棚卸入力・前年度比較・目標振り返り・目標設定・棚卸履歴・グラフ（API / 型 / コンポーネント / ページ） |

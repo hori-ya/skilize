@@ -140,12 +140,12 @@ public class UserController {
             @PathVariable int id,
             @AuthenticationPrincipal User currentUser) {
         User targetUser = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"));
 
         // TL は担当チームメンバー（tl_user_id が自分のID のユーザー）のみ参照可
         if (currentUser.getRole() == Role.TL) {
             if (!currentUser.getId().equals(targetUser.getTlUserId())) {
-                throw new AuthException("FORBIDDEN", "このユーザーへのアクセス権限がありません");
+                throw new AuthException("FORBIDDEN", "");
             }
         }
 
@@ -165,7 +165,7 @@ public class UserController {
         try {
             Role.valueOf(role);
         } catch (IllegalArgumentException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "不正なロールです: " + role);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_ROLE");
         }
     }
 

@@ -98,11 +98,11 @@ public class MasterService {
             level = 1;
         } else {
             ItSkillCategory parent = itSkillCategoryRepository.findById(parentId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "親分類が見つかりません"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "PARENT_CATEGORY_NOT_FOUND"));
             // 子のレベルは親のレベル + 1。最大3階層まで許可する。
             level = (short) (parent.getLevel() + 1);
             if (level > 3) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "第3階層以上の分類は作成できません");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "CATEGORY_MAX_DEPTH_EXCEEDED");
             }
         }
         ItSkillCategory saved = itSkillCategoryRepository.save(

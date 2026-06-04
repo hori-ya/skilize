@@ -1,0 +1,57 @@
+{
+  "AUTH_FAILED": "ユーザーIDまたはパスワードが違います",
+  "ACCOUNT_DISABLED": "このアカウントは無効化されています",
+  "CURRENT_PASSWORD_WRONG": "現在のパスワードが正しくありません",
+  "FORBIDDEN": "アクセス権限がありません",
+  "NOT_FOUND": "リソースが見つかりません",
+  "CONFLICT": "既に存在するデータと競合しています",
+  "INTERNAL_ERROR": "予期しないエラーが発生しました",
+  "ERROR": "エラーが発生しました",
+
+  "INVENTORY_NOT_FOUND": "棚卸が見つかりません",
+  "INVENTORY_ALREADY_EXISTS": "当該年度の棚卸はすでに作成されています",
+  "FISCAL_YEAR_NOT_FOUND": "年度が見つかりません",
+  "IT_SKILL_NOT_FOUND": "ITスキルが見つかりません",
+  "SKILL_LEVEL_NOT_FOUND": "レベルが見つかりません",
+  "DETAIL_NOT_FOUND": "明細が見つかりません",
+  "QUALIFICATION_NOT_FOUND": "資格が見つかりません",
+  "AD_SEMINAR_NOT_FOUND": "ADセミナーが見つかりません",
+  "GOAL_NOT_FOUND": "目標が見つかりません",
+  "GOAL_INCOMPLETE": "目標設定の件数が不足しています",
+
+  "USER_NOT_FOUND": "ユーザーが見つかりません",
+  "USER_ID_ALREADY_EXISTS": "このユーザーIDは既に使用されています",
+  "INVALID_ROLE": "不正なロールです",
+
+  "EXPECTATION_TL_ONLY": "TLが期待することはユーザーの担当TLのみ編集可能です",
+  "EXPECTATION_ASSIGNED_TL_ONLY": "担当TLのみTL期待コメントを編集できます",
+  "EXPECTATION_ADMIN_ONLY": "会社期待の設定は管理者のみ可能です",
+  "EXPECTATION_TEAM_MEMBER_ONLY": "チームメンバーの期待情報のみアクセス可能です",
+
+  "INTERVIEW_ACCESS_DENIED": "面談メモへのアクセス権限がありません",
+
+  "REPORT_TEMPLATE_NOT_FOUND": "帳票テンプレートが見つかりません",
+  "REPORT_GENERATION_ERROR": "帳票の生成に失敗しました",
+
+  "AI_SERVICE_UNAVAILABLE": "AIサービスが一時的に利用できません",
+
+  "PARENT_CATEGORY_NOT_FOUND": "親分類が見つかりません",
+  "CATEGORY_MAX_DEPTH_EXCEEDED": "第3階層以上の分類は作成できません",
+
+  "EXCEL_FILE_EMPTY": "ファイルが空です",
+  "EXCEL_FILE_TOO_LARGE": "ファイルサイズが上限（10MB）を超えています",
+  "EXCEL_INVALID_FORMAT": "Excelファイル（.xlsx）をアップロードしてください",
+  "EXCEL_SHEET_NOT_FOUND": "Excelファイルのシートが見つかりません",
+  "EXCEL_READ_ERROR": "Excelファイルの読み込みに失敗しました",
+  "EXCEL_GENERATION_ERROR": "Excelファイルの生成に失敗しました",
+
+  "VALIDATION_ERROR": "入力値に誤りがあります",
+  "VALIDATION_FAILED": "入力値が不正です",
+  "NotBlank": "入力してください",
+  "NotNull": "入力してください",
+  "Size": "文字数が正しくありません",
+  "Min": "値が小さすぎます",
+  "Max": "値が大きすぎます",
+  "Email": "メールアドレスの形式が正しくありません",
+  "Pattern": "入力形式が正しくありません"
+}

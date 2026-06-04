@@ -47,12 +47,12 @@ public class ExpectationService {
     public ExpectationQueryResult saveTlExpectation(int targetUserId, User requester, String expectation) {
         // ロールが TL でない場合は弾く
         if (requester.getRole() != Role.TL) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "TLが期待することはユーザーの担当TLのみ編集可能です");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "EXPECTATION_TL_ONLY");
         }
         User target = findUser(targetUserId);
         // 担当TLチェック: target.getTlUserId() が requester.getId() と一致する場合のみ許可する
         if (!requester.getId().equals(target.getTlUserId())) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "担当TLのみTL期待コメントを編集できます");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "EXPECTATION_ASSIGNED_TL_ONLY");
         }
         // upsert: レコードがなければ新規作成し、あれば取得して更新する
         UserExpectation entity = expectationRepository.findByUserId(targetUserId)
@@ -68,7 +68,7 @@ public class ExpectationService {
     @Transactional
     public ExpectationQueryResult saveCompanyExpectation(int targetUserId, User requester, String expectation) {
         if (requester.getRole() != Role.ADMIN) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "会社期待の設定は管理者のみ可能です");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "EXPECTATION_ADMIN_ONLY");
         }
         User target = findUser(targetUserId);
         UserExpectation entity = expectationRepository.findByUserId(targetUserId)
@@ -88,12 +88,12 @@ public class ExpectationService {
             User target = findUser(targetUserId);
             // TL は担当チームメンバー（tl_user_id が自分のID と一致するユーザー）のみ参照可
             if (!requester.getId().equals(target.getTlUserId())) {
-                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "チームメンバーの期待情報のみアクセス可能です");
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "EXPECTATION_TEAM_MEMBER_ONLY");
             }
             return;
         }
         // GENERAL ロールはアクセス不可
-        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "アクセス権限がありません");
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN");
     }
 
     /** ユーザーをIDで取得する。存在しない場合は 404 をスローする共通ヘルパー。 */

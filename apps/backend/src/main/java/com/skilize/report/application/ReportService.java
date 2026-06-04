@@ -58,7 +58,7 @@ public class ReportService {
     @Transactional(readOnly = true)
     public byte[] generateInventoryReport(Long inventoryId, User loginUser) {
         Inventory inv = inventoryRepository.findByIdWithAssociations(inventoryId.intValue())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "INVENTORY_NOT_FOUND"));
 
         checkAccess(inv, loginUser);
 
@@ -77,7 +77,7 @@ public class ReportService {
         try (InputStream jrxml = getClass().getResourceAsStream("/reports/inventory/inventoryReport.jrxml")) {
             if (jrxml == null) {
                 log.error("帳票テンプレートが見つかりません: /reports/inventory/inventoryReport.jrxml");
-                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "帳票テンプレートが見つかりません");
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "REPORT_TEMPLATE_NOT_FOUND");
             }
             log.debug("帳票コンパイル開始 inventoryId={}", inventoryId);
             JasperReport report = JasperCompileManager.compileReport(jrxml);
@@ -93,8 +93,7 @@ public class ReportService {
             return baos.toByteArray();
         } catch (Exception e) {
             log.error("帳票生成エラー inventoryId={}", inventoryId, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "[DEBUG] " + e.getClass().getSimpleName() + ": " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "REPORT_GENERATION_ERROR");
         }
     }
 
@@ -102,7 +101,7 @@ public class ReportService {
         if (!inv.getUser().getId().equals(loginUser.getId())) {
             String role = loginUser.getRole().name();
             if (!"TL".equals(role) && !"ADMIN".equals(role)) {
-                throw new AuthException("FORBIDDEN", "アクセス権限がありません");
+                throw new AuthException("FORBIDDEN", "");
             }
         }
     }

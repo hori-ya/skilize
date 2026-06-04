@@ -31,17 +31,17 @@ public class AdSeminarExcelImporter {
              XSSFWorkbook wb = new XSSFWorkbook(is)) {
             Sheet catSheet = wb.getSheet(SHEET_CATEGORY);
             Sheet semSheet = wb.getSheet(SHEET_SEMINAR);
-            if (catSheet == null) throw new ExcelFormatException("シート「" + SHEET_CATEGORY + "」が見つかりません");
-            if (semSheet == null) throw new ExcelFormatException("シート「" + SHEET_SEMINAR + "」が見つかりません");
+            if (catSheet == null) throw new ExcelFormatException("EXCEL_SHEET_NOT_FOUND");
+            if (semSheet == null) throw new ExcelFormatException("EXCEL_SHEET_NOT_FOUND");
             return new AdSeminarImportData(parseCategories(catSheet), parseSeminars(semSheet));
         } catch (ExcelFormatException e) {
             throw e;
         } catch (IOException e) {
             log.error("Excel file read failed", e);
-            throw new ExcelFormatException("Excel ファイルの読み込みに失敗しました", e);
+            throw new ExcelFormatException("EXCEL_READ_ERROR", e);
         } catch (Exception e) {
             log.error("Excel file parse failed", e);
-            throw new ExcelFormatException("Excel ファイルの形式が不正です", e);
+            throw new ExcelFormatException("EXCEL_INVALID_FORMAT", e);
         }
     }
 

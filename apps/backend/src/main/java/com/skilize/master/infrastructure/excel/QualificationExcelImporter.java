@@ -31,17 +31,17 @@ public class QualificationExcelImporter {
              XSSFWorkbook wb = new XSSFWorkbook(is)) {
             Sheet catSheet = wb.getSheet(SHEET_CATEGORY);
             Sheet qualSheet = wb.getSheet(SHEET_QUAL);
-            if (catSheet == null) throw new ExcelFormatException("シート「" + SHEET_CATEGORY + "」が見つかりません");
-            if (qualSheet == null) throw new ExcelFormatException("シート「" + SHEET_QUAL + "」が見つかりません");
+            if (catSheet == null) throw new ExcelFormatException("EXCEL_SHEET_NOT_FOUND");
+            if (qualSheet == null) throw new ExcelFormatException("EXCEL_SHEET_NOT_FOUND");
             return new QualificationImportData(parseCategories(catSheet), parseQualifications(qualSheet));
         } catch (ExcelFormatException e) {
             throw e;
         } catch (IOException e) {
             log.error("Excel file read failed", e);
-            throw new ExcelFormatException("Excel ファイルの読み込みに失敗しました", e);
+            throw new ExcelFormatException("EXCEL_READ_ERROR", e);
         } catch (Exception e) {
             log.error("Excel file parse failed", e);
-            throw new ExcelFormatException("Excel ファイルの形式が不正です", e);
+            throw new ExcelFormatException("EXCEL_INVALID_FORMAT", e);
         }
     }
 

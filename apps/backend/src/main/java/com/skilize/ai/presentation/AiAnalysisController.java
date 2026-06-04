@@ -49,7 +49,7 @@ public class AiAnalysisController {
         // TL は担当チームメンバー（tl_user_id が自分のID のユーザー）のみ参照可
         if (currentUser.getRole() == Role.TL) {
             if (!currentUser.getId().equals(targetUser.getTlUserId())) {
-                throw new AuthException("FORBIDDEN", "このユーザーへのアクセス権限がありません");
+                throw new AuthException("FORBIDDEN", "");
             }
         }
 

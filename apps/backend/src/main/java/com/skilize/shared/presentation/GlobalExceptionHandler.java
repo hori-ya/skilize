@@ -24,57 +24,64 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthException.class)
     public ResponseEntity<ErrorResponse> handleAuth(AuthException e) {
-        // AuthException の code が "FORBIDDEN" のみ 403 を返す。それ以外（AUTH_FAILED 等）は 401
-        HttpStatus status = "FORBIDDEN".equals(e.getCode()) ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED;
-        log.warn("Auth error: code={} message={}", e.getCode(), e.getMessage());
-        return ResponseEntity.status(status).body(new ErrorResponse(e.getCode(), e.getMessage()));
+        // FORBIDDEN / ACCOUNT_DISABLED は 403、それ以外（AUTH_FAILED 等）は 401
+        boolean isForbidden = "FORBIDDEN".equals(e.getCode()) || "ACCOUNT_DISABLED".equals(e.getCode());
+        HttpStatus status = isForbidden ? HttpStatus.FORBIDDEN : HttpStatus.UNAUTHORIZED;
+        log.warn("Auth error: code={}", e.getCode());
+        return ResponseEntity.status(status).body(new ErrorResponse(e.getCode(), ""));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ValidationErrorResponse> handleValidation(MethodArgumentNotValidException e) {
         List<ValidationErrorResponse.FieldError> errors = e.getBindingResult().getFieldErrors().stream()
-                .map(fe -> new ValidationErrorResponse.FieldError(fe.getField(), fe.getDefaultMessage()))
+                .map(fe -> {
+                    // コード配列は "Size.request.field", "Size.field", "Size.java.lang.String", "Size" の順に並ぶ
+                    // 最後の要素（アノテーション名）をエラーコードとして使用する
+                    String[] codes = fe.getCodes();
+                    String code = (codes != null && codes.length > 0)
+                            ? codes[codes.length - 1] : "VALIDATION_FAILED";
+                    return new ValidationErrorResponse.FieldError(fe.getField(), code);
+                })
                 .toList();
         log.warn("Validation error: {} field(s) failed", errors.size());
         return ResponseEntity.badRequest()
-                .body(new ValidationErrorResponse("VALIDATION_ERROR", "入力値に誤りがあります", errors));
+                .body(new ValidationErrorResponse("VALIDATION_ERROR", "", errors));
     }
 
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException e) {
-        String code = switch (e.getStatusCode().value()) {
+        // サービス側がエラーコード文字列を detail に設定して throw するため、それをそのまま使用する
+        String detail = e.getBody().getDetail();
+        String code = (detail != null && !detail.isBlank()) ? detail : switch (e.getStatusCode().value()) {
             case 404 -> "NOT_FOUND";
             case 403 -> "FORBIDDEN";
             case 409 -> "CONFLICT";
             default -> "ERROR";
         };
-        String detail = e.getBody().getDetail();
-        String message = detail != null ? detail : e.getMessage();
-        log.warn("HTTP error: status={} code={} message={}", e.getStatusCode().value(), code, message);
+        log.warn("HTTP error: status={} code={}", e.getStatusCode().value(), code);
         return ResponseEntity.status(e.getStatusCode())
-                .body(new ErrorResponse(code, message));
+                .body(new ErrorResponse(code, ""));
     }
 
     @ExceptionHandler(ExcelFormatException.class)
     public ResponseEntity<ErrorResponse> handleExcelFormat(ExcelFormatException e) {
-        log.warn("Excel format error: {}", e.getMessage());
+        log.warn("Excel format error: code={}", e.getMessage());
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse("EXCEL_FORMAT_ERROR", e.getMessage()));
+                .body(new ErrorResponse(e.getMessage(), ""));
     }
 
     @ExceptionHandler(GoalIncompleteException.class)
     public ResponseEntity<GoalIncompleteResponse> handleGoalIncomplete(GoalIncompleteException e) {
-        log.warn("Goal incomplete: {}", e.getMessage());
-        // 422 Unprocessable Entity: 目標件数不足を専用コードで返す
+        log.warn("Goal incomplete");
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(new GoalIncompleteResponse("GOAL_INCOMPLETE", e.getMessage(), e.getErrors()));
+                .body(new GoalIncompleteResponse("GOAL_INCOMPLETE", "", e.getErrors()));
     }
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
         log.error("Unexpected error", e);
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(new ErrorResponse("INTERNAL_ERROR", "予期しないエラーが発生しました"));
+                .body(new ErrorResponse("INTERNAL_ERROR", ""));
     }
 
     public record GoalIncompleteResponse(String code, String message,

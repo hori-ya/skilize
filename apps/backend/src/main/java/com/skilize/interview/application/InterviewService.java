@@ -105,7 +105,7 @@ public class InterviewService {
      */
     private void requireTlOrAdmin(User user) {
         if (user.getRole() != Role.TL && user.getRole() != Role.ADMIN) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "面談メモへのアクセス権限がありません");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "INTERVIEW_ACCESS_DENIED");
         }
     }
 

@@ -12,7 +12,7 @@ public class GoalIncompleteException extends RuntimeException {
     private final List<GoalValidationError> errors;
 
     public GoalIncompleteException(List<GoalValidationError> errors) {
-        super("目標設定の件数が不足しています");
+        super("GOAL_INCOMPLETE");
         this.errors = errors;
     }
 

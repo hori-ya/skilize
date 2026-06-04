@@ -30,17 +30,17 @@ public class ItSkillExcelImporter {
              XSSFWorkbook wb = new XSSFWorkbook(is)) {
             Sheet catSheet = wb.getSheet(SHEET_CATEGORY);
             Sheet skillSheet = wb.getSheet(SHEET_SKILL);
-            if (catSheet == null) throw new ExcelFormatException("シート「" + SHEET_CATEGORY + "」が見つかりません");
-            if (skillSheet == null) throw new ExcelFormatException("シート「" + SHEET_SKILL + "」が見つかりません");
+            if (catSheet == null) throw new ExcelFormatException("EXCEL_SHEET_NOT_FOUND");
+            if (skillSheet == null) throw new ExcelFormatException("EXCEL_SHEET_NOT_FOUND");
             return new ItSkillImportData(parseCategories(catSheet), parseSkills(skillSheet));
         } catch (ExcelFormatException e) {
             throw e;
         } catch (IOException e) {
             log.error("Excel file read failed", e);
-            throw new ExcelFormatException("Excel ファイルの読み込みに失敗しました", e);
+            throw new ExcelFormatException("EXCEL_READ_ERROR", e);
         } catch (Exception e) {
             log.error("Excel file parse failed", e);
-            throw new ExcelFormatException("Excel ファイルの形式が不正です", e);
+            throw new ExcelFormatException("EXCEL_INVALID_FORMAT", e);
         }
     }
 

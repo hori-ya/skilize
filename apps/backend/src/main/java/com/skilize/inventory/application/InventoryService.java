@@ -60,9 +60,9 @@ public class InventoryService {
     @Transactional
     public Inventory create(User user, int fiscalYearId) {
         fiscalYearRepository.findById(fiscalYearId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "年度が見つかりません"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FISCAL_YEAR_NOT_FOUND"));
         inventoryRepository.findByUserIdAndFiscalYearId(user.getId(), fiscalYearId).ifPresent(i -> {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "当該年度の棚卸はすでに作成されています");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "INVENTORY_ALREADY_EXISTS");
         });
         var fy = fiscalYearRepository.findById(fiscalYearId).orElseThrow();
         return inventoryRepository.save(Inventory.create(user, fy));
@@ -72,7 +72,7 @@ public class InventoryService {
     @Transactional(readOnly = true)
     public Inventory findById(int id, User user) {
         Inventory inv = inventoryRepository.findByIdWithAssociations(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "INVENTORY_NOT_FOUND"));
         checkOwnership(inv, user);
         return inv;
     }
@@ -91,10 +91,10 @@ public class InventoryService {
         List<ItSkillDetail> saved = commands.stream().map(cmd -> {
             ItSkill skill = cmd.itSkillId() != null
                     ? itSkillRepository.findById(cmd.itSkillId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ITスキルが見つかりません"))
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "IT_SKILL_NOT_FOUND"))
                     : null;
             SkillLevel level = skillLevelRepository.findById(cmd.skillLevelId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "レベルが見つかりません"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SKILL_LEVEL_NOT_FOUND"));
             return ItSkillDetail.create(inv, skill, cmd.customSkillName(), level, cmd.remarks());
         }).toList();
         itSkillDetailRepository.saveAll(saved);
@@ -116,9 +116,9 @@ public class InventoryService {
     public ItSkillDetail updateItSkillDetailRemarks(int inventoryId, int detailId, User user, String remarks) {
         findById(inventoryId, user);
         ItSkillDetail detail = itSkillDetailRepository.findById(detailId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "明細が見つかりません"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DETAIL_NOT_FOUND"));
         if (!detail.getInventory().getId().equals(inventoryId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "アクセス権限がありません");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN");
         }
         detail.updateRemarks(remarks);
         return itSkillDetailRepository.save(detail);
@@ -135,7 +135,7 @@ public class InventoryService {
         List<QualificationDetail> saved = commands.stream().map(cmd -> {
             Qualification q = cmd.qualificationId() != null
                     ? qualificationRepository.findById(cmd.qualificationId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "資格が見つかりません"))
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "QUALIFICATION_NOT_FOUND"))
                     : null;
             LocalDate date = cmd.acquiredYearMonth() != null ? LocalDate.parse(cmd.acquiredYearMonth()) : null;
             return QualificationDetail.create(inv, q, cmd.customQualificationName(), date, cmd.remarks());
@@ -165,7 +165,7 @@ public class InventoryService {
         List<SeminarDetail> saved = commands.stream().map(cmd -> {
             AdSeminar ad = cmd.adSeminarId() != null
                     ? adSeminarRepository.findById(cmd.adSeminarId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ADセミナーが見つかりません"))
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "AD_SEMINAR_NOT_FOUND"))
                     : null;
             SeminarCategory cat = (cmd.seminarCategoryId() != null && cmd.adSeminarId() == null)
                     ? seminarCategoryRepository.findById(cmd.seminarCategoryId()).orElse(null)
@@ -285,7 +285,7 @@ public class InventoryService {
         findById(inventoryId, user);
         commands.forEach(cmd -> {
             InventoryGoal goal = inventoryGoalRepository.findById(cmd.prevGoalId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "目標が見つかりません"));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "GOAL_NOT_FOUND"));
             AchievementStatus status = cmd.achievementStatus() != null
                     ? AchievementStatus.valueOf(cmd.achievementStatus()) : null;
             goal.updateReview(status, cmd.reviewNote());
@@ -372,7 +372,7 @@ public class InventoryService {
         if (!inv.getUser().getId().equals(user.getId())) {
             String role = user.getRole().name();
             if (!"TL".equals(role) && !"ADMIN".equals(role)) {
-                throw new AuthException("FORBIDDEN", "アクセス権限がありません");
+                throw new AuthException("FORBIDDEN", "");
             }
         }
     }

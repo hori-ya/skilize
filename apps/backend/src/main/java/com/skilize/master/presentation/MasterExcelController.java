@@ -96,14 +96,14 @@ public class MasterExcelController {
      */
     private void validateUploadFile(MultipartFile file) {
         if (file.isEmpty()) {
-            throw new ExcelFormatException("ファイルが空です");
+            throw new ExcelFormatException("EXCEL_FILE_EMPTY");
         }
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new ExcelFormatException("ファイルサイズが上限（10MB）を超えています");
+            throw new ExcelFormatException("EXCEL_FILE_TOO_LARGE");
         }
         String filename = file.getOriginalFilename();
         if (filename == null || !filename.toLowerCase().endsWith(".xlsx")) {
-            throw new ExcelFormatException("Excel ファイル（.xlsx）をアップロードしてください");
+            throw new ExcelFormatException("EXCEL_INVALID_FORMAT");
         }
     }
 
