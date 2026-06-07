@@ -8,6 +8,8 @@ globs: ["apps/frontend/src/**/*.tsx", "apps/frontend/src/**/*.ts"]
 
 ## フォルダ構成（3層 feature アーキテクチャ）
 
+各 feature はバックエンドの `com.skilize.{feature}` パッケージと 1:1 で対応する。
+
 ```
 src/
 ├── app/
@@ -17,14 +19,21 @@ src/
 ├── shared/
 │   ├── api/         ← Axios クライアント・複数 feature で使うマスタ API
 │   ├── types/       ← 複数 feature で使うマスタデータ型定義
+│   ├── utils/       ← 汎用ユーティリティ（apiError.ts 等）
 │   └── ui/          ← ルートガード（PrivateRoute・TlAdminRoute・AdminRoute）・共通 UI
 │
 └── features/
-    ├── auth/        ← ログイン・パスワード変更（api / types / pages）
-    ├── inventory/   ← 棚卸・ダッシュボード・グラフ（api / types / components / pages）
-    ├── team/        ← チーム照会・メンバー詳細（api / types / pages）
-    ├── master/      ← マスタ管理ページ群（api / types / pages）
-    └── interview/   ← 面談機能（api / types）※ページは features/team に統合
+    ├── auth/        ← 認証・パスワード変更
+    ├── inventory/   ← 棚卸入力・提出・前年比較・目標振り返り・棚卸履歴
+    ├── dashboard/   ← ダッシュボード表示
+    ├── charts/      ← グラフ（スキルバランス・成長推移・ヒートマップ・タイムライン）
+    ├── report/      ← 棚卸表 PDF ダウンロード
+    ├── ai/          ← AI チャット・AI キャリア分析
+    ├── user/        ← ユーザー管理・チーム照会・メンバー詳細
+    ├── expectation/ ← TL/会社からの期待コメント
+    ├── interview/   ← 面談メモ（api / types）※ページは user/ に統合
+    ├── master/      ← マスタ管理ページ群
+    └── fiscalyear/  ← 年度管理
 ```
 
 ## 依存方向（厳守）

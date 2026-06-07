@@ -61,22 +61,17 @@
 
 ## 4. 認証フロー
 
-```
-Browser ──POST /api/auth/login──▶ Backend
-                                    │ 認証成功
-                                    ▼
-Browser ◀──JWT（アクセストークン）── Backend
-    │
-    │ 以降のAPIリクエストに Authorization: Bearer <token> を付与
-    ▼
-Backend（Spring Security で検証・認可）
-```
+1. `POST /api/auth/login` → JWT 発行 → クライアントの localStorage に保存
+2. 以降のリクエストに `Authorization: Bearer <token>` を付与
+3. `JwtAuthenticationFilter` → `InitialPasswordFilter` → Controller の順でフィルタリング
+
+> 詳細（JWT 設計・フィルター実装・ロール制御・CORS 設定）は [security-design.md](./security/security-design.md) を参照。
 
 ---
 
 ## 5. フロントエンドアーキテクチャ
 
-フロントエンドは **feature by feature** 構成を採用する。
+フロントエンドは **feature by feature** 構成を採用する。フロントエンドの各 feature はバックエンドの `com.skilize.{feature}` パッケージと 1:1 で対応する。
 
 ```
 apps/frontend/src/
@@ -89,65 +84,32 @@ apps/frontend/src/
 │   │   └── masterApi.ts              ← マスタデータ API（fiscal-years, skills 等）
 │   ├── types/
 │   │   └── master.ts                 ← マスタデータ型定義
+│   ├── utils/
+│   │   └── apiError.ts               ← APIエラーコード取得・翻訳ユーティリティ
 │   └── ui/
 │       ├── PrivateRoute.tsx          ← 認証ガード
 │       ├── AdminRoute.tsx            ← ADMIN ロールガード
 │       ├── TlAdminRoute.tsx          ← TL/ADMIN ロールガード
-│       └── ScrollToTopButton.tsx     ← スクロールトップボタン
+│       └── ScrollToTopButton.tsx
 └── features/
-    ├── auth/
-    │   ├── api/authApi.ts            ← 認証 API（login / changePassword / getMe）
-    │   ├── types/index.ts            ← Role / AuthUser / UserAdmin / TlUser
-    │   └── pages/                    ← LoginPage / ChangePasswordPage
-    ├── inventory/
-    │   ├── api/inventoryApi.ts       ← 棚卸 API
-    │   ├── api/chartApi.ts           ← グラフ API（radar / growth / heatmap / timeline）
-    │   ├── types/index.ts            ← 棚卸関連型（InventorySummary, GoalItem 等）
-    │   ├── types/charts.ts           ← グラフレスポンス型
-    │   ├── components/               ← RadarChartCard / GrowthChartCard
-    │   │                                HeatmapChartCard / TimelineChartCard
-    │   └── pages/                    ← DashboardPage / InventoryPage / ComparisonPage
-    │                                    GoalReviewPage / GoalPage / InventoryHistoryPage
-    ├── team/
-    │   ├── api/userApi.ts            ← ユーザー管理 API・期待コメント API
-    │   ├── types/index.ts            ← TeamMember（FiscalYearRef, InventoryStatus を参照）・UserExpectation
-    │   └── pages/                    ← TeamMemberListPage / MemberDetailPage / AllUserListPage
-    ├── master/
-    │   └── pages/                    ← FiscalYearMasterPage / SkillLevelMasterPage
-    │                                    ItSkillMasterPage / QualificationMasterPage
-    │                                    AdSeminarMasterPage / UserMasterPage
-    ├── interview/
-    │   ├── api/interviewApi.ts       ← 面談メモ API（getInterview / saveInterview / getPrevYearInterview）
-    │   └── types/index.ts            ← InterviewMemo / DetailNoteItem / DetailType 型
-    └── ai-support/
-        ├── api/aiSupportApi.ts       ← AI チャット API（postAiChat）
-        ├── components/AiSupportWidget.tsx ← AI ボタン・パネル UI
-        ├── types/index.ts            ← AiMode / ChatMessage / AiChatRequest / AiChatResponse
-        └── store.ts                  ← モジュールレベルの状態保持（ページ遷移をまたいで復元）
-
-apps/ai/                              ← Python FastAPI（AI モジュール・内部サービス）
-├── requirements.txt
-└── app/
-    ├── main.py                       ← FastAPI エントリーポイント・ルーター登録
-    ├── api/v1/
-    │   ├── career_analysis.py        ← POST /analyze（非同期・fire-and-forget）
-    │   └── chat.py                   ← POST /chat（同期・チャット応答）
-    ├── core/config.py                ← 環境変数管理（pydantic-settings）
-    ├── schemas/
-    │   ├── career_analysis.py        ← AnalyzeRequest
-    │   └── chat.py                   ← ChatRequest / ChatResponse / ChatMessage
-    └── services/
-        ├── llm.py                    ← LLM インスタンス初期化（OpenAI / Anthropic 切り替え）
-        ├── career_analysis_service.py ← 分析オーケストレーション・DB 操作
-        ├── chat_service.py           ← チャット処理・モード別プロンプト選択
-        └── prompts/
-            ├── career_analysis_prompt.py ← キャリア分析プロンプト
-            └── chat_prompts.py       ← 通常・校正・キャリア・ヘルプ用プロンプト
+    ├── auth/        ← ログイン・パスワード変更
+    ├── inventory/   ← 棚卸入力・提出・前年比較・目標振り返り・棚卸履歴
+    ├── dashboard/   ← ダッシュボード表示
+    ├── charts/      ← グラフ（スキルバランス・成長推移・ヒートマップ・タイムライン）
+    ├── report/      ← 棚卸表 PDF ダウンロード
+    ├── ai/          ← AI チャット・AI キャリア分析
+    ├── user/        ← ユーザー管理・チーム照会・メンバー詳細
+    ├── expectation/ ← TL/会社からの期待コメント
+    ├── interview/   ← 面談メモ（API・型のみ。UI は user/pages/ に統合）
+    ├── master/      ← マスタ管理ページ群
+    └── fiscalyear/  ← 年度管理
 ```
 
 **依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）  
-**feature 間参照**: `features/team/types` → `features/inventory/types` のみ許容（cross-feature 型参照）  
-**面談メモ UI**: `features/interview/` は API・型のみ。UI は `features/team/pages/MemberDetailPage.tsx` に直接実装
+**feature 間参照**: 型の参照は許容（例: `features/user/types` → `features/inventory/types`）
+
+> Python AI サービス（`apps/ai/`）のフォルダ構成詳細は [ai-module.md](./ai-module.md) を参照。  
+> フロントエンドの詳細ルールは [`.claude/context/frontend-architecture.md`](../../.claude/context/frontend-architecture.md) を参照。
 
 ---
 

@@ -18,7 +18,7 @@ com.skilize.{feature}
 └── infrastructure/ ← JPA実装・外部API・Security実装
 ```
 
-既存 feature 一覧: `auth`, `user`, `inventory`, `master`, `fiscalyear`, `dashboard`, `charts`, `ai`, `interview`
+既存 feature 一覧: `auth`, `user`, `inventory`, `master`, `fiscalyear`, `dashboard`, `charts`, `ai`, `expectation`, `interview`, `report`
 
 共有コードは `shared/` に置くが、**業務ロジックを shared に置かない**。3回以上重複した場合のみ shared 化を検討する。
 

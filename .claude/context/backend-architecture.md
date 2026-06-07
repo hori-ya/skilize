@@ -555,3 +555,72 @@ UserResponse
 
 フォルダ構成そのものより、
 依存方向と責務分離を優先すること。
+
+---
+
+# Directory Responsibilities
+
+## バックエンド（Spring Boot）
+
+| ディレクトリ | 責務 |
+|---|---|
+| `com/skilize/shared/domain/exception/` | 共通例外（AuthException, GoalIncompleteException） |
+| `com/skilize/shared/infrastructure/` | SecurityConfig・JwtUtil・JwtAuthenticationFilter・InitialPasswordFilter・LoggingFilter（MDC requestId/userId セットアップ） |
+| `com/skilize/shared/presentation/` | GlobalExceptionHandler・ErrorResponse・ValidationErrorResponse |
+| `com/skilize/auth/presentation/` | AuthController |
+| `com/skilize/auth/presentation/request/` | LoginRequest・ChangePasswordRequest |
+| `com/skilize/auth/application/` | AuthService（ログイン・JWT 発行・パスワード変更ロジック） |
+| `com/skilize/auth/application/command/` | LoginCommand・ChangePasswordCommand |
+| `com/skilize/auth/application/query/` | LoginQueryResult・MeQueryResult |
+| `com/skilize/auth/application/mapper/` | AuthApplicationMapper（Request→Command 変換） |
+| `com/skilize/user/presentation/` | UserController |
+| `com/skilize/user/presentation/request/` | CreateUserRequest・UpdateUserRequest |
+| `com/skilize/user/presentation/response/` | UserResponse・TeamMemberResponse・MemberInventorySummaryResponse・FiscalYearRef・ResetPasswordResponse |
+| `com/skilize/user/domain/` | User エンティティ・Role・UserRepository |
+| `com/skilize/user/infrastructure/` | UserDetailsServiceImpl（Spring Security 実装） |
+| `com/skilize/inventory/presentation/` | InventoryController |
+| `com/skilize/inventory/presentation/request/` | CreateInventoryRequest・ItSkillDetailsRequest・ItSkillDetailItem・QualificationDetailsRequest・SeminarDetailsRequest・RemarksPatchRequest・GoalsRequest・GoalItem・GoalReviewUpdateRequest・GoalReviewUpdateItem |
+| `com/skilize/inventory/presentation/response/` | InventorySummaryResponse・InventoryDetailResponse・ItSkillDetailsResponse・QualificationDetailsResponse・SeminarDetailsResponse・SubmitResponse・GoalsResponse・GoalCompleteResponse・GoalReviewCompleteResponse |
+| `com/skilize/inventory/application/` | InventoryService（棚卸ビジネスロジック） |
+| `com/skilize/inventory/application/command/` | ItSkillDetailCommand・QualificationDetailCommand・SeminarDetailCommand・GoalCommand・GoalReviewUpdateCommand |
+| `com/skilize/inventory/application/query/` | ComparisonQueryResult・GoalReviewQueryResult |
+| `com/skilize/inventory/application/mapper/` | InventoryApplicationMapper（Request→Command 変換） |
+| `com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
+| `com/skilize/master/presentation/` | MasterController・MasterExcelController |
+| `com/skilize/master/presentation/request/` | SkillLevelRequest・ItSkillRequest・ItSkillCategoryRequest・QualificationRequest・AdSeminarRequest・PromoteItSkillRequest・SimpleCategoryRequest |
+| `com/skilize/master/presentation/response/` | SkillLevelResponse・ItSkillResponse・QualificationResponse・AdSeminarResponse・CustomUnregisteredResponse・MasterImportResponse |
+| `com/skilize/master/application/` | MasterService（マスタ CRUD）・MasterExcelService（Excel 出力・取込） |
+| `com/skilize/master/application/query/` | MasterImportQueryResult・MasterImportErrorDetail |
+| `com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
+| `com/skilize/master/infrastructure/excel/` | ExcelStyleHelper・ExcelFormatException・各 Exporter/Importer（ItSkill・Qualification・AdSeminar） |
+| `com/skilize/fiscalyear/presentation/` | FiscalYearController |
+| `com/skilize/fiscalyear/presentation/request/` | FiscalYearRequest・FiscalYearSettingsRequest |
+| `com/skilize/fiscalyear/presentation/response/` | FiscalYearResponse・FiscalYearSettingsResponse |
+| `com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
+| `com/skilize/dashboard/presentation/` | DashboardController |
+| `com/skilize/dashboard/presentation/response/` | DashboardResponse（nested UserInfo・FiscalYearRef・CurrentInventoryInfo） |
+| `com/skilize/charts/presentation/` | ChartController（QueryResult を直接返す） |
+| `com/skilize/charts/application/` | ChartService（スキルバランス・成長推移・ヒートマップ・タイムライン集計） |
+| `com/skilize/charts/application/query/` | RadarQueryResult・GrowthQueryResult・HeatmapQueryResult・TimelineQueryResult |
+| `com/skilize/expectation/presentation/` | ExpectationController |
+| `com/skilize/expectation/presentation/request/` | SaveExpectationRequest |
+| `com/skilize/expectation/application/` | ExpectationService（期待コメント保存ロジック） |
+| `com/skilize/expectation/application/query/` | ExpectationQueryResult |
+| `com/skilize/expectation/domain/` | UserExpectation エンティティ・UserExpectationRepository |
+| `com/skilize/interview/presentation/` | InterviewController |
+| `com/skilize/interview/presentation/request/` | SaveInterviewRequest・DetailNoteRequest |
+| `com/skilize/interview/presentation/response/` | InterviewResponse・DetailNoteResponse |
+| `com/skilize/interview/application/` | InterviewService（面談メモ保存ロジック） |
+| `com/skilize/interview/application/command/` | DetailNoteCommand |
+| `com/skilize/ai/presentation/` | AiAnalysisController（QueryResult を直接返す）・AiChatController（POST /api/ai/chat） |
+| `com/skilize/ai/presentation/request/` | AiChatRequest |
+| `com/skilize/ai/application/` | AiAnalysisService（非同期AI分析）・AiChatService（Python同期転送）・InventoryCompletedEventListener |
+| `com/skilize/ai/application/command/` | AiChatCommand |
+| `com/skilize/ai/application/mapper/` | AiChatApplicationMapper（AiChatRequest→AiChatCommand 変換） |
+| `com/skilize/ai/application/query/` | AiAnalysisQueryResult・AiChatQueryResult |
+| `com/skilize/ai/domain/` | AiCareerAnalysis エンティティ・AiAnalysisStatus・AiCareerAnalysisRepository |
+| `com/skilize/report/presentation/` | ReportController（棚卸表 PDF ダウンロードエンドポイント） |
+| `com/skilize/report/application/` | ReportService（JasperReports を使った棚卸表 PDF 生成） |
+| `apps/backend/src/main/resources/reports/` | 帳票レイアウトファイル（`.jrxml`）の格納フォルダ |
+| `apps/backend/src/main/resources/db/migration/` | Flyway マイグレーション（本番・CI 用） |
+| `scripts/db/init.sql` | ローカル Docker DB 用の完全初期化スクリプト（DROP→CREATE→INSERT） |

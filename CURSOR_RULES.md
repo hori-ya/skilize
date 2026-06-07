@@ -72,6 +72,8 @@ docker compose up --build
    SPRING_DATASOURCE_PASSWORD=password
    JWT_SECRET=change-this-to-a-random-256-bit-secret-key-before-use
    SPRING_PROFILES_ACTIVE=local
+   AI_SECRET_KEY=local-dev-secret
+   AI_SERVICE_URL=http://localhost:8000
    ```
 
 3. フロントエンド起動: `cd apps/frontend && npm run dev`
@@ -104,12 +106,14 @@ skilize/
 ├── docs/                         ← 設計・要件ドキュメント
 ├── scripts/db/init.sql           ← ローカル Docker DB 初期化スクリプト
 ├── apps/
-│   ├── backend/                  ← Spring Boot アプリ
-│   └── frontend/                 ← React / Vite アプリ
+│   ├── backend/                  ← Spring Boot アプリ（Java 21）
+│   ├── frontend/                 ← React / Vite アプリ
+│   └── ai/                       ← Python FastAPI AI サービス
 ├── infra/
 │   ├── docker/
 │   │   ├── backend/Dockerfile
 │   │   ├── frontend/Dockerfile
+│   │   ├── ai/Dockerfile
 │   │   └── nginx/nginx.conf
 │   └── compose/
 │       ├── docker-compose.yml    ← ローカル開発用
@@ -157,12 +161,20 @@ com.skilize
 │   ├── presentation/           ← ChartController + Response DTO
 │   └── application/            ← ChartService（radar/growth/heatmap/timeline 集計）
 ├── ai/
-│   ├── presentation/           ← AiAnalysisController + Response DTO
-│   ├── application/            ← AiAnalysisService
-│   └── domain/                 ← AiCareerAnalysis エンティティ・Repository・InventoryCompletedEventListener
-└── interview/
-    ├── presentation/           ← InterviewController + Request/Response DTO
-    └── application/            ← InterviewService
+│   ├── presentation/           ← AiAnalysisController・AiChatController + Request/Response DTO
+│   ├── application/            ← AiAnalysisService・AiChatService・InventoryCompletedEventListener
+│   └── domain/                 ← AiCareerAnalysis エンティティ・AiAnalysisStatus・Repository
+├── expectation/
+│   ├── presentation/           ← ExpectationController + Request DTO
+│   ├── application/            ← ExpectationService
+│   └── domain/                 ← UserExpectation エンティティ・UserExpectationRepository
+├── interview/
+│   ├── presentation/           ← InterviewController + Request/Response DTO
+│   ├── application/            ← InterviewService
+│   └── domain/                 ← InventoryInterview・InterviewDetailNote・Repository
+└── report/
+    ├── presentation/           ← ReportController（棚卸表 PDF ダウンロード）
+    └── application/            ← ReportService（JasperReports）
 ```
 
 ### レイヤー責務と禁止事項
@@ -278,6 +290,8 @@ user.setPasswordHash(newHash);
 
 ### フォルダ構成（3層 feature アーキテクチャ）
 
+フロントエンドの各 feature はバックエンドの `com.skilize.{feature}` パッケージと 1:1 で対応する。
+
 ```
 src/
 ├── app/
@@ -287,14 +301,21 @@ src/
 ├── shared/
 │   ├── api/         ← Axios クライアント・複数 feature で使うマスタ API
 │   ├── types/       ← 複数 feature で使うマスタデータ型定義
+│   ├── utils/       ← 汎用ユーティリティ（apiError.ts 等）
 │   └── ui/          ← ルートガード（PrivateRoute・TlAdminRoute・AdminRoute）・共通 UI
 │
 └── features/
-    ├── auth/        ← ログイン・パスワード変更（api / types / pages）
-    ├── inventory/   ← 棚卸・ダッシュボード・グラフ（api / types / components / pages）
-    ├── team/        ← チーム照会・メンバー詳細（api / types / pages）
-    ├── master/      ← マスタ管理ページ群（api / types / pages）
-    └── interview/   ← 面談機能（api / types）※ページは features/team に統合
+    ├── auth/        ← 認証・パスワード変更
+    ├── inventory/   ← 棚卸入力・提出・前年比較・目標振り返り・棚卸履歴
+    ├── dashboard/   ← ダッシュボード表示
+    ├── charts/      ← グラフ（スキルバランス・成長推移・ヒートマップ・タイムライン）
+    ├── report/      ← 棚卸表 PDF ダウンロード
+    ├── ai/          ← AI チャット・AI キャリア分析
+    ├── user/        ← ユーザー管理・チーム照会・メンバー詳細
+    ├── expectation/ ← TL/会社からの期待コメント
+    ├── interview/   ← 面談メモ（api / types）※ページは user/ に統合
+    ├── master/      ← マスタ管理ページ群
+    └── fiscalyear/  ← 年度管理
 ```
 
 ### 依存方向（厳守）
@@ -306,6 +327,7 @@ App.tsx → features → shared
 - `shared` が `features` をインポート禁止
 - feature 間で直接インポート禁止（型の参照は許容）
 - 新機能は必ず対応する `features/{name}/` フォルダ内に追加する
+- バックエンドに新 feature を追加した場合はフロントエンドにも同名 feature フォルダを作成する
 
 ### コーディングルール（React / TypeScript）
 

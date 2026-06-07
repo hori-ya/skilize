@@ -308,23 +308,4 @@ erDiagram
 `inventory_interviews.interviewer_id` が面談メモのオーナーを示す。  
 APIはリクエストユーザーの `interviewer_id` に一致するレコードのみ返す（TL/ADMINとも同様）。
 
-### NULLを許容するFK
-
-| テーブル | カラム | NULLの意味 |
-|----------|--------|-----------|
-| `qualifications` | `category_id` | 未分類 |
-| `ad_seminars` | `category_id` | 未分類 |
-| `it_skill_details` | `it_skill_id` | カスタムスキル（`custom_skill_name` を使用） |
-| `qualification_details` | `qualification_id` | カスタム資格（`custom_qualification_name` を使用） |
-| `seminar_details` | `ad_seminar_id` | AD以外のセミナー（`seminar_name` を使用） |
-| `seminar_details` | `seminar_category_id` | ADセミナーの場合（ADの分類は `ad_seminars.category_id` で管理）、または未分類セミナー |
-| `inventory_goals` | `it_skill_id` / `qualification_id` / `ad_seminar_id` | `goal_category` に応じて1つのみ設定。カスタム目標は `custom_name` を使用 |
-| `users` | `tl_user_id` | TL未設定ユーザー |
-| `users` | `email` | メールアドレス未登録ユーザー（任意項目） |
-| `user_expectations` | `tl_expectation` | TLによる期待コメント未入力 |
-| `user_expectations` | `company_expectation` | 管理者による期待コメント未入力 |
-
-### 年月の保存方法
-
-`acquired_year_month`・`attended_year_month`・`target_period` は `date` 型で保存し、常に**月初日（1日）**を格納する。  
-例：2025年4月 → `2025-04-01`
+> NULLを許容するFKの意味・年月の保存方法については [data-model.md](./data-model.md) を参照。
