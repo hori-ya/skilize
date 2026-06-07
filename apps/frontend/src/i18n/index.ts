@@ -5,9 +5,9 @@ import commonJa from './locales/ja/common.json';
 import navJa from './locales/ja/nav.json';
 import authJa from './locales/ja/auth.json';
 import inventoryJa from './locales/ja/inventory.json';
-import teamJa from './locales/ja/team.json';
+import userJa from './locales/ja/user.json';
 import masterJa from './locales/ja/master.json';
-import aiSupportJa from './locales/ja/ai-support.json';
+import aiJa from './locales/ja/ai.json';
 import errorsJa from './locales/ja/errors.json';
 
 i18n
@@ -21,9 +21,9 @@ i18n
         nav: navJa,
         auth: authJa,
         inventory: inventoryJa,
-        team: teamJa,
+        user: userJa,
         master: masterJa,
-        'ai-support': aiSupportJa,
+        ai: aiJa,
         errors: errorsJa,
       },
     },

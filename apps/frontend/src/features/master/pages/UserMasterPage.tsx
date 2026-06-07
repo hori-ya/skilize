@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
 import type { UserAdmin, Role } from '../../auth/types/index';
-import { getUsers, createUser, updateUser, resetUserPassword } from '../../team/api/userApi';
+import { getUsers, createUser, updateUser, resetUserPassword } from '../../user/api/userApi';
 import { IconPlus, IconEdit, IconKey, IconX, IconCheck, IconReset } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 

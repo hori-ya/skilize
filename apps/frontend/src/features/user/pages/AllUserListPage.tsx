@@ -27,7 +27,7 @@ const ROLE_KEY: Record<string, string> = {
 
 export default function AllUserListPage() {
   const navigate = useNavigate();
-  const { t } = useTranslation('team');
+  const { t } = useTranslation('user');
 
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);

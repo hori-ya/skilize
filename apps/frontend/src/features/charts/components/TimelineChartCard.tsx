@@ -1,4 +1,4 @@
-import type { TimelineEvent, TimelineEventType } from '../types/charts';
+import type { TimelineEvent, TimelineEventType } from '../types/index';
 
 interface Props {
   events: TimelineEvent[];

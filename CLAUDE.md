@@ -211,10 +211,31 @@ infrastructure → domain / application
 - **フォルダ構成**: feature by feature（`app/` / `shared/` / `features/` の3層）
   - `app/` — アプリ全体の初期化（AuthProvider・NavBar）
   - `shared/` — 複数 feature で使う共通資産（Axiosクライアント・マスタAPI・マスタ型・ルートガード）
-  - `features/{name}/` — 機能ごとの閉じた実装（api / types / pages）
+  - `features/{name}/` — 機能ごとの閉じた実装（api / types / pages / components）
 - **依存方向**: `App.tsx → features → shared`（`shared` は `features` をインポートしない）
-- feature 間の型参照は許容する（例: `features/team/types` が `features/inventory/types` を参照）
+- feature 間の型参照は許容する（例: `features/user/types` が `features/inventory/types` を参照）
 - 新機能は必ず対応する feature フォルダ内に追加する
+- **フロントエンドとバックエンドの feature 粒度・命名を統一する（必須）**
+  - フロントエンドの `features/{name}/` はバックエンドの `com.skilize.{name}` パッケージと 1:1 で対応させる
+  - feature 名はバックエンドのパッケージ名に合わせる（例: `user`・`ai`・`dashboard`・`charts`・`report`・`fiscalyear`・`expectation`）
+  - バックエンドに新 feature（パッケージ）を追加した場合は、フロントエンドにも同名の feature フォルダを作成する
+  - 既存 feature に新しい API を追加する場合も、バックエンドのパッケージ割当に従って feature を選ぶ（例: AI分析の API は `features/ai/api/` に追加する）
+
+  **現在の feature 対応表（フロント ↔ バックエンド）**:
+
+  | フロントエンド `features/` | バックエンド `com.skilize.` | 主な責務 |
+  |---|---|---|
+  | `auth` | `auth` | 認証・パスワード変更 |
+  | `inventory` | `inventory` | 棚卸入力・提出・前年比較・目標振り返り |
+  | `dashboard` | `dashboard` | ダッシュボード表示 |
+  | `charts` | `charts` | スキルバランス・成長推移・ヒートマップ・タイムライン |
+  | `report` | `report` | 棚卸表 PDF ダウンロード |
+  | `ai` | `ai` | AI チャット・AI キャリア分析 |
+  | `user` | `user` | ユーザー管理・チーム照会 |
+  | `expectation` | `expectation` | TL/会社からの期待コメント |
+  | `interview` | `interview` | 面談メモ |
+  | `master` | `master` | マスタ管理（スキルレベル・ITスキル・資格・ADセミナー） |
+  | `fiscalyear` | `fiscalyear` | 年度管理 |
 - **i18n（国際化）**: i18next + react-i18next を使用。コンポーネント内に日本語文字列をハードコードしない
   - 翻訳ファイル: `src/i18n/locales/ja/{namespace}.json`（namespace は feature 単位）
   - 初期設定: `src/i18n/index.ts`（`main.tsx` でインポート）
@@ -603,11 +624,16 @@ docker compose up db     # init.sql が再実行される
 | `apps/frontend/src/shared/utils/apiError.ts` | APIエラーコード取得・翻訳ユーティリティ（`getApiErrorMessage` / `getValidationErrors`） |
 | `apps/frontend/src/shared/ui/` | ルートガード（PrivateRoute・TlAdminRoute・AdminRoute）・ScrollToTopButton |
 | `apps/frontend/src/features/auth/` | ログイン・初回パスワード変更・マイページパスワード変更（API / 型 / ページ） |
-| `apps/frontend/src/features/inventory/` | ダッシュボード・棚卸入力・前年度比較・目標振り返り・目標設定・棚卸履歴・グラフ（API / 型 / コンポーネント / ページ） |
-| `apps/frontend/src/features/team/` | チーム照会・メンバー詳細・全ユーザー照会（API / 型 / ページ） |
-| `apps/frontend/src/features/master/` | 各種マスタ管理ページ（年度・スキルレベル・ITスキル・資格・AD・ユーザー管理） |
-| `apps/frontend/src/features/interview/` | 面談機能の API 呼び出し・型定義（ページは features/team に統合） |
-| `apps/frontend/src/features/ai-support/` | AI サポートチャット機能（ボタン・パネル UI / API / 型定義） |
+| `apps/frontend/src/features/inventory/` | 棚卸入力・提出・前年度比較・目標振り返り・目標設定・棚卸履歴（API / 型 / ページ） |
+| `apps/frontend/src/features/dashboard/` | ダッシュボード表示（API / 型 / ページ） |
+| `apps/frontend/src/features/charts/` | スキルバランス・成長推移・ヒートマップ・タイムラインのグラフ（API / 型 / コンポーネント） |
+| `apps/frontend/src/features/report/` | 棚卸表 PDF ダウンロード（API） |
+| `apps/frontend/src/features/ai/` | AI チャット・AI キャリア分析（API / 型 / コンポーネント / ストア） |
+| `apps/frontend/src/features/user/` | ユーザー管理・チーム照会・メンバー詳細・全ユーザー照会（API / 型 / ページ） |
+| `apps/frontend/src/features/expectation/` | TL/会社からの期待コメント（API / 型） |
+| `apps/frontend/src/features/interview/` | 面談メモの API 呼び出し・型定義 |
+| `apps/frontend/src/features/master/` | マスタ管理ページ（スキルレベル・ITスキル・資格・ADセミナー・ユーザーマスタ） |
+| `apps/frontend/src/features/fiscalyear/` | 年度管理ページ（API は shared/api/masterApi 経由） |
 | `apps/frontend/src/i18n/` | i18next 初期設定（`index.ts`）と翻訳 JSON ファイル（`locales/ja/`） |
 
 ### Python AI サービス（FastAPI）

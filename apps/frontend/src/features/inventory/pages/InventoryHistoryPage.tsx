@@ -3,17 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import {
   getMyInventories, getItSkillDetails, getQualificationDetails,
   getSeminarDetails, getGoals, getComparison, patchItSkillRemarks, getGoalReview,
-  getMyAiAnalyses,
 } from '../api/inventoryApi';
+import { getMyAiAnalyses } from '../../ai/api/aiAnalysisApi';
 import { getItSkills, getFiscalYears } from '../../../shared/api/masterApi';
 import type { FiscalYear } from '../../../shared/types/master';
 import type {
   InventorySummary, ItSkillDetailItem, QualificationDetailItem,
-  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem, AiAnalysis,
+  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem,
 } from '../types/index';
+import type { AiAnalysis } from '../../ai/types/index';
 import type { ItSkill } from '../../../shared/types/master';
 import NavBar from '../../../app/layouts/NavBar';
-import AiAnalysisCard from '../components/AiAnalysisCard';
+import AiAnalysisCard from '../../ai/components/AiAnalysisCard';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 import { useTranslation } from 'react-i18next';
 

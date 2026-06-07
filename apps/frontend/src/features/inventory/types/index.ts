@@ -107,38 +107,3 @@ export interface GoalItem {
   reason: string | null;
 }
 
-/** PENDING=待機中 / PROCESSING=分析中 / COMPLETED=完了 / FAILED=失敗 */
-export type AiAnalysisStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
-
-export interface AiAnalysisResult {
-  summary: string;
-  strengths: string[];
-  growth_areas: string[];
-  expectation_fit: string;
-  recommended_actions: string[];
-}
-
-export interface AiAnalysis {
-  id: number;
-  fiscalYearId: number;
-  status: AiAnalysisStatus;
-  analysisResult: AiAnalysisResult | null;
-  errorMessage: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface DashboardResponse {
-  user: { id: number; name: string; role: string };
-  currentFiscalYear: { id: number; name: string; inputStartDate: string | null; inputEndDate: string | null } | null;
-  currentInventory: {
-    id: number;
-    status: InventoryStatus;
-    itSkillCount: number;
-    qualificationCount: number;
-    seminarCount: number;
-    submittedAt: string | null;
-    goalReviewCompletedAt: string | null;
-    goalCompletedAt: string | null;
-  } | null;
-}

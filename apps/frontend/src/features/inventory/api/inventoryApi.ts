@@ -1,16 +1,15 @@
 /**
  * 棚卸関連 API。明細（ITスキル・資格・セミナー）は PUT で全件洗い替えを行う。
  * completeGoal は目標件数の条件（ITスキル/資格 ≥1・AD ≥2）を満たさない場合 422 を返す。
+ * ダッシュボードは features/dashboard/api、帳票は features/report/api、AI分析は features/ai/api に分離している。
  */
 import apiClient from '../../../shared/api/client';
 import type {
-  DashboardResponse, InventorySummary, InventoryDetail,
+  InventorySummary, InventoryDetail,
   ItSkillDetailItem, QualificationDetailItem, SeminarDetailItem,
   ComparisonResponse, GoalReviewResponse,
-  GoalItem, AiAnalysis,
+  GoalItem,
 } from '../types/index';
-
-export const getDashboard = () => apiClient.get<DashboardResponse>('/dashboard');
 
 export const getMyInventories = () => apiClient.get<InventorySummary[]>('/inventories/mine');
 
@@ -75,8 +74,3 @@ export const saveGoals = (id: number, items: Array<{
 export const completeGoal = (id: number) =>
   apiClient.post<{ id: number; status: string; goalCompletedAt: string }>(`/inventories/${id}/goals/complete`);
 
-export const getMyAiAnalyses = () =>
-  apiClient.get<AiAnalysis[]>('/users/me/ai-analyses');
-
-export const downloadInventoryReport = (id: number) =>
-  apiClient.get(`/inventories/${id}/report`, { responseType: 'blob' });

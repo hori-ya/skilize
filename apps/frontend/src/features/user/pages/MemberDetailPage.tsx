@@ -1,24 +1,27 @@
 import { useEffect, useRef, useState, useMemo, Fragment } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { getMemberInventories, getExpectations, saveTlExpectation, saveCompanyExpectation, getMemberAiAnalyses } from '../api/userApi';
+import { getMemberInventories } from '../api/userApi';
+import { getExpectations, saveTlExpectation, saveCompanyExpectation } from '../../expectation/api/expectationApi';
+import { getMemberAiAnalyses } from '../../ai/api/aiAnalysisApi';
 import {
   getItSkillDetails, getQualificationDetails,
   getSeminarDetails, getGoals, getComparison, getGoalReview,
-  downloadInventoryReport,
 } from '../../inventory/api/inventoryApi';
+import { downloadInventoryReport } from '../../report/api/reportApi';
 import { getItSkills, getFiscalYears } from '../../../shared/api/masterApi';
 import type { FiscalYear } from '../../../shared/types/master';
 import { getInterview, saveInterview, getPrevYearInterview } from '../../interview/api/interviewApi';
 import type {
   InventorySummary, ItSkillDetailItem, QualificationDetailItem,
-  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem, AiAnalysis,
+  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem,
 } from '../../inventory/types/index';
+import type { AiAnalysis } from '../../ai/types/index';
 import type { ItSkill } from '../../../shared/types/master';
 import type { InterviewMemo, DetailType } from '../../interview/types';
-import type { UserExpectation } from '../types/index';
+import type { UserExpectation } from '../../expectation/types/index';
 import { useAuth } from '../../../app/providers/AuthProvider';
 import NavBar from '../../../app/layouts/NavBar';
-import AiAnalysisCard from '../../inventory/components/AiAnalysisCard';
+import AiAnalysisCard from '../../ai/components/AiAnalysisCard';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 import { useTranslation } from 'react-i18next';
 
@@ -43,7 +46,7 @@ const STATUS_KEY: Record<string, string> = {
 };
 
 function DiffCell({ diff, hasPrevYear }: { diff: number | null | undefined; hasPrevYear: boolean }) {
-  const { t } = useTranslation('team');
+  const { t } = useTranslation('user');
   if (!hasPrevYear) return null;
   if (diff === null || diff === undefined) return <span className="diff-new">{t('diffNew')}</span>;
   if (diff > 0) return <span className="diff-up">↑ +{diff}</span>;
@@ -60,7 +63,7 @@ export default function MemberDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const { t } = useTranslation('team');
+  const { t } = useTranslation('user');
   const userIdNum = Number(userId);
   const backPath: string = (location.state as { from?: string } | null)?.from ?? '/team';
   const backLabel: string = (location.state as { fromLabel?: string } | null)?.fromLabel ?? t('memberDetail.defaultBackLabel');

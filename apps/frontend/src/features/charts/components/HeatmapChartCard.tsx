@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { HeatmapCell, HeatmapResponse, HeatmapSkill } from '../types/charts';
+import type { HeatmapCell, HeatmapResponse, HeatmapSkill } from '../types/index';
 
 interface Props {
   data: HeatmapResponse;

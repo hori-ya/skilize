@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDashboard, createInventory, getMyAiAnalyses } from '../api/inventoryApi';
-import { getRadarChart, getGrowthChart, getHeatmapChart, getTimelineChart } from '../api/chartApi';
-import type { DashboardResponse, AiAnalysis } from '../types/index';
-import type { RadarResponse, GrowthResponse, HeatmapResponse, TimelineResponse } from '../types/charts';
+import { getDashboard } from '../api/dashboardApi';
+import { createInventory } from '../../inventory/api/inventoryApi';
+import { getMyAiAnalyses } from '../../ai/api/aiAnalysisApi';
+import { getRadarChart, getGrowthChart, getHeatmapChart, getTimelineChart } from '../../charts/api/chartApi';
+import type { DashboardResponse } from '../types/index';
+import type { AiAnalysis } from '../../ai/types/index';
+import type { RadarResponse, GrowthResponse, HeatmapResponse, TimelineResponse } from '../../charts/types/index';
 import NavBar from '../../../app/layouts/NavBar';
 import { IconPlay, IconEdit, IconEye, IconHistory } from '../../../shared/ui/Icons';
-import RadarChartCard from '../components/RadarChartCard';
-import GrowthChartCard from '../components/GrowthChartCard';
-import HeatmapChartCard from '../components/HeatmapChartCard';
-import TimelineChartCard from '../components/TimelineChartCard';
-import AiAnalysisCard from '../components/AiAnalysisCard';
+import RadarChartCard from '../../charts/components/RadarChartCard';
+import GrowthChartCard from '../../charts/components/GrowthChartCard';
+import HeatmapChartCard from '../../charts/components/HeatmapChartCard';
+import TimelineChartCard from '../../charts/components/TimelineChartCard';
+import AiAnalysisCard from '../../ai/components/AiAnalysisCard';
 import { useTranslation } from 'react-i18next';
 
 interface ChartsState {

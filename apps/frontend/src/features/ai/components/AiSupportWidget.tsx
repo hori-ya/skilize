@@ -2,14 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { postAiChat } from '../api/aiSupportApi';
+import { postAiChat } from '../api/aiChatApi';
 import { getAiSupportState, setAiSupportState } from '../store';
 import type { AiMode, ChatMessage } from '../types';
 
 const MODES: AiMode[] = ['NORMAL', 'PROOFREADING', 'CAREER', 'HELP'];
 
 export default function AiSupportWidget() {
-  const { t } = useTranslation('ai-support');
+  const { t } = useTranslation('ai');
 
   // 再マウント時はモジュールストアから状態を復元する
   const [open, setOpen] = useState(() => getAiSupportState().open);

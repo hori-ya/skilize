@@ -3,7 +3,7 @@
  * レーダー・成長推移・ヒートマップ・タイムラインの4種類。集計はバックエンドが行う。
  */
 import apiClient from '../../../shared/api/client';
-import type { RadarResponse, GrowthResponse, HeatmapResponse, TimelineResponse } from '../types/charts';
+import type { RadarResponse, GrowthResponse, HeatmapResponse, TimelineResponse } from '../types/index';
 
 /** ITスキル大分類ごとの平均スキルレベルをレーダーチャート形式で取得する。 */
 export const getRadarChart = () => apiClient.get<RadarResponse>('/charts/radar');

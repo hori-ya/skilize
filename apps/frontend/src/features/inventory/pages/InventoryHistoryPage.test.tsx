@@ -2,6 +2,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import InventoryHistoryPage from './InventoryHistoryPage';
 import * as inventoryApi from '../api/inventoryApi';
+import * as aiAnalysisApi from '../../ai/api/aiAnalysisApi';
 import * as masterApi from '../../../shared/api/masterApi';
 
 // ─── モック定義 ───────────────────────────────────────────────
@@ -16,9 +17,10 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('../api/inventoryApi');
+vi.mock('../../ai/api/aiAnalysisApi');
 vi.mock('../../../shared/api/masterApi');
 vi.mock('../../../app/layouts/NavBar', () => ({ default: () => null }));
-vi.mock('../components/AiAnalysisCard', () => ({ default: () => null }));
+vi.mock('../../ai/components/AiAnalysisCard', () => ({ default: () => null }));
 vi.mock('../../../shared/ui/StickyHorizontalScroll', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -60,11 +62,12 @@ const comparisonWithPrevYear = {
 // ─── テストヘルパー ───────────────────────────────────────────
 
 const mockInventoryApi = vi.mocked(inventoryApi);
+const mockAiAnalysisApi = vi.mocked(aiAnalysisApi);
 const mockMasterApi = vi.mocked(masterApi);
 
 function setupDefaultMocks() {
   mockInventoryApi.getMyInventories.mockResolvedValue({ data: [inventorySummary] } as never);
-  mockInventoryApi.getMyAiAnalyses.mockResolvedValue({ data: [] } as never);
+  mockAiAnalysisApi.getMyAiAnalyses.mockResolvedValue({ data: [] } as never);
   mockInventoryApi.getItSkillDetails.mockResolvedValue({ data: { items: [masterSkillDetail, customSkillDetail] } } as never);
   mockInventoryApi.getQualificationDetails.mockResolvedValue({ data: { items: [] } } as never);
   mockInventoryApi.getSeminarDetails.mockResolvedValue({ data: { items: [] } } as never);
@@ -100,7 +103,7 @@ describe('InventoryHistoryPage', () => {
 
   it('正常系_棚卸データなし_noDataメッセージが表示される', async () => {
     mockInventoryApi.getMyInventories.mockResolvedValue({ data: [] } as never);
-    mockInventoryApi.getMyAiAnalyses.mockResolvedValue({ data: [] } as never);
+    mockAiAnalysisApi.getMyAiAnalyses.mockResolvedValue({ data: [] } as never);
     mockMasterApi.getFiscalYears.mockResolvedValue({ data: [] } as never);
 
     renderPage();

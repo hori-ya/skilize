@@ -2,7 +2,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
 } from 'recharts';
-import type { GrowthResponse } from '../types/charts';
+import type { GrowthResponse } from '../types/index';
 
 const PALETTE = [
   '#3d6db3', '#bf7a3a', '#149b78', '#c05040',

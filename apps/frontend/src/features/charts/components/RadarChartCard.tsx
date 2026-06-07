@@ -2,7 +2,7 @@ import {
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis,
   PolarRadiusAxis, Radar, Legend, Tooltip,
 } from 'recharts';
-import type { RadarResponse } from '../types/charts';
+import type { RadarResponse } from '../types/index';
 
 interface Props {
   data: RadarResponse;
