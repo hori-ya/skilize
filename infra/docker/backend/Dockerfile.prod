@@ -40,6 +40,9 @@ RUN apt-get update && \
 # 非 root ユーザーの作成
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 
+# logback-spring.xml の FILE appender が書き込むディレクトリを作成
+RUN mkdir -p /var/log/skilize && chown appuser:appgroup /var/log/skilize
+
 COPY --from=builder /app/build/libs/*.jar app.jar
 RUN chown appuser:appgroup app.jar
 
