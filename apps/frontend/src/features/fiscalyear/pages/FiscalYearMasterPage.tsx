@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：FY
+ * 機能名      ：年度管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 年度設定ページ。年度の一覧表示・新規作成・編集と、年度開始月の設定変更を行う。
+ * ADMIN ロールのみアクセス可能。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
@@ -33,6 +48,12 @@ const emptyForm = (): FormState => ({
   active: true,
 });
 
+/**
+ * 年度の表示ステータスキーを返す。
+ *
+ * @param fy 年度エンティティ
+ * @returns ステータスキー（active / planned / done / inactive）
+ */
 function fiscalYearStatusKey(fy: FiscalYear): FiscalYearStatusKey {
   const today = new Date().toISOString().slice(0, 10);
   if (!fy.isActive) return 'inactive';
@@ -48,6 +69,12 @@ const STATUS_CLASS: Record<FiscalYearStatusKey, string> = {
   inactive: 'fy-status fy-status--inactive',
 };
 
+/**
+ * 年度設定ページ。
+ *
+ * 年度開始月の設定変更と、年度の一覧表示・新規作成・編集を行う。
+ * ADMIN ロールのみアクセス可能。
+ */
 export default function FiscalYearMasterPage() {
   const { t } = useTranslation('master');
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
@@ -64,6 +91,7 @@ export default function FiscalYearMasterPage() {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // 初期表示時に年度一覧と年度設定を取得する
   useEffect(() => {
     Promise.all([getFiscalYears(), getFiscalYearSettings()])
       .then(([fyRes, sRes]) => {

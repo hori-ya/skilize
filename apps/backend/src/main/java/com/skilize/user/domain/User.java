@@ -1,3 +1,19 @@
+/**************************************************************************************************************
+ * 機能ID      ：USR
+ * 機能名      ：ユーザー管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ユーザーエンティティ。Spring Security の UserDetails を実装し、認証プリンシパルとしても機能する。
+ * ロールは GENERAL（一般）/ TL（チームリーダー）/ ADMIN（管理者）の3種類。
+ * フィールドはドメインメソッドでのみ変更し、@Setter は使用しない。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.user.domain;
 
 import jakarta.persistence.*;
@@ -75,6 +91,17 @@ public class User implements UserDetails {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * ユーザーエンティティを新規作成する。is_initial_password=true、is_active=true で初期化する。
+     *
+     * @param userId       ログインID
+     * @param name         氏名
+     * @param email        メールアドレス（null 可）
+     * @param role         ロール
+     * @param tlUserId     所属TLのユーザー内部PK（null で上長なし）
+     * @param passwordHash BCrypt でハッシュ化済みのパスワード
+     * @return 新規作成されたユーザーエンティティ
+     */
     public static User create(String userId, String name, String email, Role role,
                                Integer tlUserId, String passwordHash) {
         User u = new User();
@@ -89,6 +116,15 @@ public class User implements UserDetails {
         return u;
     }
 
+    /**
+     * ユーザー情報（氏名・メール・ロール・上長・有効フラグ）を更新する。
+     *
+     * @param name     氏名
+     * @param email    メールアドレス（null 可）
+     * @param role     ロール
+     * @param tlUserId 所属TLのユーザー内部PK（null で上長なし）
+     * @param active   有効フラグ（false で論理無効化）
+     */
     public void update(String name, String email, Role role, Integer tlUserId, boolean active) {
         this.name = name;
         this.email = email;
@@ -97,11 +133,22 @@ public class User implements UserDetails {
         this.active = active;
     }
 
+    /**
+     * パスワードを変更し、初回パスワードフラグを解除する。
+     *
+     * @param newPasswordHash BCrypt でハッシュ化済みの新パスワード
+     */
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.initialPassword = false; // 変更完了で初回PW強制を解除する
     }
 
+    /**
+     * パスワードをリセットし、初回パスワードフラグを再設定する。
+     * リセット後は次回ログイン時にパスワード変更が強制される。
+     *
+     * @param passwordHash BCrypt でハッシュ化済みの仮パスワード
+     */
     public void resetPassword(String passwordHash) {
         this.passwordHash = passwordHash;
         this.initialPassword = true; // リセット後は再度初回PW変更を強制する

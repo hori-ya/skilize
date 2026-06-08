@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 資格棚卸明細エンティティ。1棚卸あたり複数行の資格取得状況を管理する。
+ * マスタ資格とカスタム資格名のいずれか一方が必ず設定される。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.domain;
 
 import com.skilize.master.domain.Qualification;
@@ -58,6 +73,16 @@ public class QualificationDetail {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * 資格明細を新規作成する。
+     *
+     * @param inventory               紐付ける棚卸
+     * @param qualification           資格マスタ参照（カスタム資格の場合は null）
+     * @param customQualificationName カスタム資格名（qualification が null の場合に使用）
+     * @param acquiredYearMonth       取得年月（月初日で保存。未取得の場合は null）
+     * @param remarks                 備考
+     * @return 新規作成した資格明細エンティティ（未永続化）
+     */
     public static QualificationDetail create(Inventory inventory, Qualification qualification,
                                               String customQualificationName,
                                               LocalDate acquiredYearMonth, String remarks) {

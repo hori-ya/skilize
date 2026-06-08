@@ -1,3 +1,19 @@
+# ******************************************************************************
+# 機能ID      ：AI
+# 機能名      ：AI機能
+# 作成日      ：2026/06/08
+# 作成者      ：hori-ya
+# ------------------------------------------------------------------------------
+# 機能概要：
+# AIキャリア分析のオーケストレーションサービス。
+# DB から棚卸データを取得し LangChain チェーンで LLM 分析を実行する。
+# 分析ステータスを ai_career_analyses テーブルに随時更新する。
+# ------------------------------------------------------------------------------
+# 更新履歴：
+# 2026/06/08 hori-ya 初版作成
+# ------------------------------------------------------------------------------
+# Copyright (C) 2026 Skilize Project. All Rights Reserved.
+# ******************************************************************************
 import json
 import logging
 
@@ -27,6 +43,7 @@ def process_analysis(user_id: int, fiscal_year_id: int) -> None:
 
 
 def _get_connection():
+    """PostgreSQL への接続を生成して返す。"""
     return psycopg2.connect(settings.database_url)
 
 
@@ -139,6 +156,7 @@ def _update_status(user_id: int, fiscal_year_id: int, status: str,
 
 
 def _format_it_skills(items: list[dict]) -> str:
+    """ITスキル実績リストをプロンプト用テキスト形式に整形する。"""
     if not items:
         return "（データなし）"
     lines = [f"- {r['skill_name']}: レベル {r['level_value']}" +
@@ -148,6 +166,7 @@ def _format_it_skills(items: list[dict]) -> str:
 
 
 def _format_qualifications(items: list[dict]) -> str:
+    """資格実績リストをプロンプト用テキスト形式に整形する。"""
     if not items:
         return "（データなし）"
     # acquired_year_month は date 型で YYYY-MM-DD で渡るため、先頭7文字（YYYY-MM）のみ使う
@@ -158,6 +177,7 @@ def _format_qualifications(items: list[dict]) -> str:
 
 
 def _format_seminars(items: list[dict]) -> str:
+    """セミナー受講実績リストをプロンプト用テキスト形式に整形する。"""
     if not items:
         return "（データなし）"
     lines = [f"- {r['seminar_name']}" +
@@ -167,6 +187,7 @@ def _format_seminars(items: list[dict]) -> str:
 
 
 def _format_goals(items: list[dict]) -> str:
+    """今年度の目標リストをプロンプト用テキスト形式に整形する。"""
     if not items:
         return "（データなし）"
     # Enum 値（英語）を日本語表示名にマッピングする
@@ -178,6 +199,7 @@ def _format_goals(items: list[dict]) -> str:
 
 
 def _format_expectations(exp: dict) -> str:
+    """TL・会社からの期待コメントをプロンプト用テキスト形式に整形する。"""
     if not exp:
         return "（データなし）"
     parts = []

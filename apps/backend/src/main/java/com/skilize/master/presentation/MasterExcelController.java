@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * マスタExcel出力・取込APIコントローラー。ADMIN専用。
+ * ITスキル・資格・ADセミナーの各マスタをExcelでダウンロード／アップロードする。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.presentation;
 
 import com.skilize.master.application.MasterExcelService;
@@ -39,6 +54,11 @@ public class MasterExcelController {
 
     // ─── ITスキルマスタ ──────────────────────────────────────────────────────────
 
+    /**
+     * ITスキルマスタをExcelファイルとしてダウンロードする。
+     *
+     * @return Excelファイル（.xlsx）のレスポンス
+     */
     @GetMapping("/it-skills/download")
     public ResponseEntity<byte[]> downloadItSkills() {
         log.info("ITスキルマスタ Excel 出力");
@@ -46,6 +66,12 @@ public class MasterExcelController {
         return excelResponse(bytes, "ItSkillMaster.xlsx");
     }
 
+    /**
+     * ITスキルマスタExcelファイルを取り込む。バリデーションエラーがあれば400エラーを返す。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return 取込成功時は MasterImportResponse、エラー時は EXCEL_IMPORT_ERROR
+     */
     @PostMapping(value = "/it-skills/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadItSkills(@RequestParam("file") MultipartFile file) {
         validateUploadFile(file);
@@ -56,6 +82,11 @@ public class MasterExcelController {
 
     // ─── 参考資格マスタ ──────────────────────────────────────────────────────────
 
+    /**
+     * 資格マスタをExcelファイルとしてダウンロードする。
+     *
+     * @return Excelファイル（.xlsx）のレスポンス
+     */
     @GetMapping("/qualifications/download")
     public ResponseEntity<byte[]> downloadQualifications() {
         log.info("参考資格マスタ Excel 出力");
@@ -63,6 +94,12 @@ public class MasterExcelController {
         return excelResponse(bytes, "QualificationMaster.xlsx");
     }
 
+    /**
+     * 資格マスタExcelファイルを取り込む。バリデーションエラーがあれば400エラーを返す。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return 取込成功時は MasterImportResponse、エラー時は EXCEL_IMPORT_ERROR
+     */
     @PostMapping(value = "/qualifications/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadQualifications(@RequestParam("file") MultipartFile file) {
         validateUploadFile(file);
@@ -73,6 +110,11 @@ public class MasterExcelController {
 
     // ─── ADマスタ ────────────────────────────────────────────────────────────────
 
+    /**
+     * ADセミナーマスタをExcelファイルとしてダウンロードする。
+     *
+     * @return Excelファイル（.xlsx）のレスポンス
+     */
     @GetMapping("/ad-seminars/download")
     public ResponseEntity<byte[]> downloadAdSeminars() {
         log.info("ADマスタ Excel 出力");
@@ -80,6 +122,12 @@ public class MasterExcelController {
         return excelResponse(bytes, "AdSeminarMaster.xlsx");
     }
 
+    /**
+     * ADセミナーマスタExcelファイルを取り込む。バリデーションエラーがあれば400エラーを返す。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return 取込成功時は MasterImportResponse、エラー時は EXCEL_IMPORT_ERROR
+     */
     @PostMapping(value = "/ad-seminars/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadAdSeminars(@RequestParam("file") MultipartFile file) {
         validateUploadFile(file);

@@ -1,3 +1,19 @@
+# ******************************************************************************
+# 機能ID      ：AI
+# 機能名      ：AI機能
+# 作成日      ：2026/06/08
+# 作成者      ：hori-ya
+# ------------------------------------------------------------------------------
+# 機能概要：
+# AIチャットのビジネスロジックサービス。
+# モード別システムプロンプトの選択、会話履歴の管理、LLM 呼び出しを担当する。
+# CAREER モードではユーザーの棚卸データを DB から取得してプロンプトに埋め込む。
+# ------------------------------------------------------------------------------
+# 更新履歴：
+# 2026/06/08 hori-ya 初版作成
+# ------------------------------------------------------------------------------
+# Copyright (C) 2026 Skilize Project. All Rights Reserved.
+# ******************************************************************************
 import logging
 
 import psycopg2
@@ -16,7 +32,7 @@ from app.services.prompts.chat_prompts import (
 
 logger = logging.getLogger(__name__)
 
-# 会話履歴の最大件数（古いものから切り捨て）
+# LLMのコンテキスト長制限とAPIコスト削減のバランスを考慮して20件を上限とする（古いものから切り捨て）
 MAX_HISTORY = 20
 
 
@@ -38,6 +54,19 @@ def process_chat(message: str, mode: str, user_id: int, history: list[dict]) -> 
 
 
 def _build_system_prompt(mode: str, user_id: int) -> str:
+    """
+    チャットモードに応じたシステムプロンプト文字列を返す。
+
+    CAREER モードはユーザーの棚卸データを取得して動的に組み立てる。
+    未知のモードが渡された場合は NORMAL モードのプロンプトをフォールバックとして返す。
+
+    Args:
+        mode: チャットモード（NORMAL / PROOFREADING / CAREER / HELP）
+        user_id: CAREER モードでのデータ取得に使用するユーザー ID
+
+    Returns:
+        システムプロンプト文字列
+    """
     if mode == "NORMAL":
         return NORMAL_SYSTEM_PROMPT
     if mode == "PROOFREADING":
@@ -122,6 +151,18 @@ def _fetch_career_context(user_id: int) -> str:
 
 
 def _format_career_context(year: int, skills: list, goals: list, expectation) -> str:
+    """
+    取得した棚卸データをキャリアプロンプト用のテキスト形式に整形する。
+
+    Args:
+        year: 対象年度
+        skills: IT スキル一覧
+        goals: 今年度目標一覧
+        expectation: TL・会社からの期待コメント（None 可）
+
+    Returns:
+        CAREER_SYSTEM_PROMPT の {inventory_context} プレースホルダーに埋め込むテキスト
+    """
     lines = [f"【{year}年度 棚卸サマリー】"]
 
     if skills:

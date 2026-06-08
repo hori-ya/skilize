@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキルマスタ（IT分類・ITスキル）をExcelファイル（.xlsx）として出力するコンポーネント。
+ * IT分類シートとITスキルシートの2シートを生成する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.infrastructure.excel;
 
 import com.skilize.master.domain.ItSkill;
@@ -17,6 +32,14 @@ import static com.skilize.master.infrastructure.excel.ExcelCellWriter.*;
 @Component
 public class ItSkillExcelExporter {
 
+    /**
+     * ITスキルマスタをExcelファイルとして出力する。
+     * IT分類シート・ITスキルシートの2シートを生成して返す。
+     *
+     * @param categories IT分類一覧（全階層）
+     * @param skills     ITスキル一覧
+     * @return Excelファイルのバイト配列（.xlsx 形式）
+     */
     public byte[] export(List<ItSkillCategory> categories, List<ItSkill> skills) {
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
             XSSFCellStyle headerStyle = ExcelStyleHelper.createHeaderStyle(wb);

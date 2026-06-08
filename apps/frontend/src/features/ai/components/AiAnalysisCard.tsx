@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：AI
+ * 機能名      ：AI機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * AIキャリア分析カード。分析の状態（PENDING / PROCESSING / FAILED / 完了）に
+ * 応じた表示を行う。完了時は要約・強み・成長領域・推奨アクションを表示する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import type { AiAnalysis } from '../types/index';
 import { useTranslation } from 'react-i18next';
 
@@ -6,6 +21,12 @@ interface Props {
   fiscalYearName?: string;
 }
 
+/**
+ * AIキャリア分析カード。
+ *
+ * 分析状態に応じた表示を行う。PENDING/PROCESSING はスピナー付きで待機中を示し、
+ * FAILED はエラーメッセージを、完了時は分析結果の詳細を表示する。
+ */
 export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
   const { t } = useTranslation('inventory');
   const { status, analysisResult, errorMessage, createdAt, updatedAt } = analysis;

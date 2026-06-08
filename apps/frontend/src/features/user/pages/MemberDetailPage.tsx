@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：USR
+ * 機能名      ：ユーザー管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * メンバー詳細ページ。TL/ADMIN がメンバーの棚卸データを年度別に参照する。
+ * ITスキル・資格・セミナー・目標・AI分析・期待のタブで閲覧でき、
+ * フローティングパネルで面談メモを入力・保存できる。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useRef, useState, useMemo, Fragment } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { getMemberInventories } from '../api/userApi';
@@ -45,6 +61,11 @@ const STATUS_KEY: Record<string, string> = {
   COMPLETED: 'status.completed',
 };
 
+/**
+ * ITスキルの前年比較差分を表示するセルコンポーネント。
+ *
+ * 前年データがない場合は null を返し、差分に応じて上昇・下降・新規のスタイルで表示する。
+ */
 function DiffCell({ diff, hasPrevYear }: { diff: number | null | undefined; hasPrevYear: boolean }) {
   const { t } = useTranslation('user');
   if (!hasPrevYear) return null;
@@ -54,10 +75,24 @@ function DiffCell({ diff, hasPrevYear }: { diff: number | null | undefined; hasP
   return <span>—</span>;
 }
 
+/**
+ * 面談メモのキーを生成する。detailType と detailId を組み合わせて一意のキーを返す。
+ *
+ * @param detailType 明細種別（IT_SKILL / QUALIFICATION / SEMINAR / GOAL）
+ * @param detailId 明細 ID
+ * @returns Map のキーとして使用する文字列
+ */
 function buildNoteKey(detailType: DetailType, detailId: number): string {
   return `${detailType}|${detailId}`;
 }
 
+/**
+ * メンバー詳細ページ。
+ *
+ * TL/ADMIN がメンバーの棚卸データを年度別に参照する。
+ * ITスキル・資格・セミナー・目標・AI分析・期待のタブで閲覧でき、
+ * フローティングパネルで面談メモを入力・保存できる。
+ */
 export default function MemberDetailPage() {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
@@ -144,6 +179,7 @@ export default function MemberDetailPage() {
 
   const dragRef = useRef<{ onMove: (e: MouseEvent) => void; onUp: () => void } | null>(null);
 
+  // アンマウント時にドラッグ操作のイベントリスナーをクリーンアップする
   useEffect(() => {
     return () => {
       if (dragRef.current) {
@@ -210,6 +246,7 @@ export default function MemberDetailPage() {
     });
   }
 
+  // 選択年度が変わったときにすべてのフィルター状態をリセットする
   useEffect(() => {
     setItSkillSearch('');
     setItSkillCategory1Filter('');
@@ -226,6 +263,7 @@ export default function MemberDetailPage() {
     setGoalCategoryFilter('');
   }, [selectedId]);
 
+  // 初期表示時にメンバーの棚卸一覧と会計年度一覧を取得する
   useEffect(() => {
     getMemberInventories(userIdNum).then(res => {
       setInventories(res.data);
@@ -234,6 +272,7 @@ export default function MemberDetailPage() {
     getFiscalYears().then(res => setFiscalYears(res.data)).catch(() => {});
   }, [userIdNum]);
 
+  // 選択年度が変わったときに明細・目標・比較・面談メモなどの詳細データを一括取得する
   useEffect(() => {
     if (!selectedId) return;
     setLoading(true);
@@ -303,6 +342,7 @@ export default function MemberDetailPage() {
     }).finally(() => setLoading(false));
   }, [selectedId, inventories, isTlOrAdmin]);
 
+  // AI分析タブが初めて表示されたときにメンバーの AI分析データを取得する
   useEffect(() => {
     if (activeTab !== 'ai-analysis' || aiAnalysisLoaded || !isTlOrAdmin) return;
     getMemberAiAnalyses(userIdNum)
@@ -311,6 +351,7 @@ export default function MemberDetailPage() {
       .finally(() => setAiAnalysisLoaded(true));
   }, [activeTab, aiAnalysisLoaded, isTlOrAdmin, userIdNum]);
 
+  // 期待タブが初めて表示されたときにメンバーへの期待データを取得する
   useEffect(() => {
     if (activeTab !== 'expectations' || expLoaded || !isTlOrAdmin) return;
     setExpLoading(true);

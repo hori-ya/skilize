@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：SHR
+ * 機能名      ：共通
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * アプリ共通ナビゲーションバー。ロールに応じてメニュー項目を出し分け、
+ * ログアウト・パスワード変更・ADMIN ドロップダウンメニューを提供する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
@@ -5,6 +20,12 @@ import { useTranslation } from 'react-i18next';
 import SkilizeLogo from '../../shared/ui/SkilizeLogo';
 import AiSupportWidget from '../../features/ai/components/AiSupportWidget';
 
+/**
+ * アプリ共通ナビゲーションバー。
+ *
+ * ロール（GENERAL / TL / ADMIN）に応じてメニュー項目を出し分ける。
+ * ADMIN はドロップダウンメニューからマスタ管理・ユーザー照会へアクセスできる。
+ */
 export default function NavBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();

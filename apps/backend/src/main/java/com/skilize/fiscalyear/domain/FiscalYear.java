@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：FY
+ * 機能名      ：年度管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 年度マスタエンティティ。棚卸の対象年度（年度期間・入力受付期間・有効フラグ）を管理する。
+ * フィールドはドメインメソッド（create/update）でのみ変更する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.fiscalyear.domain;
 
 import jakarta.persistence.*;
@@ -59,6 +74,16 @@ public class FiscalYear {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * 年度エンティティを新規作成する。有効フラグは初期値 true。
+     *
+     * @param name           年度名（例: "2025年度"）
+     * @param startDate      年度開始日
+     * @param endDate        年度終了日
+     * @param inputStartDate 棚卸入力受付開始日（null で制限なし）
+     * @param inputEndDate   棚卸入力受付終了日（null で制限なし）
+     * @return 新規作成された年度エンティティ
+     */
     public static FiscalYear create(String name, LocalDate startDate, LocalDate endDate,
                                     LocalDate inputStartDate, LocalDate inputEndDate) {
         FiscalYear f = new FiscalYear();
@@ -71,6 +96,16 @@ public class FiscalYear {
         return f;
     }
 
+    /**
+     * 年度情報を更新する。active フラグで有効・無効を切り替えられる。
+     *
+     * @param name           年度名
+     * @param startDate      年度開始日
+     * @param endDate        年度終了日
+     * @param inputStartDate 棚卸入力受付開始日（null で制限なし）
+     * @param inputEndDate   棚卸入力受付終了日（null で制限なし）
+     * @param active         有効フラグ（false で論理無効化）
+     */
     public void update(String name, LocalDate startDate, LocalDate endDate,
                        LocalDate inputStartDate, LocalDate inputEndDate, boolean active) {
         this.name = name;

@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：CHT
+ * 機能名      ：グラフ・チャート
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * スキルバランスレーダーチャートカード。
+ * ITスキル大分類ごとの平均スキルレベルをレーダーチャートで表示する。
+ * 前年度データがある場合は比較表示する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import {
   ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis,
   PolarRadiusAxis, Radar, Legend, Tooltip,
@@ -8,6 +24,12 @@ interface Props {
   data: RadarResponse;
 }
 
+/**
+ * スキルバランスレーダーチャートカード。
+ *
+ * ITスキル大分類の平均スコアをレーダーチャートで可視化する。
+ * 前年度データがある場合は重ねて比較表示する。
+ */
 export default function RadarChartCard({ data }: Props) {
   const { currentFiscalYear, prevFiscalYear, hasCurrentYearData, maxScoreWeight, axes } = data;
 

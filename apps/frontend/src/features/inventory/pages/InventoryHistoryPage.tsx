@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 棚卸履歴ページ。年度を選択してITスキル・資格・セミナー・目標・AI分析を参照できる。
+ * 現在年度の ITスキル備考は編集が可能。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState, useMemo, Fragment } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,6 +47,11 @@ const ACHIEVEMENT_KEY: Record<string, string> = {
   NOT_ACHIEVED: 'historyPage.achievement.notAchieved',
 };
 
+/**
+ * ITスキルの前年比較差分を表示するセルコンポーネント。
+ *
+ * 前年データがない場合は null を返し、差分に応じて上昇・下降・新規のスタイルで表示する。
+ */
 function DiffCell({ diff, hasPrevYear }: { diff: number | null | undefined; hasPrevYear: boolean }) {
   const { t } = useTranslation('inventory');
   if (!hasPrevYear) return null;
@@ -41,6 +61,12 @@ function DiffCell({ diff, hasPrevYear }: { diff: number | null | undefined; hasP
   return <span>—</span>;
 }
 
+/**
+ * 棚卸履歴ページ。
+ *
+ * 年度セレクトボックスで表示年度を切り替え、ITスキル・資格・セミナー・目標・AI分析の
+ * 各タブで棚卸履歴を参照できる。
+ */
 export default function InventoryHistoryPage() {
   const navigate = useNavigate();
   const { t } = useTranslation('inventory');
@@ -98,6 +124,7 @@ export default function InventoryHistoryPage() {
   const [goalSearch, setGoalSearch] = useState('');
   const [goalCategoryFilter, setGoalCategoryFilter] = useState<'' | 'IT_SKILL' | 'QUALIFICATION' | 'AD'>('');
 
+  // 初期表示時に棚卸一覧・AI分析一覧・会計年度一覧を取得する
   useEffect(() => {
     getMyInventories().then(res => {
       setInventories(res.data);
@@ -107,6 +134,7 @@ export default function InventoryHistoryPage() {
     getFiscalYears().then(res => setFiscalYears(res.data)).catch(() => {});
   }, []);
 
+  // 選択年度が変わったときにすべてのフィルター状態をリセットする
   useEffect(() => {
     setItSkillSearch('');
     setItSkillCategory1Filter('');
@@ -123,6 +151,7 @@ export default function InventoryHistoryPage() {
     setGoalCategoryFilter('');
   }, [selectedId]);
 
+  // 選択年度が変わったときに明細・目標・比較・AI分析などの詳細データを一括取得する
   useEffect(() => {
     if (!selectedId) return;
     setLoading(true);

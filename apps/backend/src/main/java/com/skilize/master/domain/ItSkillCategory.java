@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキル分類マスタエンティティ。最大3階層の自己参照構造でITスキルを分類する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.domain;
 
 import jakarta.persistence.*;
@@ -62,6 +76,15 @@ public class ItSkillCategory {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * ITスキル分類を新規生成する（有効状態で初期化）。
+     *
+     * @param parentId  親分類ID（null の場合はルートカテゴリ）
+     * @param level     階層レベル（1=大分類 / 2=中分類 / 3=小分類）
+     * @param name      分類名
+     * @param sortOrder 一覧表示時の並び順
+     * @return 生成したITスキル分類エンティティ
+     */
     public static ItSkillCategory create(Integer parentId, short level, String name, int sortOrder) {
         ItSkillCategory c = new ItSkillCategory();
         c.parentId = parentId;
@@ -72,6 +95,13 @@ public class ItSkillCategory {
         return c;
     }
 
+    /**
+     * ITスキル分類の名称・表示順・有効フラグを更新する。
+     *
+     * @param name      新しい分類名
+     * @param sortOrder 新しい表示順
+     * @param active    有効フラグ（false で論理無効化）
+     */
     public void update(String name, int sortOrder, boolean active) {
         this.name = name;
         this.sortOrder = sortOrder;

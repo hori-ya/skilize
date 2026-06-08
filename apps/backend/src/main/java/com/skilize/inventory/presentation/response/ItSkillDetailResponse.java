@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキル明細1件のレスポンス。ITスキル明細一覧取得・保存の各エンドポイントのレスポンス要素として使用する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
 import com.skilize.inventory.domain.ItSkillDetail;
@@ -17,6 +31,12 @@ public record ItSkillDetailResponse(int id, Integer itSkillId, String itSkillNam
                                     String customSkillName, int skillLevelId,
                                     short levelValue, String remarks) {
 
+    /**
+     * ItSkillDetail エンティティから ItSkillDetailResponse を生成する。
+     *
+     * @param d ITスキル明細エンティティ
+     * @return ITスキル明細レスポンス
+     */
     public static ItSkillDetailResponse from(ItSkillDetail d) {
         return new ItSkillDetailResponse(d.getId(),
                 d.getItSkill() != null ? d.getItSkill().getId() : null,

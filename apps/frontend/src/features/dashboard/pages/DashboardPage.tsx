@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：DSH
+ * 機能名      ：ダッシュボード
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ダッシュボードページ。ログインユーザーの現在年度における棚卸状況を表示する。
+ * グラフ（レーダー・成長推移・ヒートマップ・タイムライン）および
+ * AI キャリア分析カードを併せて表示する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDashboard } from '../api/dashboardApi';
@@ -23,6 +39,12 @@ interface ChartsState {
   timeline: TimelineResponse | null;
 }
 
+/**
+ * ダッシュボードページ。
+ *
+ * ログインユーザーの現在年度の棚卸状況・チャート・AI 分析を表示する。
+ * 棚卸が未作成の場合は開始ボタンを表示し、作成済みの場合は継続・閲覧ボタンを表示する。
+ */
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { t } = useTranslation('inventory');
@@ -33,6 +55,7 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [aiAnalyses, setAiAnalyses] = useState<AiAnalysis[]>([]);
 
+  // 初期表示時にダッシュボード情報・グラフデータ・AI分析一覧を取得する
   useEffect(() => {
     getDashboard()
       .then(res => setDashboard(res.data))

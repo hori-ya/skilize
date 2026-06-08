@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 棚卸詳細レスポンス。GET /api/inventories/{id} のレスポンスとして使用する。
+ * サマリより多くのタイムスタンプ情報を含む。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
 import com.skilize.inventory.domain.Inventory;
@@ -20,6 +35,12 @@ public record InventoryDetailResponse(int id, int userId, FiscalYearRef fiscalYe
                                       String submittedAt, String goalReviewCompletedAt,
                                       String goalCompletedAt, String createdAt, String updatedAt) {
 
+    /**
+     * Inventory エンティティから InventoryDetailResponse を生成する。
+     *
+     * @param i 棚卸エンティティ
+     * @return 棚卸詳細レスポンス
+     */
     public static InventoryDetailResponse from(Inventory i) {
         return new InventoryDetailResponse(i.getId(), i.getUser().getId(),
                 new FiscalYearRef(i.getFiscalYear().getId(), i.getFiscalYear().getName()),

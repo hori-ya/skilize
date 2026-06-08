@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：FY
+ * 機能名      ：年度管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 年度1件情報のレスポンス。FiscalYear エンティティから生成する静的ファクトリメソッドを提供する。
+ * 日付は ISO-8601 形式の文字列（"yyyy-MM-dd"）で返す。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.fiscalyear.presentation.response;
 
 import com.skilize.fiscalyear.domain.FiscalYear;
@@ -16,6 +31,12 @@ import com.skilize.fiscalyear.domain.FiscalYear;
 public record FiscalYearResponse(int id, String name, String startDate, String endDate,
                                   String inputStartDate, String inputEndDate, boolean isActive) {
 
+    /**
+     * FiscalYear エンティティからレスポンスを生成する。日付は ISO-8601 形式の文字列に変換する。
+     *
+     * @param f 変換元の年度エンティティ
+     * @return 年度レスポンス
+     */
     public static FiscalYearResponse from(FiscalYear f) {
         return new FiscalYearResponse(
                 f.getId(), f.getName(),

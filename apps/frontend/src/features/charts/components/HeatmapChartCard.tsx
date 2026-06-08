@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：CHT
+ * 機能名      ：グラフ・チャート
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * スキル分布ヒートマップカード。
+ * ITスキル大分類・中分類ごとの平均スキルレベルを色の濃淡で表示する。
+ * セルにホバーするとスキル詳細のツールチップを表示する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { HeatmapCell, HeatmapResponse, HeatmapSkill } from '../types/index';
@@ -12,6 +28,13 @@ interface TooltipState {
   y: number;
 }
 
+/**
+ * セルの背景色を平均スキルレベルに応じて返す。
+ *
+ * @param avgLevelValue セルの平均スキルレベル値（null または 0 の場合は透明）
+ * @param maxLevelValue スキルレベルの最大値
+ * @returns CSS カラー文字列
+ */
 function cellColor(avgLevelValue: number | null, maxLevelValue: number): string {
   if (avgLevelValue === null || avgLevelValue === 0) return 'transparent';
   const ratio = Math.min(avgLevelValue / maxLevelValue, 1);
@@ -19,12 +42,25 @@ function cellColor(avgLevelValue: number | null, maxLevelValue: number): string 
   return `rgba(61, 109, 179, ${opacity.toFixed(2)})`;
 }
 
+/**
+ * セルのテキスト色を平均スキルレベルに応じて返す。
+ *
+ * @param avgLevelValue セルの平均スキルレベル値
+ * @param maxLevelValue スキルレベルの最大値
+ * @returns CSS カラー文字列
+ */
 function cellTextColor(avgLevelValue: number | null, maxLevelValue: number): string {
   if (avgLevelValue === null || avgLevelValue === 0) return 'var(--color-text-muted)';
   const ratio = Math.min(avgLevelValue / maxLevelValue, 1);
   return ratio >= 0.6 ? '#fff' : 'var(--color-text)';
 }
 
+/**
+ * スキル分布ヒートマップカード。
+ *
+ * ITスキルの大分類・中分類ごとの平均スキルレベルを色の濃淡で可視化する。
+ * セルにホバーするとスキル詳細のツールチップを表示する。
+ */
 export default function HeatmapChartCard({ data }: Props) {
   const { currentFiscalYear, hasCurrentYearData, maxLevelValue, rows } = data;
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);

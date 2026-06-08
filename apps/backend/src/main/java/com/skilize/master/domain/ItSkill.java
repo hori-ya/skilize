@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキルマスタエンティティ。棚卸で採点対象となるITスキルを管理する。
+ * カスタムスキル名のマスタ昇格にも使用される。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.domain;
 
 import jakarta.persistence.*;
@@ -57,6 +72,15 @@ public class ItSkill {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * ITスキルを新規生成する（有効状態で初期化）。
+     *
+     * @param category    所属するITスキル分類
+     * @param name        スキル名
+     * @param description スキルの補足説明（任意。null 可）
+     * @param sortOrder   一覧表示時の並び順
+     * @return 生成したITスキルエンティティ
+     */
     public static ItSkill create(ItSkillCategory category, String name, String description, int sortOrder) {
         ItSkill s = new ItSkill();
         s.category = category;
@@ -67,6 +91,15 @@ public class ItSkill {
         return s;
     }
 
+    /**
+     * ITスキルの各フィールドを更新する。
+     *
+     * @param category    新しい所属分類
+     * @param name        新しいスキル名
+     * @param description 新しい説明（null 可）
+     * @param sortOrder   新しい表示順
+     * @param active      有効フラグ（false で論理無効化）
+     */
     public void update(ItSkillCategory category, String name, String description, int sortOrder, boolean active) {
         this.category = category;
         this.name = name;

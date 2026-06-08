@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキルマスタ管理ページ。ITスキルカテゴリ・ITスキル・未登録カスタムスキルの昇格を
+ * タブ切り替えで管理する。Excel インポート・エクスポート機能も提供する。
+ * ADMIN ロールのみアクセス可能。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -23,6 +39,11 @@ interface CatForm {
 
 type CatModalMode = 'create' | 'edit';
 
+/**
+ * ITスキルカテゴリ管理タブ。
+ *
+ * カテゴリ（Lv1/Lv2/Lv3）の一覧表示・新規作成・編集を行う。
+ */
 function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; onReload: () => void }) {
   const { t } = useTranslation('master');
   const [modalOpen, setModalOpen] = useState(false);
@@ -214,6 +235,11 @@ interface SkillForm {
 
 type SkillModalMode = 'create' | 'edit';
 
+/**
+ * ITスキル管理タブ。
+ *
+ * ITスキルの一覧表示・カテゴリフィルタ・新規作成・編集を行う。
+ */
 function SkillTab({ skills, categories, onReload }: {
   skills: ItSkill[];
   categories: ItSkillCategory[];
@@ -497,6 +523,11 @@ interface PromoteForm {
   sortOrder: string;
 }
 
+/**
+ * ITスキル昇格タブ。
+ *
+ * ユーザーが自由入力したカスタムITスキル名を正式マスタとして登録（昇格）する。
+ */
 function PromotionTab({ categories, onSkillsReload }: {
   categories: ItSkillCategory[];
   onSkillsReload: () => void;
@@ -524,6 +555,7 @@ function PromotionTab({ categories, onSkillsReload }: {
       .finally(() => setTabLoading(false));
   };
 
+  // 初期表示時に未登録カスタムITスキル一覧を取得する
   useEffect(() => { loadItems(); }, []);
 
   const openPromote = (item: CustomUnregisteredItem) => {
@@ -692,6 +724,12 @@ function PromotionTab({ categories, onSkillsReload }: {
 
 type TabKey = 'categories' | 'skills' | 'promote';
 
+/**
+ * ITスキルマスタ管理ページ。
+ *
+ * カテゴリ・スキル・昇格の3タブで構成されるITスキルマスタ管理画面。
+ * Excel インポート・エクスポートもサポートする。ADMIN ロールのみアクセス可能。
+ */
 export default function ItSkillMasterPage() {
   const { t } = useTranslation('master');
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
@@ -717,6 +755,7 @@ export default function ItSkillMasterPage() {
       .finally(() => setLoading(false));
   };
 
+  // 初期表示時にITスキルカテゴリとITスキル一覧を取得する
   useEffect(() => { loadAll(); }, []);
 
   // ⑫: エラーハンドリングを追加

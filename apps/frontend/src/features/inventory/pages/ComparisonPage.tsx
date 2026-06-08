@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 棚卸比較ページ。今年度と前年度の ITスキルレベルを比較し、差分を確認する。
+ * レベルが変化した項目には備考の入力を促す。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { Fragment, useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getComparison, patchItSkillRemarks } from '../api/inventoryApi';
@@ -9,6 +24,12 @@ import { IconArrowRight } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 import { useTranslation } from 'react-i18next';
 
+/**
+ * 棚卸比較ページ。
+ *
+ * 今年度と前年度の ITスキルレベルを比較し、差分（上昇・下降）を一覧表示する。
+ * レベルが変化した項目には備考入力を促す。
+ */
 export default function ComparisonPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -20,6 +41,7 @@ export default function ComparisonPage() {
   const [editingRemarks, setEditingRemarks] = useState<Record<number, string>>({});
   const [savingId, setSavingId] = useState<number | null>(null);
 
+  // 初期表示時に比較データと ITスキルマスタを取得する
   useEffect(() => {
     Promise.all([
       getComparison(inventoryId),

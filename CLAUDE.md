@@ -215,3 +215,4 @@ docker compose up db
 | `.claude/context/tech-stack.md` | 技術スタック詳細・Docker 構成・ローカルポート一覧 |
 | `.claude/context/conventions.md` | 命名規則詳細・DTO 命名・i18n キー命名・禁止パターン |
 | `.claude/context/environment.md` | 環境変数テーブル・`.env` 設定ガイド |
+| `.claude/context/comment-rules.md` | コメント記載標準書（ファイルヘッダ・クラス・メソッド・業務ロジック・AI 特別ルール） |

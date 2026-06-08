@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 資格マスタ管理ページ。資格カテゴリ・資格・未登録カスタム資格の昇格を
+ * タブ切り替えで管理する。Excel インポート・エクスポート機能も提供する。
+ * ADMIN ロールのみアクセス可能。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +34,11 @@ type ModalMode = 'create' | 'edit';
 
 interface CatForm { name: string; sortOrder: string; active: boolean }
 
+/**
+ * 資格カテゴリ管理タブ。
+ *
+ * 資格カテゴリの一覧表示・新規作成・編集を行う。
+ */
 function CategoryTab({ categories, onReload }: { categories: QualificationCategory[]; onReload: () => void }) {
   const { t } = useTranslation('master');
   const [modalOpen, setModalOpen] = useState(false);
@@ -160,6 +181,11 @@ interface QualForm {
   active: boolean;
 }
 
+/**
+ * 資格管理タブ。
+ *
+ * 資格の一覧表示・カテゴリフィルタ・新規作成・編集を行う。
+ */
 function QualificationTab({ qualifications, categories, onReload }: {
   qualifications: Qualification[];
   categories: QualificationCategory[];
@@ -351,6 +377,11 @@ interface PromoteForm {
   sortOrder: string;
 }
 
+/**
+ * 資格昇格タブ。
+ *
+ * ユーザーが自由入力したカスタム資格名を正式マスタとして登録（昇格）する。
+ */
 function QualPromotionTab({ categories, onQualReload }: {
   categories: QualificationCategory[];
   onQualReload: () => void;
@@ -373,6 +404,7 @@ function QualPromotionTab({ categories, onQualReload }: {
       .finally(() => setTabLoading(false));
   };
 
+  // 初期表示時に未登録カスタム資格一覧を取得する
   useEffect(() => { loadItems(); }, []);
 
   const openPromote = (item: CustomUnregisteredItem) => {
@@ -514,6 +546,12 @@ function QualPromotionTab({ categories, onQualReload }: {
 
 type TabKey = 'categories' | 'qualifications' | 'promote';
 
+/**
+ * 資格マスタ管理ページ。
+ *
+ * 資格カテゴリ・資格・昇格の3タブで構成される資格マスタ管理画面。
+ * Excel インポート・エクスポートもサポートする。ADMIN ロールのみアクセス可能。
+ */
 export default function QualificationMasterPage() {
   const { t } = useTranslation('master');
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
@@ -538,6 +576,7 @@ export default function QualificationMasterPage() {
       .finally(() => setLoading(false));
   };
 
+  // 初期表示時に資格カテゴリと資格一覧を取得する
   useEffect(() => { loadAll(); }, []);
 
   const handleDownload = async () => {

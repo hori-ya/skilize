@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 目標1件のレスポンス。目標一覧取得・目標保存の各エンドポイントのレスポンス要素として使用する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
 import com.skilize.inventory.domain.InventoryGoal;
@@ -24,6 +38,12 @@ public record GoalResponse(int id, String goalCategory,
                            Integer adSeminarId, String adSeminarName,
                            String customName, String targetPeriod, String reason) {
 
+    /**
+     * InventoryGoal エンティティから GoalResponse を生成する。
+     *
+     * @param g 目標エンティティ
+     * @return 目標レスポンス
+     */
     public static GoalResponse from(InventoryGoal g) {
         return new GoalResponse(g.getId(), g.getGoalCategory().name(),
                 g.getItSkill() != null ? g.getItSkill().getId() : null,

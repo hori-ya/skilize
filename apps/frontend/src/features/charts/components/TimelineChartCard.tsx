@@ -1,3 +1,19 @@
+/*******************************************************************************
+ * 機能ID      ：CHT
+ * 機能名      ：グラフ・チャート
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ラーニングタイムラインカード。
+ * 資格取得・セミナー受講の実績と今年度の目標を時系列で表示する。
+ * 実績（ACHIEVEMENT）と学習活動（ACTIVITY）の2レーンで構成される。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import type { TimelineEvent, TimelineEventType } from '../types/index';
 
 interface Props {
@@ -22,11 +38,23 @@ const EVENT_ICON: Record<TimelineEventType, string> = {
   GOAL_AD: '🎯',
 };
 
+/**
+ * 年月文字列（YYYY-MM）を日本語表示形式（YYYY年M月）に変換する。
+ *
+ * @param yearMonth 年月文字列（例: "2025-04"）
+ * @returns 日本語表示文字列（例: "2025年4月"）
+ */
 function formatYearMonth(yearMonth: string): string {
   const [year, month] = yearMonth.split('-');
   return `${year}年${parseInt(month)}月`;
 }
 
+/**
+ * ラーニングタイムラインカード。
+ *
+ * 資格取得・セミナー受講の実績と目標を時系列で表示する。
+ * ACHIEVEMENT レーンと ACTIVITY レーンの2段構成で描画する。
+ */
 export default function TimelineChartCard({ events }: Props) {
   if (events.length === 0) {
     return (

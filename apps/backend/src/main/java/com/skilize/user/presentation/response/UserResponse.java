@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：USR
+ * 機能名      ：ユーザー管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ユーザー1件情報のレスポンス（ADMIN 向け管理画面用）。
+ * User エンティティと所属TL名マップから生成する静的ファクトリメソッドを提供する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.user.presentation.response;
 
 import com.skilize.user.domain.User;
@@ -22,6 +37,13 @@ public record UserResponse(int id, String userId, String name, String email, Str
                             Integer tlUserId, String tlName, boolean isInitialPassword,
                             boolean isActive, String createdAt) {
 
+    /**
+     * User エンティティと所属TL名マップからレスポンスを生成する。
+     *
+     * @param u        変換元のユーザーエンティティ
+     * @param nameById ユーザー内部PK → 氏名のマップ（TL名の解決に使用）
+     * @return ユーザーレスポンス
+     */
     public static UserResponse from(User u, Map<Integer, String> nameById) {
         return new UserResponse(
                 u.getId(), u.getUserId(), u.getName(), u.getEmail(),

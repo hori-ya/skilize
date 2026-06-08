@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 棚卸入力ページ。ITスキル・資格・セミナーのタブ切り替えで入力し、
+ * 全 ITスキルの評価が完了したら棚卸を提出できる。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { Fragment, useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
@@ -46,6 +61,12 @@ interface SeminarRow {
   isAd: boolean;
 }
 
+/**
+ * 棚卸入力ページ。
+ *
+ * ITスキル・資格・セミナーのタブを切り替えて棚卸データを入力する。
+ * 全 ITスキルの評価が完了したら棚卸を提出でき、比較ページへ遷移する。
+ */
 export default function InventoryPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -86,6 +107,7 @@ export default function InventoryPage() {
   const [qualSearch, setQualSearch] = useState('');
   const [semSearch, setSemSearch] = useState('');
 
+  // 初期表示時に棚卸データとマスタ情報を一括取得し、前年度からのデータ引き継ぎも行う
   useEffect(() => {
     Promise.all([
       getInventory(inventoryId),

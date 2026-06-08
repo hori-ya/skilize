@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * セミナー明細1件のレスポンス。セミナー明細一覧取得・保存の各エンドポイントのレスポンス要素として使用する。
+ * ADセミナーと自由入力セミナーの両方のデータを統一形式で表現する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
 import com.skilize.inventory.domain.SeminarDetail;
@@ -22,6 +37,12 @@ public record SeminarDetailResponse(int id, Integer adSeminarId, String adSemina
                                     String seminarName, Integer seminarCategoryId, String seminarCategoryName,
                                     String attendedYearMonth, String remarks) {
 
+    /**
+     * SeminarDetail エンティティから SeminarDetailResponse を生成する。
+     *
+     * @param d セミナー明細エンティティ
+     * @return セミナー明細レスポンス
+     */
     public static SeminarDetailResponse from(SeminarDetail d) {
         return new SeminarDetailResponse(d.getId(),
                 d.getAdSeminar() != null ? d.getAdSeminar().getId() : null,

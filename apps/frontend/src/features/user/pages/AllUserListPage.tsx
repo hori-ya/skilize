@@ -1,3 +1,17 @@
+/*******************************************************************************
+ * 機能ID      ：USR
+ * 機能名      ：ユーザー管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 全ユーザー照会ページ（ADMIN 専用）。名前・チーム・ロール・棚卸ステータスでフィルタリングできる。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTeamMembers } from '../api/userApi';
@@ -25,6 +39,12 @@ const ROLE_KEY: Record<string, string> = {
   ADMIN: 'role.admin',
 };
 
+/**
+ * 全ユーザー照会ページ（ADMIN 専用）。
+ *
+ * 名前・チーム・ロール・棚卸ステータスのフィルタリング機能を持つ。
+ * 各ユーザーの詳細はメンバー詳細ページへ遷移して確認できる。
+ */
 export default function AllUserListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation('user');
@@ -38,6 +58,7 @@ export default function AllUserListPage() {
   const [filterRole, setFilterRole] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
+  // 初期表示時に全ユーザー（チームメンバー）一覧を取得する
   useEffect(() => {
     getTeamMembers()
       .then(res => setMembers(res.data))

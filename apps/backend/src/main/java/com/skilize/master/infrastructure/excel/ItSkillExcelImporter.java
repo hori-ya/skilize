@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキルマスタ ExcelファイルをパースしてIT分類行・ITスキル行の中間データとして返すコンポーネント。
+ * バリデーションはMasterExcelServiceで行う。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.infrastructure.excel;
 
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +40,13 @@ public class ItSkillExcelImporter {
     public record SkillRow(Integer id, Integer categoryId, String name, String description, Boolean active, int rowNum, int siblingOrder) {}
     public record ItSkillImportData(List<CategoryRow> categoryRows, List<SkillRow> skillRows) {}
 
+    /**
+     * ITスキルマスタExcelファイルをパースして中間データを返す。
+     * ファイル形式不正の場合は ExcelFormatException をスローする。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return パース済み中間データ（IT分類行リスト・ITスキル行リスト）
+     */
     public ItSkillImportData parse(MultipartFile file) {
         try (InputStream is = file.getInputStream();
              XSSFWorkbook wb = new XSSFWorkbook(is)) {

@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 資格マスタエンティティ。棚卸で取得状況を記録する資格の一覧を管理する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.domain;
 
 import jakarta.persistence.*;
@@ -56,6 +70,15 @@ public class Qualification {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * 資格を新規生成する（有効状態で初期化）。
+     *
+     * @param category    所属する資格分類（未分類の場合は null）
+     * @param name        資格名
+     * @param description 資格の補足説明（任意。null 可）
+     * @param sortOrder   一覧表示時の並び順
+     * @return 生成した資格エンティティ
+     */
     public static Qualification create(QualificationCategory category, String name, String description, int sortOrder) {
         Qualification q = new Qualification();
         q.category = category;
@@ -66,6 +89,15 @@ public class Qualification {
         return q;
     }
 
+    /**
+     * 資格の各フィールドを更新する。
+     *
+     * @param category    新しい所属分類（null 可）
+     * @param name        新しい資格名
+     * @param description 新しい説明（null 可）
+     * @param sortOrder   新しい表示順
+     * @param active      有効フラグ（false で論理無効化）
+     */
     public void update(QualificationCategory category, String name, String description, int sortOrder, boolean active) {
         this.category = category;
         this.name = name;

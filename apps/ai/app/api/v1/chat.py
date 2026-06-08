@@ -1,3 +1,19 @@
+# ******************************************************************************
+# 機能ID      ：AI
+# 機能名      ：AI機能
+# 作成日      ：2026/06/08
+# 作成者      ：hori-ya
+# ------------------------------------------------------------------------------
+# 機能概要：
+# AIチャットのエンドポイント定義。
+# Spring Boot バックエンドからの HTTP プロキシリクエストを受け付け、
+# モード別プロンプトで LLM を呼び出し、応答を返す。
+# ------------------------------------------------------------------------------
+# 更新履歴：
+# 2026/06/08 hori-ya 初版作成
+# ------------------------------------------------------------------------------
+# Copyright (C) 2026 Skilize Project. All Rights Reserved.
+# ******************************************************************************
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +28,22 @@ router = APIRouter()
 
 @router.post("/chat", dependencies=[Depends(verify_internal_key)])
 def chat(req: ChatRequest) -> ChatResponse:
+    """
+    AIチャットエンドポイント。
+
+    モード（NORMAL / PROOFREADING / CAREER / HELP）に応じたシステムプロンプトで
+    LLM を呼び出し、応答テキストを返す。
+    LLM 処理中に例外が発生した場合は 500 Internal Server Error を返す。
+
+    Args:
+        req: チャットリクエスト（message・mode・userId・history）
+
+    Returns:
+        ChatResponse（LLM の応答テキスト）
+
+    Raises:
+        HTTPException: LLM 処理失敗時に 500 を送出
+    """
     logger.info("Chat request: user=%s mode=%s", req.userId, req.mode)
     try:
         history = [{"role": m.role, "content": m.content} for m in req.history]

@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ITスキル棚卸明細エンティティ。1棚卸あたり複数行のITスキル採点を管理する。
+ * マスタスキルとカスタムスキル名のいずれか一方が必ず設定される。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.domain;
 
 import com.skilize.master.domain.ItSkill;
@@ -59,6 +74,16 @@ public class ItSkillDetail {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * ITスキル明細を新規作成する。
+     *
+     * @param inventory       紐付ける棚卸
+     * @param itSkill         ITスキルマスタ参照（カスタムスキルの場合は null）
+     * @param customSkillName カスタムスキル名（itSkill が null の場合に使用）
+     * @param skillLevel      スキルレベルマスタ参照
+     * @param remarks         備考
+     * @return 新規作成したITスキル明細エンティティ（未永続化）
+     */
     public static ItSkillDetail create(Inventory inventory, ItSkill itSkill, String customSkillName,
                                        SkillLevel skillLevel, String remarks) {
         ItSkillDetail d = new ItSkillDetail();
@@ -70,6 +95,11 @@ public class ItSkillDetail {
         return d;
     }
 
+    /**
+     * 備考を更新する。スキルレベルを変えずに備考のみ部分更新する際に使用する。
+     *
+     * @param remarks 更新後の備考
+     */
     public void updateRemarks(String remarks) {
         this.remarks = remarks;
     }

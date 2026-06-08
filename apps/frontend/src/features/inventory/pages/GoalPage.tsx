@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 目標設定ページ。ITスキル・資格・AD セミナーの目標を設定する。
+ * ITスキル/資格 1件以上・AD 2件以上の条件を満たして完了すると棚卸が COMPLETED になる。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getGoals, saveGoals, completeGoal } from '../api/inventoryApi';
@@ -28,6 +43,12 @@ const CATEGORY_KEY: Record<GoalCategory, string> = {
   AD: 'goalPage.goalCategory.ad',
 };
 
+/**
+ * 目標設定ページ。
+ *
+ * ITスキル・資格・AD セミナーの目標を設定する。
+ * ITスキル/資格 1件以上・AD 2件以上の条件を満たして完了すると棚卸が COMPLETED になる。
+ */
 export default function GoalPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -44,6 +65,7 @@ export default function GoalPage() {
   const [error, setError] = useState('');
   const [saveMessage, setSaveMessage] = useState('');
 
+  // 初期表示時に既存の目標データとマスタ情報を取得する
   useEffect(() => {
     Promise.all([
       getGoals(inventoryId),

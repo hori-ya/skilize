@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * スキルレベルマスタエンティティ。ITスキル採点に使用する段階評価（例: 1〜5）を定義する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.domain;
 
 import jakarta.persistence.*;
@@ -49,6 +63,14 @@ public class SkillLevel {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * スキルレベルを新規生成する（有効状態で初期化）。
+     *
+     * @param levelValue  レベル値（評価段階の数値）
+     * @param description レベルの説明テキスト
+     * @param scoreWeight スコア集計時の重み（0 はスコアに寄与しない）
+     * @return 生成したスキルレベルエンティティ
+     */
     public static SkillLevel create(Short levelValue, String description, int scoreWeight) {
         SkillLevel s = new SkillLevel();
         s.levelValue = levelValue;
@@ -58,6 +80,14 @@ public class SkillLevel {
         return s;
     }
 
+    /**
+     * スキルレベルの各フィールドを更新する。
+     *
+     * @param levelValue  新しいレベル値
+     * @param description 新しい説明テキスト
+     * @param active      有効フラグ（false で論理無効化）
+     * @param scoreWeight 新しいスコア重み
+     */
     public void update(Short levelValue, String description, boolean active, int scoreWeight) {
         this.levelValue = levelValue;
         this.description = description;

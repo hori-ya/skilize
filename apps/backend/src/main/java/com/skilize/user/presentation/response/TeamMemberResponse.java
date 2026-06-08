@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：USR
+ * 機能名      ：ユーザー管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * チームメンバー1件のレスポンス（TL/ADMIN 向け）。
+ * メンバーの基本情報に加え、当年度の棚卸サマリを内包する。棚卸未作成の場合は null。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.user.presentation.response;
 
 import com.skilize.inventory.domain.Inventory;
@@ -32,6 +47,14 @@ public record TeamMemberResponse(int id, String userId, String name, String emai
      */
     public record CurrentInventoryInfo(int id, FiscalYearRef fiscalYear, String status) {}
 
+    /**
+     * User エンティティ・当年度棚卸・所属TL名マップからレスポンスを生成する。
+     *
+     * @param u        変換元のユーザーエンティティ
+     * @param inv      当年度の棚卸エンティティ（棚卸未作成の場合は null）
+     * @param nameById ユーザー内部PK → 氏名のマップ（TL名の解決に使用）
+     * @return チームメンバーレスポンス
+     */
     public static TeamMemberResponse from(User u, Inventory inv, Map<Integer, String> nameById) {
         CurrentInventoryInfo invInfo = inv == null ? null : new CurrentInventoryInfo(
                 inv.getId(),

@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 前年度目標の振り返りページ。前年度に設定した目標の達成状況と所感を入力する。
+ * 振り返り完了後は目標設定ページへ遷移する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getGoalReview, saveGoalReview, completeGoalReview } from '../api/inventoryApi';
@@ -18,6 +33,12 @@ const GOAL_CATEGORY_KEY: Record<string, string> = {
   AD: 'goalReviewPage.goalCategory.ad',
 };
 
+/**
+ * 前年度目標の振り返りページ。
+ *
+ * 前年度に設定した目標ごとに達成状況（ACHIEVED / PARTIAL / NOT_ACHIEVED）と
+ * 振り返りコメントを入力する。振り返り完了後は目標設定ページへ遷移する。
+ */
 export default function GoalReviewPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -37,6 +58,7 @@ export default function GoalReviewPage() {
     { value: 'NOT_ACHIEVED', label: t('goalReviewPage.achievement.notAchieved') },
   ];
 
+  // 初期表示時に前年度目標の振り返りデータを取得する
   useEffect(() => {
     getGoalReview(inventoryId).then(res => {
       setGoalReview(res.data);

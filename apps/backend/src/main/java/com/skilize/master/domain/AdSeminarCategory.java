@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ADセミナー分類マスタエンティティ。ADセミナーを分類するフラットなカテゴリ（階層なし）を管理する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.domain;
 
 import jakarta.persistence.*;
@@ -45,6 +59,13 @@ public class AdSeminarCategory {
     @Column(insertable = false, updatable = false)
     private OffsetDateTime updatedAt;
 
+    /**
+     * ADセミナー分類を新規生成する（有効状態で初期化）。
+     *
+     * @param name      分類名
+     * @param sortOrder 一覧表示時の並び順
+     * @return 生成したADセミナー分類エンティティ
+     */
     public static AdSeminarCategory create(String name, int sortOrder) {
         AdSeminarCategory c = new AdSeminarCategory();
         c.name = name;
@@ -53,6 +74,13 @@ public class AdSeminarCategory {
         return c;
     }
 
+    /**
+     * ADセミナー分類の名称・表示順・有効フラグを更新する。
+     *
+     * @param name      新しい分類名
+     * @param sortOrder 新しい表示順
+     * @param active    有効フラグ（false で論理無効化）
+     */
     public void update(String name, int sortOrder, boolean active) {
         this.name = name;
         this.sortOrder = sortOrder;

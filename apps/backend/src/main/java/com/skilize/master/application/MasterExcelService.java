@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * マスタデータ（ITスキル・資格・ADセミナー）のExcel出力・取込サービス。
+ * 取込は all-or-nothing で処理し、バリデーションエラー時は全件ロールバックする。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.application;
 
 import com.skilize.master.application.query.MasterImportErrorDetail;
@@ -41,6 +56,11 @@ public class MasterExcelService {
 
     // ─── 出力 ───────────────────────────────────────────────────────────────────
 
+    /**
+     * ITスキルマスタ（IT分類・ITスキル）をExcelファイルとして出力する。
+     *
+     * @return Excelファイルのバイト配列（.xlsx 形式）
+     */
     @Transactional(readOnly = true)
     public byte[] exportItSkillExcel() {
         List<ItSkillCategory> categories = itSkillCategoryRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc();
@@ -48,6 +68,11 @@ public class MasterExcelService {
         return itSkillExporter.export(categories, skills);
     }
 
+    /**
+     * 資格マスタ（資格カテゴリ・参考資格）をExcelファイルとして出力する。
+     *
+     * @return Excelファイルのバイト配列（.xlsx 形式）
+     */
     @Transactional(readOnly = true)
     public byte[] exportQualificationExcel() {
         List<QualificationCategory> categories = qualificationCategoryRepository.findAllByOrderBySortOrderAsc();
@@ -55,6 +80,11 @@ public class MasterExcelService {
         return qualificationExporter.export(categories, qualifications);
     }
 
+    /**
+     * ADセミナーマスタ（ADカテゴリ・ADセミナー）をExcelファイルとして出力する。
+     *
+     * @return Excelファイルのバイト配列（.xlsx 形式）
+     */
     @Transactional(readOnly = true)
     public byte[] exportAdSeminarExcel() {
         List<AdSeminarCategory> categories = adSeminarCategoryRepository.findAllByOrderBySortOrderAsc();
@@ -64,6 +94,14 @@ public class MasterExcelService {
 
     // ─── 取込: ITスキル ──────────────────────────────────────────────────────────
 
+    /**
+     * ITスキルマスタ ExcelファイルをDB に取り込む。
+     * バリデーションエラーがある場合はエラー詳細を返し、DBへの反映はロールバックする。
+     * Excel に存在しないDB上の有効レコードは論理削除する（all-or-nothing）。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return 取込結果（作成件数・更新件数・削除件数 またはエラー詳細）
+     */
     @Transactional
     public MasterImportQueryResult importItSkillExcel(MultipartFile file) {
         ItSkillExcelImporter.ItSkillImportData data = itSkillImporter.parse(file);
@@ -159,6 +197,14 @@ public class MasterExcelService {
 
     // ─── 取込: 参考資格 ──────────────────────────────────────────────────────────
 
+    /**
+     * 資格マスタ ExcelファイルをDB に取り込む。
+     * バリデーションエラーがある場合はエラー詳細を返し、DBへの反映はロールバックする。
+     * Excel に存在しないDB上の有効レコードは論理削除する（all-or-nothing）。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return 取込結果（作成件数・更新件数・削除件数 またはエラー詳細）
+     */
     @Transactional
     public MasterImportQueryResult importQualificationExcel(MultipartFile file) {
         QualificationExcelImporter.QualificationImportData data = qualificationImporter.parse(file);
@@ -240,6 +286,14 @@ public class MasterExcelService {
 
     // ─── 取込: ADマスタ ──────────────────────────────────────────────────────────
 
+    /**
+     * ADセミナーマスタ ExcelファイルをDB に取り込む。
+     * バリデーションエラーがある場合はエラー詳細を返し、DBへの反映はロールバックする。
+     * Excel に存在しないDB上の有効レコードは論理削除する（all-or-nothing）。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return 取込結果（作成件数・更新件数・削除件数 またはエラー詳細）
+     */
     @Transactional
     public MasterImportQueryResult importAdSeminarExcel(MultipartFile file) {
         AdSeminarExcelImporter.AdSeminarImportData data = adSeminarImporter.parse(file);

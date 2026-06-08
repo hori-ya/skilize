@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：AUTH
+ * 機能名      ：認証機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ログイン済みユーザー向けのパスワード変更ページ。
+ * 現在のパスワードと新しいパスワードを入力してパスワードを変更する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useState, type FormEvent } from 'react';
 import NavBar from '../../../app/layouts/NavBar';
 import { useAuth } from '../../../app/providers/AuthProvider';
@@ -5,6 +20,12 @@ import { IconLock } from '../../../shared/ui/Icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
+/**
+ * ログイン済みユーザー向けのパスワード変更ページ。
+ *
+ * 現在のパスワードと新しいパスワードを入力してパスワードを変更する。
+ * 変更成功時はページ内に成功メッセージを表示する。
+ */
 export default function MyPasswordPage() {
   const { changePassword } = useAuth();
   const { t } = useTranslation('auth');

@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：AUTH
+ * 機能名      ：認証機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 初回ログイン時のパスワード変更ページ。初期パスワードのまま通常ページへアクセスした際に
+ * リダイレクトされる。変更完了後はダッシュボードへ遷移する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthProvider';
@@ -5,6 +20,12 @@ import { IconLock } from '../../../shared/ui/Icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
+/**
+ * 初回ログイン時のパスワード変更ページ。
+ *
+ * 新しいパスワードと確認用パスワードを入力してパスワードを変更する。
+ * 変更完了後はダッシュボードへ遷移する。
+ */
 export default function ChangePasswordPage() {
   const { user, changePassword } = useAuth();
   const navigate = useNavigate();

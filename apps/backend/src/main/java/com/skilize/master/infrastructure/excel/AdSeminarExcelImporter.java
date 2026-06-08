@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * ADセミナーマスタ ExcelファイルをパースしてカテゴリRow・セミナーRowの中間データとして返すコンポーネント。
+ * バリデーションはMasterExcelServiceで行う。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.master.infrastructure.excel;
 
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +41,13 @@ public class AdSeminarExcelImporter {
                              Boolean active, int rowNum, int siblingOrder) {}
     public record AdSeminarImportData(List<CategoryRow> categoryRows, List<SeminarRow> seminarRows) {}
 
+    /**
+     * ADセミナーマスタExcelファイルをパースして中間データを返す。
+     * ファイル形式不正の場合は ExcelFormatException をスローする。
+     *
+     * @param file アップロードされたExcelファイル（.xlsx）
+     * @return パース済み中間データ（ADカテゴリ行リスト・ADセミナー行リスト）
+     */
     public AdSeminarImportData parse(MultipartFile file) {
         try (InputStream is = file.getInputStream();
              XSSFWorkbook wb = new XSSFWorkbook(is)) {

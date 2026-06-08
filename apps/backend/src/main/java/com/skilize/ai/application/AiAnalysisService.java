@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：AI
+ * 機能名      ：AI機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * AI キャリア分析サービス。棚卸完了イベント受信後、Python FastAPI（/analyze）を非同期で呼び出す。
+ * PENDING レコードのDB保存後にAIサービスへHTTPリクエストを送り、既存レコードは再分析時にリセットする。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.ai.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +53,12 @@ public class AiAnalysisService {
     @Value("${ai.secret.key:}")
     private String aiSecretKey;
 
+    /**
+     * 指定ユーザーのAIキャリア分析結果一覧を年度降順で返す。
+     *
+     * @param userId ユーザー内部ID
+     * @return 分析結果クエリ結果リスト（新しい年度順）
+     */
     @Transactional(readOnly = true)
     public List<AiAnalysisQueryResult> findByUserId(int userId) {
         return repository.findByUserIdOrderByFiscalYearIdDesc(userId)
@@ -46,6 +67,13 @@ public class AiAnalysisService {
                 .toList();
     }
 
+    /**
+     * PENDING状態の分析レコードをupsertしてAIサービスへの分析をトリガーする。
+     * 既存レコードがある場合はPENDINGにリセットして再分析する。非同期（@Async）で実行する。
+     *
+     * @param userId       分析対象ユーザーの内部ID
+     * @param fiscalYearId 分析対象年度の内部ID
+     */
     // @Async: EventListener から呼ばれる場合はすでに別スレッドになるが、
     //         直接呼び出し時の非同期保証のために付与している
     @Async

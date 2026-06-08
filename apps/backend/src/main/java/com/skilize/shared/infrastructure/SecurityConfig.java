@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：SHR
+ * 機能名      ：共通
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * Spring Security の全体設定クラス。
+ * フィルターチェーン・CORS・BCryptPasswordEncoder を一元管理し、JWT によるステートレス認証を実現する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.shared.infrastructure;
 
 import lombok.RequiredArgsConstructor;
@@ -48,6 +63,13 @@ public class SecurityConfig {
                 .toList();
     }
 
+    /**
+     * セキュリティフィルターチェーンを構築する。
+     * CSRF 無効・ステートレスセッション・CORS・JWT 認証フィルターを設定する。
+     * @param http Spring Security の HttpSecurity 設定オブジェクト
+     * @return 構築済みの SecurityFilterChain
+     * @throws Exception 設定構築に失敗した場合
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -72,6 +94,11 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * パスワードエンコーダー Bean を生成する。
+     * コストファクター 12 の BCrypt を使用してブルートフォース攻撃への耐性を確保する。
+     * @return BCryptPasswordEncoder（コストファクター 12）
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         // コストファクター 12 = ログイン照合が約 300〜500ms になる強度（セキュリティ設計書参照）
@@ -79,6 +106,11 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder(12);
     }
 
+    /**
+     * CORS 設定ソース Bean を生成する。
+     * 環境変数 FRONTEND_ORIGIN で指定されたオリジンからの /api/** へのリクエストを許可する。
+     * @return URL パターンごとの CORS 設定ソース
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：AI
+ * 機能名      ：AI機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * AIチャットサービス。フロントエンドからのチャットリクエストを Python FastAPI（/chat）に
+ * 同期転送して応答を返す。CAREER モードでは userId を Python 側に渡し、棚卸データを参照させる。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.ai.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +56,14 @@ public class AiChatService {
     private static final String DISABLED_MESSAGE =
             "AI機能は現在無効化されています。ご利用には管理者による設定が必要です。";
 
+    /**
+     * AIチャットリクエストを Python FastAPI に転送し、応答を返す。
+     * AI機能が無効化されている場合は固定メッセージを返す。
+     * Python AIサービスが応答不可の場合は 503 をスローする。
+     *
+     * @param command チャットコマンド（メッセージ・モード・ユーザーID・会話履歴）
+     * @return AIサービスからの応答テキストとモード
+     */
     public AiChatQueryResult chat(AiChatCommand command) {
         if (!aiEnabled) {
             log.info("AI chat skipped: AI disabled mode={} userId={}", command.mode(), command.userId());

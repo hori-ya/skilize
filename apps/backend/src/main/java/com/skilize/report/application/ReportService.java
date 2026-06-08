@@ -1,3 +1,18 @@
+/**************************************************************************************************************
+ * 機能ID      ：RPT
+ * 機能名      ：帳票・レポート
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 棚卸表PDF生成サービス。JasperReports を使って棚卸データ（ITスキル・ADセミナーの目標・実績）を
+ * PDF 帳票にまとめて返す。フォント設定は @PostConstruct で日本語フォント拡張を登録する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.report.application;
 
 import com.skilize.inventory.domain.*;
@@ -24,6 +39,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.*;
 
+/**
+ * 棚卸PDF帳票生成サービス。JasperReports を使って棚卸データを PDF にエクスポートする。
+ * 日本語フォント拡張は起動時（@PostConstruct）に登録し、同一 JasperReportsContext を使い回す。
+ * アクセス制御（本人・TL・ADMIN）は checkAccess メソッドで行う。
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -55,6 +75,15 @@ public class ReportService {
     private final SeminarDetailRepository seminarDetailRepository;
     private final InventoryGoalRepository inventoryGoalRepository;
 
+    /**
+     * 棚卸PDF帳票を生成して返す。
+     * JRXMLテンプレートをコンパイル・フィルしてPDFにエクスポートする。
+     * テンプレートが見つからない場合や生成エラー時は 500 をスローする。
+     *
+     * @param inventoryId 棚卸内部ID
+     * @param loginUser   リクエストユーザー（アクセス権確認に使用）
+     * @return PDFバイナリ
+     */
     @Transactional(readOnly = true)
     public byte[] generateInventoryReport(Long inventoryId, User loginUser) {
         Inventory inv = inventoryRepository.findByIdWithAssociations(inventoryId.intValue())

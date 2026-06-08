@@ -1,3 +1,17 @@
+/*******************************************************************************
+ * 機能ID      ：USR
+ * 機能名      ：ユーザー管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * チームメンバー一覧ページ。TL は担当メンバーの棚卸状況を、ADMIN は全メンバーを確認できる。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getTeamMembers } from '../api/userApi';
@@ -25,12 +39,19 @@ const ROLE_KEY: Record<string, string> = {
   ADMIN: 'role.admin',
 };
 
+/**
+ * チームメンバー一覧ページ。
+ *
+ * TL は担当メンバーの棚卸状況を確認できる。
+ * ADMIN は全メンバーを確認できる（バックエンドでロール制御）。
+ */
 export default function TeamMemberListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation('user');
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // 初期表示時にチームメンバー一覧を取得する
   useEffect(() => {
     getTeamMembers()
       .then(res => setMembers(res.data))

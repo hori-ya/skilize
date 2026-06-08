@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ADセミナーマスタ管理ページ。ADセミナーカテゴリと ADセミナーをタブ切り替えで管理する。
+ * Excel インポート・エクスポート機能も提供する。ADMIN ロールのみアクセス可能。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +32,11 @@ type ModalMode = 'create' | 'edit';
 
 interface CatForm { name: string; sortOrder: string; active: boolean }
 
+/**
+ * ADセミナーカテゴリ管理タブ。
+ *
+ * ADセミナーカテゴリの一覧表示・新規作成・編集を行う。
+ */
 function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]; onReload: () => void }) {
   const { t } = useTranslation('master');
   const [modalOpen, setModalOpen] = useState(false);
@@ -159,6 +179,11 @@ interface AdForm {
   active: boolean;
 }
 
+/**
+ * ADセミナー管理タブ。
+ *
+ * ADセミナーの一覧表示・カテゴリフィルタ・新規作成・編集を行う。
+ */
 function AdSeminarTab({ adSeminars, categories, onReload }: {
   adSeminars: AdSeminar[];
   categories: AdSeminarCategory[];
@@ -345,6 +370,12 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
 
 type TabKey = 'categories' | 'adSeminars';
 
+/**
+ * ADセミナーマスタ管理ページ。
+ *
+ * ADセミナーカテゴリと ADセミナーの2タブで構成されるマスタ管理画面。
+ * Excel インポート・エクスポートもサポートする。ADMIN ロールのみアクセス可能。
+ */
 export default function AdSeminarMasterPage() {
   const { t } = useTranslation('master');
   const [activeTab, setActiveTab] = useState<TabKey>('categories');
@@ -369,6 +400,7 @@ export default function AdSeminarMasterPage() {
       .finally(() => setLoading(false));
   };
 
+  // 初期表示時にADセミナーカテゴリとADセミナー一覧を取得する
   useEffect(() => { loadAll(); }, []);
 
   const handleDownload = async () => {

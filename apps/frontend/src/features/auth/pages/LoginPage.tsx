@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：AUTH
+ * 機能名      ：認証機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ログインページ。ユーザーID・パスワードを入力して認証を行う。
+ * 初回ログイン時はパスワード変更ページへリダイレクトする。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../../../app/providers/AuthProvider';
@@ -6,6 +21,12 @@ import { IconLogin } from '../../../shared/ui/Icons';
 import { useTranslation } from 'react-i18next';
 import axios from 'axios';
 
+/**
+ * ログインページ。
+ *
+ * ユーザーID・パスワードを入力して認証を行う。
+ * 初回ログイン時はパスワード変更ページへリダイレクトする。
+ */
 export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
   const navigate = useNavigate();

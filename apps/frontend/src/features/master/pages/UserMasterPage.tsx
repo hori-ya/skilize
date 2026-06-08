@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * ユーザーマスタ管理ページ。ユーザーの一覧表示・新規作成・編集・パスワードリセットを行う。
+ * ADMIN ロールのみアクセス可能。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import NavBar from '../../../app/layouts/NavBar';
@@ -31,6 +46,12 @@ interface EditForm {
   active: boolean;
 }
 
+/**
+ * ユーザーマスタ管理ページ。
+ *
+ * ユーザーの一覧表示・新規作成・編集・パスワードリセットを行う。
+ * ADMIN ロールのみアクセス可能。
+ */
 export default function UserMasterPage() {
   const { t } = useTranslation('master');
   const [users, setUsers] = useState<UserAdmin[]>([]);
@@ -66,6 +87,7 @@ export default function UserMasterPage() {
       .finally(() => setLoading(false));
   };
 
+  // 初期表示時にユーザー一覧を取得する
   useEffect(() => { loadUsers(); }, []);
 
   const tlCandidates = users.filter(u => u.isActive);

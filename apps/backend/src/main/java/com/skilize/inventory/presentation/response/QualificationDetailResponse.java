@@ -1,3 +1,17 @@
+/**************************************************************************************************************
+ * 機能ID      ：INV
+ * 機能名      ：棚卸管理
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * 資格明細1件のレスポンス。資格明細一覧取得・保存の各エンドポイントのレスポンス要素として使用する。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
 import com.skilize.inventory.domain.QualificationDetail;
@@ -18,6 +32,12 @@ public record QualificationDetailResponse(int id, Integer qualificationId, Strin
                                           String customQualificationName,
                                           String acquiredYearMonth, String remarks) {
 
+    /**
+     * QualificationDetail エンティティから QualificationDetailResponse を生成する。
+     *
+     * @param d 資格明細エンティティ
+     * @return 資格明細レスポンス
+     */
     public static QualificationDetailResponse from(QualificationDetail d) {
         return new QualificationDetailResponse(d.getId(),
                 d.getQualification() != null ? d.getQualification().getId() : null,

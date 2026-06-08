@@ -1,3 +1,18 @@
+/*******************************************************************************
+ * 機能ID      ：SHR
+ * 機能名      ：共通
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * 画面下部に固定表示される水平スクロールバーを提供するコンポーネント。
+ * テーブルなど横幅が広いコンテンツでスクロールバーを常に表示するために使用する。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useRef, useEffect, type ReactNode } from 'react';
 
 interface Props {
@@ -5,11 +20,18 @@ interface Props {
   className?: string;
 }
 
+/**
+ * 画面下部に固定表示される水平スクロールバーコンポーネント。
+ *
+ * コンテンツの横幅がウィンドウを超える場合にのみスクロールバーを表示し、
+ * コンテンツとスクロールバーの位置を同期する。
+ */
 export default function StickyHorizontalScroll({ children, className }: Props) {
   const innerRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLDivElement>(null);
   const phantomRef = useRef<HTMLDivElement>(null);
 
+  // 内部コンテンツのリサイズを監視してスクロールバーの表示・非表示を切り替え、双方向同期を設定する
   useEffect(() => {
     const inner = innerRef.current;
     const bar = barRef.current;

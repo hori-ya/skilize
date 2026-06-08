@@ -1,3 +1,20 @@
+/*******************************************************************************
+ * 機能ID      ：AI
+ * 機能名      ：AI機能
+ * 作成日      ：2026/06/08
+ * 作成者      ：hori-ya
+ * ---------------------------------------------------------------------------
+ * 機能概要：
+ * AIサポートウィジェット（フローティングパネル）。
+ * NavBar に配置されるボタンから開閉するチャットパネルを提供する。
+ * NORMAL / PROOFREADING / CAREER / HELP の4モードを切り替えて使用できる。
+ * 会話履歴はモジュールストアで保持し、画面遷移後も復元される。
+ * ---------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/06/08 hori-ya 初版作成
+ * ---------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ *******************************************************************************/
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
@@ -8,6 +25,12 @@ import type { AiMode, ChatMessage } from '../types';
 
 const MODES: AiMode[] = ['NORMAL', 'PROOFREADING', 'CAREER', 'HELP'];
 
+/**
+ * AIサポートウィジェット。
+ *
+ * NavBar に配置されるフローティングチャットパネル。
+ * モードを切り替えながらAIと会話でき、画面遷移後も会話履歴が保持される。
+ */
 export default function AiSupportWidget() {
   const { t } = useTranslation('ai');
 
@@ -34,6 +57,7 @@ export default function AiSupportWidget() {
     }
   }, [history, open]);
 
+  // パネルが開いたときにテキストエリアにフォーカスを当てる
   useEffect(() => {
     if (open) textareaRef.current?.focus();
   }, [open]);
