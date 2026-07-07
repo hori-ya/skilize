@@ -1,7 +1,7 @@
 <!-- Created with Jaspersoft Studio version 7.0.6.final using JasperReports Library version 7.0.6-5d2a603fdc6b3db8f842a83383e594f41891534d  -->
 <jasperReport name="inventoryReport" language="java" columnCount="1" pageWidth="842" pageHeight="595" columnWidth="802" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="1a69e82f-9009-4071-a92a-158607c76daa">
 	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
-	<style name="default" default="true" fontName="MS Gothic" pdfFontName="HeiseiKakuGo-W5" pdfEncoding="UniJIS-UCS2-H" pdfEmbedded="false"/>
+	<style name="default" default="true" fontName="MSGothic" pdfFontName="MSGothic" pdfEncoding="Identity-H" pdfEmbedded="true"/>
 	<style name="Table_TH" mode="Opaque" backcolor="#F0F8FF">
 		<box>
 			<pen lineWidth="0.5" lineColor="#000000"/>

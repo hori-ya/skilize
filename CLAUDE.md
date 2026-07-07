@@ -197,6 +197,7 @@ docker compose up db
 
 - エンティティの新規フィールド追加時は Flyway マイグレーション（`apps/backend/src/main/resources/db/migration/V{n}__xxx.sql`）と `scripts/db/init.sql` の両方を更新する
 - `application-local.yml` は `flyway.enabled: false` のため、ローカル向けスキーマ変更は `scripts/db/init.sql` に反映する
+- 開発環境の YAML（`application-local.yml` 等）を変更する際は、本番環境の YAML（`application.yml`）にも同様の変更が必要かを必ず確認し、必要であれば反映する（開発環境のみ変更してエラーが起きた事例あり）。ただし、開発環境と本番環境には意図的な差異（例: `flyway.enabled`, `show-sql`, `lazy-initialization` 等）があるため、本番環境に不要な修正を加えないよう注意する
 - テストデータ（テストユーザー・サンプル棚卸など）は `db/testdata/` に配置する（`db/migration/` は本番 Flyway 対象のため混在禁止）
 - `SecurityConfig` の `permitAll()` に追加する際は CORS 設定も確認する
 - 新しいロール制御が必要な場合は `@PreAuthorize("hasRole('ADMIN')")` 等を使用する
@@ -216,3 +217,4 @@ docker compose up db
 | `.claude/context/conventions.md` | 命名規則詳細・DTO 命名・i18n キー命名・禁止パターン |
 | `.claude/context/environment.md` | 環境変数テーブル・`.env` 設定ガイド |
 | `.claude/context/comment-rules.md` | コメント記載標準書（ファイルヘッダ・クラス・メソッド・業務ロジック・AI 特別ルール） |
+| `.claude/rules/` | プロジェクト非依存の汎用コーディング規約（命名・コメント・ロギング・エラー処理・security、および backend/frontend/ai 別の code-style・api-design・testing）。各ファイルの `paths` frontmatter により該当ファイル編集時に自動読込される。索引は `.claude/rules/README.md` を参照 |
