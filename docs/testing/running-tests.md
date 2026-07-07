@@ -18,6 +18,8 @@
 | `InventoryServiceComparisonTest.java` | InventoryService#getComparison（前年度比較） | 単体テスト |
 | `AiChatServiceTest.java` | AiChatService（AI 無効時の制御） | 単体テスト |
 | `AiChatControllerTest.java` | AiChatController（POST /api/ai/chat） | Web レイヤーテスト |
+| `MasterExcelControllerTest.java` | MasterExcelController（マスタ Excel 出力・取込） | Web レイヤーテスト |
+| `ItSkillExcelImporterTest.java` | ItSkillExcelImporter（ITスキル Excel 取込） | 単体テスト |
 
 ### 実行方法
 
@@ -41,12 +43,32 @@ gradlew.bat test
 ./gradlew test --tests "com.skilize.inventory.application.InventoryServiceComparisonTest"
 ./gradlew test --tests "com.skilize.ai.application.AiChatServiceTest"
 ./gradlew test --tests "com.skilize.ai.presentation.AiChatControllerTest"
+./gradlew test --tests "com.skilize.master.presentation.MasterExcelControllerTest"
+./gradlew test --tests "com.skilize.master.infrastructure.excel.ItSkillExcelImporterTest"
 ```
 
 **テスト結果の確認**
 ```
 apps/backend/build/reports/tests/test/index.html
 ```
+
+### カバレッジレポート（JaCoCo）
+
+`./gradlew test` を実行すると、テスト完了後に JaCoCo によるカバレッジレポートが自動生成される（`build.gradle` の `finalizedBy jacocoTestReport` 設定による）。
+
+```
+apps/backend/build/reports/jacoco/test/html/index.html   ← ブラウザ表示用（行単位で色分け）
+apps/backend/build/reports/jacoco/test/jacocoTestReport.xml ← 機械可読用
+```
+
+`index.html` を開くと、パッケージ・クラス単位のカバレッジ率に加え、ソースコードを行単位で緑（実行済み）・赤（未実行）・黄（分岐の一部のみ実行）に色分け表示できる。
+
+CI では以下の方法でも確認できる。
+
+- **PR / 任意のブランチ**: GitHub Actions の実行結果から `backend-coverage-report` アーティファクトをダウンロードして確認する
+- **main ブランチ（マージ後）**: GitHub Pages に自動デプロイされたレポートを、ダウンロードせずブラウザから直接確認できる
+
+> 設計の詳細は [`docs/architecture/testing-coverage.md`](../architecture/testing-coverage.md) を参照。
 
 ### テスト設計方針
 

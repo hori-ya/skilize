@@ -27,12 +27,7 @@ jobs:
 
       - name: Run backend unit tests
         working-directory: apps/backend
-        run: |
-          ./gradlew test \
-            --tests "com.skilize.auth.application.AuthServiceTest" \
-            --tests "com.skilize.shared.infrastructure.JwtUtilTest" \
-            --tests "com.skilize.auth.presentation.AuthControllerTest" \
-            --tests "com.skilize.inventory.application.InventoryServiceComparisonTest"
+        run: ./gradlew test
 
       - name: Upload test report
         if: always()
@@ -40,6 +35,13 @@ jobs:
         with:
           name: backend-test-report
           path: apps/backend/build/reports/tests/test/
+
+      - name: Upload JaCoCo coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: apps/backend/build/reports/jacoco/test/html/
 
   # ─── フロントエンドテスト ─────────────────────────────────────
   frontend:
@@ -70,3 +72,35 @@ jobs:
         with:
           name: frontend-test-report
           path: apps/frontend/test-results/
+
+  # ─── バックエンドカバレッジレポート公開（main ブランチのみ）───────
+  publish-coverage:
+    name: Publish Coverage Report to GitHub Pages
+    needs: backend
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Download JaCoCo coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: coverage-site
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: coverage-site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
