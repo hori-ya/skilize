@@ -118,7 +118,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(GoalIncompleteException.class)
     public ResponseEntity<GoalIncompleteResponse> handleGoalIncomplete(GoalIncompleteException e) {
         log.warn("Goal incomplete");
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_CONTENT)
                 .body(new GoalIncompleteResponse("GOAL_INCOMPLETE", "", e.getErrors()));
     }
 

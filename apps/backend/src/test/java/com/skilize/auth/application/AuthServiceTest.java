@@ -104,9 +104,9 @@ class AuthServiceTest {
             when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
             AuthException notFound = catchThrowableOfType(
-                    () -> authService.login(new LoginCommand("unknown", "pw")), AuthException.class);
+                    AuthException.class, () -> authService.login(new LoginCommand("unknown", "pw")));
             AuthException badPassword = catchThrowableOfType(
-                    () -> authService.login(new LoginCommand("user01", "pw")), AuthException.class);
+                    AuthException.class, () -> authService.login(new LoginCommand("user01", "pw")));
 
             assertThat(notFound.getCode()).isEqualTo(badPassword.getCode());
             assertThat(notFound.getMessage()).isEqualTo(badPassword.getMessage());
