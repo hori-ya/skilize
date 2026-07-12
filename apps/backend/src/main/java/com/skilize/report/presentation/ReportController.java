@@ -16,7 +16,7 @@
 package com.skilize.report.presentation;
 
 import com.skilize.report.application.ReportService;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -52,7 +52,7 @@ public class ReportController {
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<byte[]> downloadInventoryReport(
             @PathVariable Long id,
-            @AuthenticationPrincipal User user) {
+            @AuthenticationPrincipal(expression = "user") User user) {
         byte[] pdf = reportService.generateInventoryReport(id, user);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

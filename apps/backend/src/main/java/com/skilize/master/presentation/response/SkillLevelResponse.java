@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.SkillLevel;
+import com.skilize.master.domain.model.SkillLevel;
 
 /**
  * スキルレベル1件のレスポンス。GET /api/skill-levels などのレスポンスに使用する。

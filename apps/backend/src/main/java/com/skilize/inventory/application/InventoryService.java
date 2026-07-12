@@ -15,17 +15,27 @@
  **************************************************************************************************************/
 package com.skilize.inventory.application;
 
-import com.skilize.fiscalyear.domain.FiscalYearRepository;
+import com.skilize.fiscalyear.domain.repository.FiscalYearRepository;
 import com.skilize.inventory.application.command.*;
 import com.skilize.inventory.application.query.ComparisonQueryResult;
 import com.skilize.inventory.application.query.ComparisonQueryResult.ComparisonItem;
 import com.skilize.inventory.application.query.GoalReviewQueryResult;
 import com.skilize.inventory.application.query.GoalReviewQueryResult.GoalReviewItem;
-import com.skilize.inventory.domain.*;
-import com.skilize.master.domain.*;
+import com.skilize.inventory.domain.model.*;
+import com.skilize.inventory.domain.repository.*;
+import com.skilize.master.domain.model.AdSeminar;
+import com.skilize.master.domain.model.ItSkill;
+import com.skilize.master.domain.model.Qualification;
+import com.skilize.master.domain.model.SeminarCategory;
+import com.skilize.master.domain.model.SkillLevel;
+import com.skilize.master.domain.repository.AdSeminarRepository;
+import com.skilize.master.domain.repository.ItSkillRepository;
+import com.skilize.master.domain.repository.QualificationRepository;
+import com.skilize.master.domain.repository.SeminarCategoryRepository;
+import com.skilize.master.domain.repository.SkillLevelRepository;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.domain.exception.GoalIncompleteException;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -132,7 +142,7 @@ public class InventoryService {
         findById(inventoryId, user);
         ItSkillDetail detail = itSkillDetailRepository.findById(detailId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DETAIL_NOT_FOUND"));
-        if (!detail.getInventory().getId().equals(inventoryId)) {
+        if (!detail.getInventoryId().equals(inventoryId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN");
         }
         detail.updateRemarks(remarks);

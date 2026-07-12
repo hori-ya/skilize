@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
-import com.skilize.inventory.domain.QualificationDetail;
+import com.skilize.inventory.domain.model.QualificationDetail;
 
 /**
  * 資格明細1件のレスポンス。qualificationId が null の場合はカスタム資格（マスタ未登録）を示す。

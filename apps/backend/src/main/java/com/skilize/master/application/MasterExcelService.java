@@ -17,7 +17,8 @@ package com.skilize.master.application;
 
 import com.skilize.master.application.query.MasterImportErrorDetail;
 import com.skilize.master.application.query.MasterImportQueryResult;
-import com.skilize.master.domain.*;
+import com.skilize.master.domain.model.*;
+import com.skilize.master.domain.repository.*;
 import com.skilize.master.infrastructure.excel.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

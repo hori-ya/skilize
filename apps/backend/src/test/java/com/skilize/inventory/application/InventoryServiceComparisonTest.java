@@ -1,14 +1,16 @@
 package com.skilize.inventory.application;
 
-import com.skilize.fiscalyear.domain.FiscalYear;
-import com.skilize.fiscalyear.domain.FiscalYearRepository;
+import com.skilize.fiscalyear.domain.model.FiscalYear;
+import com.skilize.fiscalyear.domain.repository.FiscalYearRepository;
 import com.skilize.inventory.application.query.ComparisonQueryResult;
 import com.skilize.inventory.application.query.ComparisonQueryResult.ComparisonItem;
-import com.skilize.inventory.domain.*;
-import com.skilize.master.domain.*;
+import com.skilize.inventory.domain.model.*;
+import com.skilize.inventory.domain.repository.*;
+import com.skilize.master.domain.model.*;
+import com.skilize.master.domain.repository.*;
 import com.skilize.shared.domain.exception.AuthException;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

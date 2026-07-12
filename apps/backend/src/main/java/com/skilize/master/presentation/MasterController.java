@@ -16,7 +16,7 @@
 package com.skilize.master.presentation;
 
 import com.skilize.master.application.MasterService;
-import com.skilize.master.domain.*;
+import com.skilize.master.domain.model.*;
 import com.skilize.master.presentation.request.*;
 import com.skilize.master.presentation.response.*;
 import jakarta.validation.Valid;
@@ -39,22 +39,11 @@ import java.util.List;
 public class MasterController {
 
     private final MasterService masterService;
-    private final SkillLevelRepository skillLevelRepository;
-    private final ItSkillRepository itSkillRepository;
-    private final QualificationRepository qualificationRepository;
-    private final AdSeminarRepository adSeminarRepository;
-    private final SeminarCategoryRepository seminarCategoryRepository;
-    private final ItSkillCategoryRepository itSkillCategoryRepository;
-    private final QualificationCategoryRepository qualificationCategoryRepository;
-    private final AdSeminarCategoryRepository adSeminarCategoryRepository;
 
     /** スキルレベル一覧を levelValue 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/skill-levels")
     public List<SkillLevelResponse> getSkillLevels(@RequestParam(required = false) Boolean isActive) {
-        List<SkillLevel> levels = isActive != null
-                ? skillLevelRepository.findByActiveOrderByLevelValueAsc(isActive)
-                : skillLevelRepository.findAllByOrderByLevelValueAsc();
-        return levels.stream().map(SkillLevelResponse::from).toList();
+        return masterService.getSkillLevels(isActive).stream().map(SkillLevelResponse::from).toList();
     }
 
     /** スキルレベルを新規作成する（ADMIN のみ）。 */
@@ -78,11 +67,7 @@ public class MasterController {
      */
     @GetMapping("/it-skills")
     public List<ItSkillResponse> getItSkills(@RequestParam(required = false) Boolean isActive) {
-        List<ItSkill> skills = isActive == null
-                ? itSkillRepository.findAllOrderByHierarchy()
-                : isActive ? itSkillRepository.findAllActiveWithCategory()
-                           : itSkillRepository.findByActiveFalseOrderByHierarchy();
-        return skills.stream().map(this::toItSkillResponse).toList();
+        return masterService.getItSkills(isActive).stream().map(this::toItSkillResponse).toList();
     }
 
     /** ITスキルを新規作成する（ADMIN のみ）。resolveCategory1() で表示用の大分類を解決する。 */
@@ -123,11 +108,7 @@ public class MasterController {
     /** 資格一覧を返す。isActive で有効/無効を絞り込み可。全件・無効のみは分類→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。 */
     @GetMapping("/qualifications")
     public List<QualificationResponse> getQualifications(@RequestParam(required = false) Boolean isActive) {
-        List<Qualification> list = isActive == null
-                ? qualificationRepository.findAllWithCategory()
-                : isActive ? qualificationRepository.findAllActiveWithCategory()
-                           : qualificationRepository.findAllWithCategoryByActive(false);
-        return list.stream().map(QualificationResponse::from).toList();
+        return masterService.getQualifications(isActive).stream().map(QualificationResponse::from).toList();
     }
 
     /** 資格を新規作成する（ADMIN のみ）。 */
@@ -167,10 +148,7 @@ public class MasterController {
     /** 資格分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/qualification-categories")
     public List<QualificationCategoryResponse> getQualificationCategories(@RequestParam(required = false) Boolean isActive) {
-        List<QualificationCategory> cats = isActive == null
-                ? qualificationCategoryRepository.findAllByOrderBySortOrderAsc()
-                : qualificationCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
-        return cats.stream().map(QualificationCategoryResponse::from).toList();
+        return masterService.getQualificationCategories(isActive).stream().map(QualificationCategoryResponse::from).toList();
     }
 
     /** 資格分類を新規作成する（ADMIN のみ）。 */
@@ -194,11 +172,7 @@ public class MasterController {
     /** ADセミナー一覧を返す。isActive で有効/無効を絞り込み可。全件・無効のみは分類→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。 */
     @GetMapping("/ad-seminars")
     public List<AdSeminarResponse> getAdSeminars(@RequestParam(required = false) Boolean isActive) {
-        List<AdSeminar> list = isActive == null
-                ? adSeminarRepository.findAllWithCategory()
-                : isActive ? adSeminarRepository.findAllActiveWithCategory()
-                           : adSeminarRepository.findAllWithCategoryByActive(false);
-        return list.stream().map(AdSeminarResponse::from).toList();
+        return masterService.getAdSeminars(isActive).stream().map(AdSeminarResponse::from).toList();
     }
 
     /** ADセミナーを新規作成する（ADMIN のみ）。 */
@@ -220,8 +194,7 @@ public class MasterController {
     /** 有効なセミナー分類一覧を sortOrder 昇順で返す（isActive フィルタなし・常に有効のみ）。 */
     @GetMapping("/seminar-categories")
     public List<SeminarCategoryResponse> getSeminarCategories() {
-        return seminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
-                .stream().map(SeminarCategoryResponse::from).toList();
+        return masterService.getSeminarCategories().stream().map(SeminarCategoryResponse::from).toList();
     }
 
     /**
@@ -231,11 +204,7 @@ public class MasterController {
      */
     @GetMapping("/it-skill-categories")
     public List<ItSkillCategoryResponse> getItSkillCategories(@RequestParam(required = false) Boolean isActive) {
-        List<ItSkillCategory> cats = isActive == null
-                ? itSkillCategoryRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc()
-                : isActive ? itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
-                           : itSkillCategoryRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc();
-        return cats.stream().map(ItSkillCategoryResponse::from).toList();
+        return masterService.getItSkillCategories(isActive).stream().map(ItSkillCategoryResponse::from).toList();
     }
 
     /** ITスキル分類を新規作成する（ADMIN のみ）。 */
@@ -258,10 +227,7 @@ public class MasterController {
     /** ADセミナー分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/ad-seminar-categories")
     public List<AdSeminarCategoryResponse> getAdSeminarCategories(@RequestParam(required = false) Boolean isActive) {
-        List<AdSeminarCategory> cats = isActive == null
-                ? adSeminarCategoryRepository.findAllByOrderBySortOrderAsc()
-                : adSeminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
-        return cats.stream().map(AdSeminarCategoryResponse::from).toList();
+        return masterService.getAdSeminarCategories(isActive).stream().map(AdSeminarCategoryResponse::from).toList();
     }
 
     /** ADセミナー分類を新規作成する（ADMIN のみ）。 */
@@ -290,9 +256,9 @@ public class MasterController {
     private ItSkillCategory resolveCategory1(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
         if (cat.getLevel() == 1) return cat;
-        return itSkillCategoryRepository.findById(cat.getParentId())
+        return masterService.findItSkillCategoryById(cat.getParentId())
                 .map(parent -> parent.getLevel() == 1 ? parent
-                        : itSkillCategoryRepository.findById(parent.getParentId()).orElse(parent))
+                        : masterService.findItSkillCategoryById(parent.getParentId()).orElse(parent))
                 .orElse(cat);
     }
 
@@ -304,7 +270,7 @@ public class MasterController {
     private ItSkillCategory resolveCategory2(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
         if (cat.getLevel() != 3) return null;
-        return itSkillCategoryRepository.findById(cat.getParentId()).orElse(null);
+        return masterService.findItSkillCategoryById(cat.getParentId()).orElse(null);
     }
 
     private ItSkillResponse toItSkillResponse(ItSkill skill) {

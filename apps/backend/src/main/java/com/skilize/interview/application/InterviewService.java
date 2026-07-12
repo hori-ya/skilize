@@ -16,11 +16,12 @@
 package com.skilize.interview.application;
 
 import com.skilize.interview.application.command.DetailNoteCommand;
-import com.skilize.interview.domain.*;
-import com.skilize.inventory.domain.Inventory;
-import com.skilize.inventory.domain.InventoryRepository;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
+import com.skilize.interview.domain.model.*;
+import com.skilize.interview.domain.repository.*;
+import com.skilize.inventory.domain.model.Inventory;
+import com.skilize.inventory.domain.repository.InventoryRepository;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -70,7 +71,7 @@ public class InterviewService {
         // orElseGet(): 値が存在しない場合のみラムダを実行する（存在する場合はDBアクセスしない）
         InventoryInterview interview = inventoryInterviewRepository
                 .findByInventoryIdAndInterviewerId(inventoryId, requester.getId())
-                .orElseGet(() -> InventoryInterview.create(inventory, requester, generalNote));
+                .orElseGet(() -> InventoryInterview.create(inventory.getId(), requester, generalNote));
 
         interview.update(generalNote);
         InventoryInterview saved = inventoryInterviewRepository.save(interview);

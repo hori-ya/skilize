@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.fiscalyear.presentation.response;
 
-import com.skilize.fiscalyear.domain.FiscalYear;
+import com.skilize.fiscalyear.domain.model.FiscalYear;
 
 /**
  * 年度1件のレスポンス。GET /api/fiscal-years などのレスポンスに使用する。

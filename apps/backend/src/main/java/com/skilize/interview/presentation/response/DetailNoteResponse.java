@@ -15,8 +15,8 @@
  **************************************************************************************************************/
 package com.skilize.interview.presentation.response;
 
-import com.skilize.interview.domain.DetailType;
-import com.skilize.interview.domain.InterviewDetailNote;
+import com.skilize.interview.domain.model.DetailType;
+import com.skilize.interview.domain.model.InterviewDetailNote;
 
 /**
  * 面談明細ノートレスポンス。detailType + detailId で対象の棚卸明細（ITスキル・資格・セミナー・目標）を識別する。

@@ -14,8 +14,8 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.ItSkill;
-import com.skilize.master.domain.ItSkillCategory;
+import com.skilize.master.domain.model.ItSkill;
+import com.skilize.master.domain.model.ItSkillCategory;
 
 /**
  * ITスキルマスタ1件のレスポンス。GET /api/it-skills などのレスポンスに使用する。

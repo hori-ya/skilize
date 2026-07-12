@@ -19,7 +19,7 @@ import com.skilize.ai.application.AiChatService;
 import com.skilize.ai.application.command.AiChatCommand;
 import com.skilize.ai.application.mapper.AiChatApplicationMapper;
 import com.skilize.ai.application.query.AiChatQueryResult;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -50,7 +50,7 @@ public class AiChatController {
     @PostMapping("/chat")
     public AiChatQueryResult chat(
             @Valid @RequestBody AiChatRequest request,
-            @AuthenticationPrincipal User user
+            @AuthenticationPrincipal(expression = "user") User user
     ) {
         AiChatCommand command = mapper.toCommand(request, user.getId());
         return aiChatService.chat(command);

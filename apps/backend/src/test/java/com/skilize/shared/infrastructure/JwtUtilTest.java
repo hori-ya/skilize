@@ -1,7 +1,7 @@
 package com.skilize.shared.infrastructure;
 
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;

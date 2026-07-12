@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.user.presentation.response;
 
-import com.skilize.inventory.domain.Inventory;
+import com.skilize.inventory.domain.model.Inventory;
 
 /**
  * メンバー棚卸サマリ1件のレスポンス。GET /api/users/{id}/inventories のレスポンスに使用する（TL/ADMIN 向け）。

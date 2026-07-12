@@ -1,0 +1,62 @@
+/**************************************************************************************************************
+ * 機能ID      ：MST
+ * 機能名      ：マスタ管理
+ * 作成日      ：2026/07/12
+ * 作成者      ：hori-ya
+ * ----------------------------------------------------------------------------------------------------------
+ * 機能概要：
+ * domain.repository.SkillLevelRepository の実装クラス。
+ * ----------------------------------------------------------------------------------------------------------
+ * 更新履歴：
+ * 2026/07/12 hori-ya 初版作成（Domain/Infrastructure再構成）
+ * ----------------------------------------------------------------------------------------------------------
+ * Copyright (C) 2026 Skilize Project. All Rights Reserved.
+ **************************************************************************************************************/
+package com.skilize.master.infrastructure.persistence.repository;
+
+import com.skilize.master.domain.model.SkillLevel;
+import com.skilize.master.domain.repository.SkillLevelRepository;
+import com.skilize.master.infrastructure.persistence.entity.SkillLevelEntity;
+import com.skilize.master.infrastructure.persistence.mapper.SkillLevelPersistenceMapper;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+/** domain.repository.SkillLevelRepository の実装。 */
+@Repository
+@RequiredArgsConstructor
+public class SkillLevelRepositoryImpl implements SkillLevelRepository {
+
+    private final SkillLevelJpaRepository jpaRepository;
+    private final SkillLevelPersistenceMapper mapper;
+
+    @Override
+    public Optional<SkillLevel> findById(Integer id) {
+        return jpaRepository.findById(id).map(mapper::toDomain);
+    }
+
+    @Override
+    public SkillLevel save(SkillLevel skillLevel) {
+        SkillLevelEntity entity;
+        if (skillLevel.getId() == null) {
+            entity = SkillLevelEntity.create(skillLevel.getLevelValue(), skillLevel.getDescription(), skillLevel.getScoreWeight());
+        } else {
+            entity = jpaRepository.findById(skillLevel.getId())
+                    .orElseThrow(() -> new IllegalStateException("SkillLevel not found: id=" + skillLevel.getId()));
+            entity.update(skillLevel.getLevelValue(), skillLevel.getDescription(), skillLevel.isActive(), skillLevel.getScoreWeight());
+        }
+        return mapper.toDomain(jpaRepository.save(entity));
+    }
+
+    @Override
+    public List<SkillLevel> findAllByOrderByLevelValueAsc() {
+        return jpaRepository.findAllByOrderByLevelValueAsc().stream().map(mapper::toDomain).toList();
+    }
+
+    @Override
+    public List<SkillLevel> findByActiveOrderByLevelValueAsc(boolean active) {
+        return jpaRepository.findByActiveOrderByLevelValueAsc(active).stream().map(mapper::toDomain).toList();
+    }
+}

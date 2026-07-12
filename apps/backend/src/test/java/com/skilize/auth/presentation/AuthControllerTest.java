@@ -10,8 +10,9 @@ import com.skilize.auth.application.query.MeQueryResult;
 import com.skilize.auth.presentation.request.LoginRequest;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.presentation.GlobalExceptionHandler;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
+import com.skilize.user.infrastructure.security.UserPrincipal;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -145,7 +146,7 @@ class AuthControllerTest {
             var result = new MeQueryResult(1, "user01", "テストユーザー", null, "GENERAL", false, null, true);
             when(authService.getMe(any())).thenReturn(result);
 
-            mockMvc.perform(get("/api/auth/me").with(user(generalUser)))
+            mockMvc.perform(get("/api/auth/me").with(user(new UserPrincipal(generalUser))))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.userId").value("user01"))
                     .andExpect(jsonPath("$.role").value("GENERAL"));
@@ -166,7 +167,7 @@ class AuthControllerTest {
             doNothing().when(authService).changePassword(any(), any());
 
             mockMvc.perform(post("/api/auth/change-password")
-                            .with(user(generalUser))
+                            .with(user(new UserPrincipal(generalUser)))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(
                                     Map.of("currentPassword", "oldpass1", "newPassword", "newpass12"))))
@@ -176,7 +177,7 @@ class AuthControllerTest {
         @Test
         void 異常系_newPasswordが8文字未満_400バリデーションエラー() throws Exception {
             mockMvc.perform(post("/api/auth/change-password")
-                            .with(user(generalUser))
+                            .with(user(new UserPrincipal(generalUser)))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(
                                     Map.of("currentPassword", "oldpass1", "newPassword", "short"))))
@@ -191,7 +192,7 @@ class AuthControllerTest {
 
     @Test
     void logout_正常系_204を返す() throws Exception {
-        mockMvc.perform(post("/api/auth/logout").with(user(generalUser)))
+        mockMvc.perform(post("/api/auth/logout").with(user(new UserPrincipal(generalUser))))
                 .andExpect(status().isNoContent());
     }
 }

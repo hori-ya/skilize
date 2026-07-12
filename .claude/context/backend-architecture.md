@@ -64,8 +64,15 @@ src/main/java/com/skilize
 │   │   ├── UserController.java
 │   │   ├── request/             ← CreateUserRequest, UpdateUserRequest
 │   │   └── response/            ← UserResponse, TeamMemberResponse, MemberInventorySummaryResponse, FiscalYearRef, ResetPasswordResponse
-│   ├── domain/                  ← User, Role, UserRepository
-│   └── infrastructure/          ← UserDetailsServiceImpl
+│   ├── domain/
+│   │   ├── model/                ← User, Role（JPA/Springに依存しない純粋なドメインモデル）
+│   │   └── repository/           ← UserRepository（Interfaceのみ）
+│   └── infrastructure/
+│       ├── security/             ← UserPrincipal（UserDetails実装。Userをラップ）, UserDetailsServiceImpl
+│       └── persistence/
+│           ├── entity/           ← UserEntity（JPA @Entity）
+│           ├── repository/       ← UserJpaRepository（Spring Data JPA）、UserRepositoryImpl（domain.repositoryの実装）
+│           └── mapper/           ← UserPersistenceMapper（Entity⇄Domain変換）
 │
 ├── inventory
 │   ├── presentation/
@@ -77,21 +84,41 @@ src/main/java/com/skilize
 │   │   ├── command/             ← ItSkillDetailCommand, QualificationDetailCommand, SeminarDetailCommand, GoalCommand, GoalReviewUpdateCommand
 │   │   ├── query/               ← ComparisonQueryResult, GoalReviewQueryResult
 │   │   └── mapper/              ← InventoryApplicationMapper
-│   └── domain/                  ← エンティティ・Repository・列挙型
+│   ├── domain/
+│   │   ├── model/                ← Inventory, ItSkillDetail, QualificationDetail, SeminarDetail, InventoryGoal, InventoryStatus, GoalCategory, AchievementStatus（JPA/Springに依存しない純粋なドメインモデル）
+│   │   └── repository/           ← 各モデルに対応するRepository（Interfaceのみ）
+│   └── infrastructure/persistence/
+│       ├── entity/               ← 各モデルに対応するJPA @Entity（例: InventoryEntity, ItSkillDetailEntity）
+│       ├── repository/           ← 各XxxJpaRepository（Spring Data JPA）、XxxRepositoryImpl（domain.repositoryの実装）
+│       └── mapper/               ← 各XxxPersistenceMapper（Entity⇄Domain変換。user/fiscalyear/masterの各Mapperに委譲）
 │
 ├── master
 │   ├── presentation/
 │   │   ├── MasterController.java
 │   │   ├── request/             ← SkillLevelRequest, ItSkillRequest, ItSkillCategoryRequest, ItSkillCategoryUpdateRequest, QualificationRequest, AdSeminarRequest, PromoteItSkillRequest, PromoteQualificationRequest, SimpleCategoryRequest
 │   │   └── response/            ← SkillLevelResponse, ItSkillResponse, ItSkillCategoryResponse, QualificationResponse, QualificationCategoryResponse, AdSeminarResponse, AdSeminarCategoryResponse, SeminarCategoryResponse, CustomUnregisteredResponse
-│   └── domain/                  ← マスタエンティティ・Repository
+│   ├── domain/
+│   │   ├── model/                ← SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory（JPA/Springに依存しない純粋なドメインモデル）
+│   │   └── repository/           ← 各モデルに対応するRepository（Interfaceのみ）
+│   └── infrastructure/
+│       ├── excel/                ← ExcelStyleHelper・ExcelFormatException・各Exporter/Importer（既存のまま。importのみpure domainへ追従）
+│       └── persistence/
+│           ├── entity/           ← 各モデルに対応するJPA @Entity（例: ItSkillEntity, ItSkillCategoryEntity）
+│           ├── repository/       ← 各XxxJpaRepository（Spring Data JPA）、XxxRepositoryImpl（domain.repositoryの実装）
+│           └── mapper/           ← 各XxxPersistenceMapper（Entity⇄Domain変換。ItSkillCategoryは親カテゴリを再帰変換）
 │
 ├── fiscalyear
 │   ├── presentation/
 │   │   ├── FiscalYearController.java
 │   │   ├── request/             ← FiscalYearRequest, FiscalYearSettingsRequest
 │   │   └── response/            ← FiscalYearResponse, FiscalYearSettingsResponse
-│   └── domain/                  ← FiscalYear, FiscalYearSettings, Repository
+│   ├── domain/
+│   │   ├── model/                ← FiscalYear, FiscalYearSettings（JPA/Springに依存しない純粋なドメインモデル）
+│   │   └── repository/           ← FiscalYearRepository, FiscalYearSettingsRepository（Interfaceのみ）
+│   └── infrastructure/persistence/
+│       ├── entity/               ← FiscalYearEntity, FiscalYearSettingsEntity（JPA @Entity）
+│       ├── repository/           ← FiscalYearJpaRepository, FiscalYearSettingsJpaRepository（Spring Data JPA）、FiscalYearRepositoryImpl, FiscalYearSettingsRepositoryImpl（domain.repositoryの実装）
+│       └── mapper/               ← FiscalYearPersistenceMapper, FiscalYearSettingsPersistenceMapper（Entity⇄Domain変換）
 │
 ├── dashboard
 │   └── presentation/
@@ -113,7 +140,13 @@ src/main/java/com/skilize
 │   ├── application/
 │   │   ├── ExpectationService.java
 │   │   └── query/               ← ExpectationQueryResult
-│   └── domain/                  ← UserExpectation・UserExpectationRepository
+│   ├── domain/
+│   │   ├── model/                ← UserExpectation（JPA/Springに依存しない純粋なドメインモデル）
+│   │   └── repository/           ← UserExpectationRepository（Interfaceのみ）
+│   └── infrastructure/persistence/
+│       ├── entity/               ← UserExpectationEntity（JPA @Entity）
+│       ├── repository/           ← UserExpectationJpaRepository（Spring Data JPA）、UserExpectationRepositoryImpl（domain.repositoryの実装）
+│       └── mapper/               ← UserExpectationPersistenceMapper（Entity⇄Domain変換。userはUserPersistenceMapperに委譲）
 │
 ├── interview
 │   ├── presentation/
@@ -123,7 +156,13 @@ src/main/java/com/skilize
 │   ├── application/
 │   │   ├── InterviewService.java
 │   │   └── command/             ← DetailNoteCommand
-│   └── domain/                  ← InventoryInterview・InterviewDetailNote・DetailType・Repository
+│   ├── domain/
+│   │   ├── model/                ← InventoryInterview・InterviewDetailNote・DetailType（JPA/Springに依存しない純粋なドメインモデル）
+│   │   └── repository/           ← InventoryInterviewRepository・InterviewDetailNoteRepository（Interfaceのみ）
+│   └── infrastructure/persistence/
+│       ├── entity/               ← InventoryInterviewEntity・InterviewDetailNoteEntity（JPA @Entity）
+│       ├── repository/           ← XxxJpaRepository（Spring Data JPA）、XxxRepositoryImpl（domain.repositoryの実装）
+│       └── mapper/               ← XxxPersistenceMapper（Entity⇄Domain変換。interviewerはuser側のMapperに委譲）
 │
 └── ai
     ├── presentation/
@@ -137,7 +176,13 @@ src/main/java/com/skilize
     │   ├── command/             ← AiChatCommand
     │   ├── mapper/              ← AiChatApplicationMapper
     │   └── query/               ← AiAnalysisQueryResult・AiChatQueryResult
-    └── domain/                  ← AiCareerAnalysis・AiAnalysisStatus・AiCareerAnalysisRepository
+    ├── domain/
+    │   ├── model/                ← AiCareerAnalysis・AiAnalysisStatus（JPA/Springに依存しない純粋なドメインモデル）
+    │   └── repository/           ← AiCareerAnalysisRepository（Interfaceのみ）
+    └── infrastructure/persistence/
+        ├── entity/               ← AiCareerAnalysisEntity（JPA @Entity）
+        ├── repository/           ← AiCareerAnalysisJpaRepository（Spring Data JPA）、AiCareerAnalysisRepositoryImpl（domain.repositoryの実装）
+        └── mapper/               ← AiCareerAnalysisPersistenceMapper（Entity⇄Domain変換）
 ```
 
 ---
@@ -198,9 +243,26 @@ src/main/java/com/skilize
 
 ルール:
 
-* domain は純粋に保つ
-* Spring Frameworkへ極力依存しない
-* JPA実装詳細を持ち込まない
+* domain は純粋に保つ（JPA/Spring Frameworkに一切依存しない。`jakarta.persistence.*` の import 禁止）
+* Repository は Interface のみ配置する（`extends JpaRepository` は禁止。実装は infrastructure 側）
+
+サブパッケージ構成（全feature共通）:
+
+```text
+domain/
+├── model/       ← ドメインモデル本体（Entity相当・Enum・Value Object）。JPA/Springアノテーションなし
+├── repository/  ← Repository interface のみ（JpaRepositoryを継承しない）
+├── service/     ← Domain Service（Entity単体で表現しづらい業務ロジック。必要になるまで空でよい）
+├── value/       ← Value Object（Enumで十分な場合は無理に作らない）
+└── exception/   ← feature固有の業務例外（横断的な例外は shared/domain/exception/ に置く）
+```
+
+ドメインモデルの実装規則:
+
+* ビジネス生成用の `static create(...)` ファクトリと、永続化復元専用の `static reconstruct(...)` ファクトリを分ける（`reconstruct` は infrastructure層のMapperからのみ呼び出す）
+* フィールド変更はドメインメソッド経由のみ（`@Setter` 禁止）
+* 他featureのモデルを直接内包してよいのは、そのfeatureの `domain.model` が既に純粋ドメイン化されている場合のみ。JPAエンティティ（infrastructure層）を持ち込まない
+* 親エンティティへの逆参照（例: 明細が持つ棚卸ヘッダーへの参照）は、`.getId()` 以外の用途がなければ nested object ではなく `xxxId: Integer` のようにフラットなIDで保持する（不要なEntity展開・追加クエリを避けるため）
 
 禁止:
 
@@ -226,6 +288,30 @@ src/main/java/com/skilize
 
 * 技術詳細を閉じ込める
 * domain/application を実装する
+
+サブパッケージ構成（全feature共通）:
+
+```text
+infrastructure/
+├── persistence/
+│   ├── entity/      ← JPA @Entity（`XxxEntity`。JPA/Hibernateアノテーションはここにのみ記述する）
+│   ├── repository/  ← `XxxJpaRepository`（Spring Data JPA。既存の@Query/JOIN FETCH戦略はそのまま）
+│   │                   + `XxxRepositoryImpl`（domain.repository.XxxRepository の実装。Entity⇄Domain変換をMapper経由で行う）
+│   └── mapper/      ← `XxxPersistenceMapper`（Entity→Domainの変換。他featureの関連は、そのfeatureの
+│                       Mapperに委譲する。例: InventoryPersistenceMapper は UserPersistenceMapper /
+│                       FiscalYearPersistenceMapper に委譲する）
+├── security/        ← feature固有のSpring Security実装（例: UserPrincipal, UserDetailsServiceImpl）
+├── external/        ← 外部システム連携（DB以外の技術的実装）
+└── config/          ← feature固有のConfiguration
+```
+
+`XxxRepositoryImpl` の実装パターン:
+
+* 新規保存（id が null）: `XxxEntity.create(...)` で新規Entityを組み立てる。関連エンティティは他featureの
+  `XxxJpaRepository.getReferenceById(id)` で参照のみ取得する（`findById` と違い実クエリを発行しない軽量な参照）
+* 更新（id が非null）: `jpaRepository.findById(id)` で既存Entityを取得し、ドメインメソッド相当の
+  `entity.applyState(...)` 等でドメイン側が計算済みの値をそのまま反映する（タイムスタンプ等をEntity側で再計算しない）
+* 変換後は必ず `mapper.toDomain(jpaRepository.save(entity))` でドメインモデルとして返す
 
 ---
 
@@ -427,6 +513,23 @@ XxxApplicationMapper ← Request → Command 変換（@Component）
 
 ---
 
+# Authentication Principal Rule
+
+Controller で認証済みユーザー（ドメインモデル `User`）を取得する際は、必ず以下の形式を使用する。
+
+```java
+@GetMapping
+public XxxResponse example(@AuthenticationPrincipal(expression = "user") User user) {
+```
+
+`user.infrastructure.security.UserPrincipal` が Spring Security の認証プリンシパル（`UserDetails`）であり、
+ドメインモデル `User`（Spring非依存）をラップしている。`expression = "user"` の SpEL 式で `UserPrincipal.getUser()` を
+直接取り出すことで、Controller 側は `User` 型のまま扱える。
+
+禁止: `@AuthenticationPrincipal User user`（`expression` なし）は `UserPrincipal` と `User` の型不一致でエラーになる。
+
+---
+
 # DI Rules
 
 * constructor injection only
@@ -478,12 +581,18 @@ CreateUserUseCase
 UpdateOrderUseCase
 ```
 
-Repository:
+Domain / Infrastructure（永続化レイヤー）:
 
-```text
-UserRepository
-JpaUserRepository
-```
+| 対象 | パッケージ | 命名パターン | 例 |
+|---|---|---|---|
+| ドメインモデル | `domain/model/` | `Xxx` | `User`, `Inventory` |
+| Repository（インターフェース） | `domain/repository/` | `XxxRepository` | `UserRepository` |
+| JPAエンティティ | `infrastructure/persistence/entity/` | `XxxEntity` | `UserEntity` |
+| Spring Data JPA リポジトリ | `infrastructure/persistence/repository/` | `XxxJpaRepository` | `UserJpaRepository` |
+| Repository実装 | `infrastructure/persistence/repository/` | `XxxRepositoryImpl` | `UserRepositoryImpl` |
+| Entity⇄Domain変換Mapper | `infrastructure/persistence/mapper/` | `XxxPersistenceMapper` | `UserPersistenceMapper` |
+
+> 詳細（サブパッケージ構成・実装パターン）は上記「Layer Responsibilities」の domain / infrastructure セクションを参照。
 
 DTO:
 
@@ -576,8 +685,12 @@ UserResponse
 | `com/skilize/user/presentation/` | UserController |
 | `com/skilize/user/presentation/request/` | CreateUserRequest・UpdateUserRequest |
 | `com/skilize/user/presentation/response/` | UserResponse・TeamMemberResponse・MemberInventorySummaryResponse・FiscalYearRef・ResetPasswordResponse |
-| `com/skilize/user/domain/` | User エンティティ・Role・UserRepository |
-| `com/skilize/user/infrastructure/` | UserDetailsServiceImpl（Spring Security 実装） |
+| `com/skilize/user/domain/model/` | User・Role（JPA/Springに依存しない純粋なドメインモデル） |
+| `com/skilize/user/domain/repository/` | UserRepository（Interfaceのみ） |
+| `com/skilize/user/infrastructure/security/` | UserPrincipal（UserDetails実装。ドメインUserをラップしてSpring Securityの認証プリンシパルとして扱う）・UserDetailsServiceImpl |
+| `com/skilize/user/infrastructure/persistence/entity/` | UserEntity（JPA @Entity） |
+| `com/skilize/user/infrastructure/persistence/repository/` | UserJpaRepository（Spring Data JPA）、UserRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/user/infrastructure/persistence/mapper/` | UserPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/inventory/presentation/` | InventoryController |
 | `com/skilize/inventory/presentation/request/` | CreateInventoryRequest・ItSkillDetailsRequest・ItSkillDetailItem・QualificationDetailsRequest・SeminarDetailsRequest・RemarksPatchRequest・GoalsRequest・GoalItem・GoalReviewUpdateRequest・GoalReviewUpdateItem |
 | `com/skilize/inventory/presentation/response/` | InventorySummaryResponse・InventoryDetailResponse・ItSkillDetailsResponse・QualificationDetailsResponse・SeminarDetailsResponse・SubmitResponse・GoalsResponse・GoalCompleteResponse・GoalReviewCompleteResponse |
@@ -585,18 +698,30 @@ UserResponse
 | `com/skilize/inventory/application/command/` | ItSkillDetailCommand・QualificationDetailCommand・SeminarDetailCommand・GoalCommand・GoalReviewUpdateCommand |
 | `com/skilize/inventory/application/query/` | ComparisonQueryResult・GoalReviewQueryResult |
 | `com/skilize/inventory/application/mapper/` | InventoryApplicationMapper（Request→Command 変換） |
-| `com/skilize/inventory/domain/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・Repository・列挙型 |
+| `com/skilize/inventory/domain/model/` | Inventory・ItSkillDetail・QualificationDetail・SeminarDetail・InventoryGoal・列挙型（JPA/Springに依存しない純粋なドメインモデル） |
+| `com/skilize/inventory/domain/repository/` | 各モデルに対応するRepository（Interfaceのみ） |
+| `com/skilize/inventory/infrastructure/persistence/entity/` | 各モデルに対応するJPA @Entity（例: InventoryEntity, ItSkillDetailEntity） |
+| `com/skilize/inventory/infrastructure/persistence/repository/` | 各XxxJpaRepository（Spring Data JPA）、XxxRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/inventory/infrastructure/persistence/mapper/` | 各XxxPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/master/presentation/` | MasterController・MasterExcelController |
 | `com/skilize/master/presentation/request/` | SkillLevelRequest・ItSkillRequest・ItSkillCategoryRequest・QualificationRequest・AdSeminarRequest・PromoteItSkillRequest・SimpleCategoryRequest |
 | `com/skilize/master/presentation/response/` | SkillLevelResponse・ItSkillResponse・QualificationResponse・AdSeminarResponse・CustomUnregisteredResponse・MasterImportResponse |
 | `com/skilize/master/application/` | MasterService（マスタ CRUD）・MasterExcelService（Excel 出力・取込） |
 | `com/skilize/master/application/query/` | MasterImportQueryResult・MasterImportErrorDetail |
-| `com/skilize/master/domain/` | マスタエンティティ（SkillLevel, ItSkill, Qualification, AdSeminar 等）・Repository |
+| `com/skilize/master/domain/model/` | マスタドメインモデル（SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory。JPA/Springに依存しない） |
+| `com/skilize/master/domain/repository/` | 各モデルに対応するRepository（Interfaceのみ） |
 | `com/skilize/master/infrastructure/excel/` | ExcelStyleHelper・ExcelFormatException・各 Exporter/Importer（ItSkill・Qualification・AdSeminar） |
+| `com/skilize/master/infrastructure/persistence/entity/` | 各モデルに対応するJPA @Entity（例: ItSkillEntity, ItSkillCategoryEntity） |
+| `com/skilize/master/infrastructure/persistence/repository/` | 各XxxJpaRepository（Spring Data JPA）、XxxRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/master/infrastructure/persistence/mapper/` | 各XxxPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/fiscalyear/presentation/` | FiscalYearController |
 | `com/skilize/fiscalyear/presentation/request/` | FiscalYearRequest・FiscalYearSettingsRequest |
 | `com/skilize/fiscalyear/presentation/response/` | FiscalYearResponse・FiscalYearSettingsResponse |
-| `com/skilize/fiscalyear/domain/` | FiscalYear・FiscalYearSettings・Repository |
+| `com/skilize/fiscalyear/domain/model/` | FiscalYear・FiscalYearSettings（JPA/Springに依存しない純粋なドメインモデル） |
+| `com/skilize/fiscalyear/domain/repository/` | FiscalYearRepository・FiscalYearSettingsRepository（Interfaceのみ） |
+| `com/skilize/fiscalyear/infrastructure/persistence/entity/` | FiscalYearEntity・FiscalYearSettingsEntity（JPA @Entity） |
+| `com/skilize/fiscalyear/infrastructure/persistence/repository/` | FiscalYearJpaRepository・FiscalYearSettingsJpaRepository（Spring Data JPA）、FiscalYearRepositoryImpl・FiscalYearSettingsRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/fiscalyear/infrastructure/persistence/mapper/` | FiscalYearPersistenceMapper・FiscalYearSettingsPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/dashboard/presentation/` | DashboardController |
 | `com/skilize/dashboard/presentation/response/` | DashboardResponse（nested UserInfo・FiscalYearRef・CurrentInventoryInfo） |
 | `com/skilize/charts/presentation/` | ChartController（QueryResult を直接返す） |
@@ -606,19 +731,32 @@ UserResponse
 | `com/skilize/expectation/presentation/request/` | SaveExpectationRequest |
 | `com/skilize/expectation/application/` | ExpectationService（期待コメント保存ロジック） |
 | `com/skilize/expectation/application/query/` | ExpectationQueryResult |
-| `com/skilize/expectation/domain/` | UserExpectation エンティティ・UserExpectationRepository |
+| `com/skilize/expectation/domain/model/` | UserExpectation（JPA/Springに依存しない純粋なドメインモデル） |
+| `com/skilize/expectation/domain/repository/` | UserExpectationRepository（Interfaceのみ） |
+| `com/skilize/expectation/infrastructure/persistence/entity/` | UserExpectationEntity（JPA @Entity） |
+| `com/skilize/expectation/infrastructure/persistence/repository/` | UserExpectationJpaRepository（Spring Data JPA）、UserExpectationRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/expectation/infrastructure/persistence/mapper/` | UserExpectationPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/interview/presentation/` | InterviewController |
 | `com/skilize/interview/presentation/request/` | SaveInterviewRequest・DetailNoteRequest |
 | `com/skilize/interview/presentation/response/` | InterviewResponse・DetailNoteResponse |
 | `com/skilize/interview/application/` | InterviewService（面談メモ保存ロジック） |
 | `com/skilize/interview/application/command/` | DetailNoteCommand |
+| `com/skilize/interview/domain/model/` | InventoryInterview・InterviewDetailNote・DetailType（JPA/Springに依存しない純粋なドメインモデル） |
+| `com/skilize/interview/domain/repository/` | InventoryInterviewRepository・InterviewDetailNoteRepository（Interfaceのみ） |
+| `com/skilize/interview/infrastructure/persistence/entity/` | InventoryInterviewEntity・InterviewDetailNoteEntity（JPA @Entity） |
+| `com/skilize/interview/infrastructure/persistence/repository/` | 各XxxJpaRepository（Spring Data JPA）、XxxRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/interview/infrastructure/persistence/mapper/` | 各XxxPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/ai/presentation/` | AiAnalysisController（QueryResult を直接返す）・AiChatController（POST /api/ai/chat） |
 | `com/skilize/ai/presentation/request/` | AiChatRequest |
 | `com/skilize/ai/application/` | AiAnalysisService（非同期AI分析）・AiChatService（Python同期転送）・InventoryCompletedEventListener |
 | `com/skilize/ai/application/command/` | AiChatCommand |
 | `com/skilize/ai/application/mapper/` | AiChatApplicationMapper（AiChatRequest→AiChatCommand 変換） |
 | `com/skilize/ai/application/query/` | AiAnalysisQueryResult・AiChatQueryResult |
-| `com/skilize/ai/domain/` | AiCareerAnalysis エンティティ・AiAnalysisStatus・AiCareerAnalysisRepository |
+| `com/skilize/ai/domain/model/` | AiCareerAnalysis・AiAnalysisStatus（JPA/Springに依存しない純粋なドメインモデル） |
+| `com/skilize/ai/domain/repository/` | AiCareerAnalysisRepository（Interfaceのみ） |
+| `com/skilize/ai/infrastructure/persistence/entity/` | AiCareerAnalysisEntity（JPA @Entity） |
+| `com/skilize/ai/infrastructure/persistence/repository/` | AiCareerAnalysisJpaRepository（Spring Data JPA）、AiCareerAnalysisRepositoryImpl（domain.repositoryの実装） |
+| `com/skilize/ai/infrastructure/persistence/mapper/` | AiCareerAnalysisPersistenceMapper（Entity⇄Domain変換） |
 | `com/skilize/report/presentation/` | ReportController（棚卸表 PDF ダウンロードエンドポイント） |
 | `com/skilize/report/application/` | ReportService（JasperReports を使った棚卸表 PDF 生成） |
 | `apps/backend/src/main/resources/reports/` | 帳票レイアウトファイル（`.jrxml`）の格納フォルダ |

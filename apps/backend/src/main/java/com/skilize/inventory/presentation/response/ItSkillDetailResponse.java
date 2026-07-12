@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
-import com.skilize.inventory.domain.ItSkillDetail;
+import com.skilize.inventory.domain.model.ItSkillDetail;
 
 /**
  * ITスキル明細1件のレスポンス。itSkillId が null の場合はカスタムスキル（マスタ未登録）を示す。

@@ -15,13 +15,11 @@
  **************************************************************************************************************/
 package com.skilize.user.presentation;
 
-import com.skilize.inventory.domain.Inventory;
-import com.skilize.inventory.domain.InventoryRepository;
+import com.skilize.inventory.domain.model.Inventory;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.application.UserService;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
-import com.skilize.user.domain.UserRepository;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
 import com.skilize.user.presentation.request.CreateUserRequest;
 import com.skilize.user.presentation.request.UpdateUserRequest;
 import com.skilize.user.presentation.response.MemberInventorySummaryResponse;
@@ -51,9 +49,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserRepository userRepository;
     private final UserService userService;
-    private final InventoryRepository inventoryRepository;
 
     // ─── Admin-only endpoints ─────────────────────────────────────────────────
 
@@ -64,7 +60,7 @@ public class UserController {
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public List<UserResponse> list() {
-        List<User> users = userRepository.findAllByOrderByUserIdAsc();
+        List<User> users = userService.findAllOrdered();
         // TL名を tlUserId から引けるよう「内部ID → 氏名」のマップを構築する
         Map<Integer, String> nameById = users.stream()
                 .collect(Collectors.toMap(User::getId, User::getName));
@@ -82,7 +78,7 @@ public class UserController {
         User saved = userService.create(req.userId(), req.name(), req.email(),
                 Role.valueOf(req.role()), req.tlUserId());
         // 作成後に全ユーザーを再取得してTL名マップを更新する（作成ユーザーを含むため）
-        List<User> all = userRepository.findAllByOrderByUserIdAsc();
+        List<User> all = userService.findAllOrdered();
         Map<Integer, String> nameById = all.stream().collect(Collectors.toMap(User::getId, User::getName));
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(saved, nameById));
     }
@@ -98,7 +94,7 @@ public class UserController {
         // active が null（未送信）の場合は true をデフォルトとする
         User saved = userService.update(id, req.name(), req.email(), Role.valueOf(req.role()),
                 req.tlUserId(), req.active() != null ? req.active() : true);
-        List<User> all = userRepository.findAllByOrderByUserIdAsc();
+        List<User> all = userService.findAllOrdered();
         Map<Integer, String> nameById = all.stream().collect(Collectors.toMap(User::getId, User::getName));
         return UserResponse.from(saved, nameById);
     }
@@ -123,16 +119,14 @@ public class UserController {
      */
     @GetMapping("/me/team-members")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
-    public List<TeamMemberResponse> getTeamMembers(@AuthenticationPrincipal User currentUser) {
+    public List<TeamMemberResponse> getTeamMembers(@AuthenticationPrincipal(expression = "user") User currentUser) {
         // ADMIN は全有効ユーザー、TL は tlUserId が自分の ID と一致する有効ユーザーのみ取得する
-        List<User> members = currentUser.getRole() == Role.ADMIN
-                ? userRepository.findByActiveTrue()
-                : userRepository.findByTlUserIdAndActiveTrue(currentUser.getId());
+        List<User> members = userService.findActiveMembersFor(currentUser);
 
         // 今日の日付を基準に現在の有効年度を取得する（存在しない場合は棚卸情報が null になる）
         var currentFy = userService.findCurrentFiscalYear();
 
-        List<User> allUsers = userRepository.findAllByOrderByUserIdAsc();
+        List<User> allUsers = userService.findAllOrdered();
         Map<Integer, String> nameById = allUsers.stream()
                 .collect(Collectors.toMap(User::getId, User::getName));
 
@@ -153,8 +147,8 @@ public class UserController {
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public List<MemberInventorySummaryResponse> getUserInventories(
             @PathVariable int id,
-            @AuthenticationPrincipal User currentUser) {
-        User targetUser = userRepository.findById(id)
+            @AuthenticationPrincipal(expression = "user") User currentUser) {
+        User targetUser = userService.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"));
 
         // TL は担当チームメンバー（tl_user_id が自分のID のユーザー）のみ参照可
@@ -164,7 +158,7 @@ public class UserController {
             }
         }
 
-        return inventoryRepository.findByUserIdWithFiscalYear(id)
+        return userService.findInventoriesByUserId(id)
                 .stream()
                 .map(MemberInventorySummaryResponse::from)
                 .toList();

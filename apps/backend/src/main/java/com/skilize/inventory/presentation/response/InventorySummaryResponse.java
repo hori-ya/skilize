@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
-import com.skilize.inventory.domain.Inventory;
+import com.skilize.inventory.domain.model.Inventory;
 
 /**
  * 棚卸サマリレスポンス。GET /api/inventories/mine の一覧要素および棚卸作成直後のレスポンスに使用する。

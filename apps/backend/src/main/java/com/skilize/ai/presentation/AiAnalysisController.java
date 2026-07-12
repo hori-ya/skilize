@@ -18,9 +18,9 @@ package com.skilize.ai.presentation;
 import com.skilize.ai.application.AiAnalysisService;
 import com.skilize.ai.application.query.AiAnalysisQueryResult;
 import com.skilize.shared.domain.exception.AuthException;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
-import com.skilize.user.domain.UserRepository;
+import com.skilize.user.application.UserService;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -41,11 +41,11 @@ import java.util.List;
 public class AiAnalysisController {
 
     private final AiAnalysisService aiAnalysisService;
-    private final UserRepository userRepository;
+    private final UserService userService;
 
     /** 自分の AI 分析結果一覧を返す（全ロール参照可）。 */
     @GetMapping("/users/me/ai-analyses")
-    public List<AiAnalysisQueryResult> getMyAnalyses(@AuthenticationPrincipal User user) {
+    public List<AiAnalysisQueryResult> getMyAnalyses(@AuthenticationPrincipal(expression = "user") User user) {
         return aiAnalysisService.findByUserId(user.getId());
     }
 
@@ -57,8 +57,8 @@ public class AiAnalysisController {
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public List<AiAnalysisQueryResult> getMemberAnalyses(
             @PathVariable int userId,
-            @AuthenticationPrincipal User currentUser) {
-        User targetUser = userRepository.findById(userId)
+            @AuthenticationPrincipal(expression = "user") User currentUser) {
+        User targetUser = userService.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
 
         // TL は担当チームメンバー（tl_user_id が自分のID のユーザー）のみ参照可

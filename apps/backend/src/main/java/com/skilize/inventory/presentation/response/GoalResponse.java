@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
-import com.skilize.inventory.domain.InventoryGoal;
+import com.skilize.inventory.domain.model.InventoryGoal;
 
 /**
  * 目標1件のレスポンス。goalCategory に応じて itSkillId / qualificationId / adSeminarId の

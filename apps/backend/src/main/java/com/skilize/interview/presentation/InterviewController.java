@@ -17,11 +17,11 @@ package com.skilize.interview.presentation;
 
 import com.skilize.interview.application.InterviewService;
 import com.skilize.interview.application.command.DetailNoteCommand;
-import com.skilize.interview.domain.InventoryInterview;
+import com.skilize.interview.domain.model.InventoryInterview;
 import com.skilize.interview.presentation.request.SaveInterviewRequest;
 import com.skilize.interview.presentation.response.DetailNoteResponse;
 import com.skilize.interview.presentation.response.InterviewResponse;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -47,7 +47,7 @@ public class InterviewController {
      */
     @GetMapping("/inventory/{inventoryId}")
     public ResponseEntity<InterviewResponse> getMine(@PathVariable int inventoryId,
-                                                      @AuthenticationPrincipal User user) {
+                                                      @AuthenticationPrincipal(expression = "user") User user) {
         // Optional のまま処理し、存在する場合のみ明細ノートを取得して200を返す
         return interviewService.findMine(inventoryId, user)
                 .map(interview -> {
@@ -64,7 +64,7 @@ public class InterviewController {
      */
     @PutMapping("/inventory/{inventoryId}")
     public InterviewResponse save(@PathVariable int inventoryId,
-                                   @AuthenticationPrincipal User user,
+                                   @AuthenticationPrincipal(expression = "user") User user,
                                    @RequestBody @Valid SaveInterviewRequest req) {
         List<DetailNoteCommand> commands = req.detailNotes().stream()
                 .map(d -> new DetailNoteCommand(d.detailType(), d.detailId(), d.note()))
@@ -82,7 +82,7 @@ public class InterviewController {
      */
     @GetMapping("/inventory/{inventoryId}/prev-year")
     public ResponseEntity<InterviewResponse> getPrevYear(@PathVariable int inventoryId,
-                                                          @AuthenticationPrincipal User user) {
+                                                          @AuthenticationPrincipal(expression = "user") User user) {
         return interviewService.findPrevYear(inventoryId, user)
                 .map(interview -> {
                     List<DetailNoteResponse> notes = interviewService.findDetailNotes(interview.getId())

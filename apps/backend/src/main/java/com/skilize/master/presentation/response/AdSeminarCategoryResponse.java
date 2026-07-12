@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.AdSeminarCategory;
+import com.skilize.master.domain.model.AdSeminarCategory;
 
 /**
  * ADセミナーカテゴリ1件のレスポンス。GET /api/ad-seminar-categories などのレスポンスに使用する。

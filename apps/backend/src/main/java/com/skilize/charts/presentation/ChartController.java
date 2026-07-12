@@ -20,7 +20,7 @@ import com.skilize.charts.application.query.GrowthQueryResult;
 import com.skilize.charts.application.query.HeatmapQueryResult;
 import com.skilize.charts.application.query.RadarQueryResult;
 import com.skilize.charts.application.query.TimelineQueryResult;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,25 +40,25 @@ public class ChartController {
 
     /** レーダーチャート（ITスキル大分類ごとの平均スキルレベル）を返す。 */
     @GetMapping("/radar")
-    public RadarQueryResult getRadar(@AuthenticationPrincipal User user) {
+    public RadarQueryResult getRadar(@AuthenticationPrincipal(expression = "user") User user) {
         return chartService.getRadar(user);
     }
 
     /** 成長推移グラフ（年度別のスキルレベル合計推移）を返す。 */
     @GetMapping("/growth")
-    public GrowthQueryResult getGrowth(@AuthenticationPrincipal User user) {
+    public GrowthQueryResult getGrowth(@AuthenticationPrincipal(expression = "user") User user) {
         return chartService.getGrowth(user);
     }
 
     /** ヒートマップ（年度×スキルレベルの分布）を返す。 */
     @GetMapping("/heatmap")
-    public HeatmapQueryResult getHeatmap(@AuthenticationPrincipal User user) {
+    public HeatmapQueryResult getHeatmap(@AuthenticationPrincipal(expression = "user") User user) {
         return chartService.getHeatmap(user);
     }
 
     /** タイムライン（資格取得・セミナー受講の時系列データ）を返す。 */
     @GetMapping("/timeline")
-    public TimelineQueryResult getTimeline(@AuthenticationPrincipal User user) {
+    public TimelineQueryResult getTimeline(@AuthenticationPrincipal(expression = "user") User user) {
         return chartService.getTimeline(user);
     }
 }

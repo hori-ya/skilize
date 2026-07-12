@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.shared.infrastructure;
 
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;

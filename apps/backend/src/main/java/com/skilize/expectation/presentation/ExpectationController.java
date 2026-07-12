@@ -18,7 +18,7 @@ package com.skilize.expectation.presentation;
 import com.skilize.expectation.application.ExpectationService;
 import com.skilize.expectation.application.query.ExpectationQueryResult;
 import com.skilize.expectation.presentation.request.SaveExpectationRequest;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -43,7 +43,7 @@ public class ExpectationController {
     @GetMapping
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public ExpectationQueryResult get(@PathVariable int userId,
-                                       @AuthenticationPrincipal User requester) {
+                                       @AuthenticationPrincipal(expression = "user") User requester) {
         return expectationService.getForUser(userId, requester);
     }
 
@@ -54,7 +54,7 @@ public class ExpectationController {
     @PutMapping("/tl")
     @PreAuthorize("hasRole('TL')")
     public ExpectationQueryResult saveTl(@PathVariable int userId,
-                                          @AuthenticationPrincipal User requester,
+                                          @AuthenticationPrincipal(expression = "user") User requester,
                                           @RequestBody SaveExpectationRequest req) {
         return expectationService.saveTlExpectation(userId, requester, req.expectation());
     }
@@ -63,7 +63,7 @@ public class ExpectationController {
     @PutMapping("/company")
     @PreAuthorize("hasRole('ADMIN')")
     public ExpectationQueryResult saveCompany(@PathVariable int userId,
-                                               @AuthenticationPrincipal User requester,
+                                               @AuthenticationPrincipal(expression = "user") User requester,
                                                @RequestBody SaveExpectationRequest req) {
         return expectationService.saveCompanyExpectation(userId, requester, req.expectation());
     }

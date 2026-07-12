@@ -15,9 +15,10 @@
  **************************************************************************************************************/
 package com.skilize.master.application;
 
-import com.skilize.inventory.domain.ItSkillDetailRepository;
-import com.skilize.inventory.domain.QualificationDetailRepository;
-import com.skilize.master.domain.*;
+import com.skilize.inventory.domain.repository.ItSkillDetailRepository;
+import com.skilize.inventory.domain.repository.QualificationDetailRepository;
+import com.skilize.master.domain.model.*;
+import com.skilize.master.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -26,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * マスタデータ（スキルレベル・ITスキル・ITスキル分類・資格・資格分類・ADセミナー・ADセミナー分類）の
@@ -44,9 +46,85 @@ public class MasterService {
     private final QualificationCategoryRepository qualificationCategoryRepository;
     private final AdSeminarRepository adSeminarRepository;
     private final AdSeminarCategoryRepository adSeminarCategoryRepository;
+    private final SeminarCategoryRepository seminarCategoryRepository;
     // 昇格時に棚卸明細のカスタム名をマスタへ紐付けるため inventory ドメインのリポジトリを参照する
     private final ItSkillDetailRepository itSkillDetailRepository;
     private final QualificationDetailRepository qualificationDetailRepository;
+
+    /** スキルレベル一覧を levelValue 昇順で返す。isActive で有効/無効を絞り込み可（null は全件）。 */
+    @Transactional(readOnly = true)
+    public List<SkillLevel> getSkillLevels(Boolean isActive) {
+        return isActive != null
+                ? skillLevelRepository.findByActiveOrderByLevelValueAsc(isActive)
+                : skillLevelRepository.findAllByOrderByLevelValueAsc();
+    }
+
+    /**
+     * ITスキル一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。
+     * 全件・無効のみは分類階層順、有効のみは棚卸入力画面向けの従来順を維持する。
+     */
+    @Transactional(readOnly = true)
+    public List<ItSkill> getItSkills(Boolean isActive) {
+        return isActive == null ? itSkillRepository.findAllOrderByHierarchy()
+                : isActive ? itSkillRepository.findAllActiveWithCategory()
+                           : itSkillRepository.findByActiveFalseOrderByHierarchy();
+    }
+
+    /** ITスキル分類をIDで取得する（表示用の上位分類解決に使用）。 */
+    @Transactional(readOnly = true)
+    public Optional<ItSkillCategory> findItSkillCategoryById(int id) {
+        return itSkillCategoryRepository.findById(id);
+    }
+
+    /** 資格一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。 */
+    @Transactional(readOnly = true)
+    public List<Qualification> getQualifications(Boolean isActive) {
+        return isActive == null ? qualificationRepository.findAllWithCategory()
+                : isActive ? qualificationRepository.findAllActiveWithCategory()
+                           : qualificationRepository.findAllWithCategoryByActive(false);
+    }
+
+    /** 資格分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可（null は全件）。 */
+    @Transactional(readOnly = true)
+    public List<QualificationCategory> getQualificationCategories(Boolean isActive) {
+        return isActive == null
+                ? qualificationCategoryRepository.findAllByOrderBySortOrderAsc()
+                : qualificationCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+    }
+
+    /** ADセミナー一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。 */
+    @Transactional(readOnly = true)
+    public List<AdSeminar> getAdSeminars(Boolean isActive) {
+        return isActive == null ? adSeminarRepository.findAllWithCategory()
+                : isActive ? adSeminarRepository.findAllActiveWithCategory()
+                           : adSeminarRepository.findAllWithCategoryByActive(false);
+    }
+
+    /** 有効なセミナー分類一覧を sortOrder 昇順で返す（常に有効のみ）。 */
+    @Transactional(readOnly = true)
+    public List<SeminarCategory> getSeminarCategories() {
+        return seminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+    }
+
+    /**
+     * ITスキル分類一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。
+     * 全件・無効のみは階層レベル昇順→親分類ID昇順→表示順昇順、有効のみは表示順昇順のみ。
+     */
+    @Transactional(readOnly = true)
+    public List<ItSkillCategory> getItSkillCategories(Boolean isActive) {
+        return isActive == null
+                ? itSkillCategoryRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc()
+                : isActive ? itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
+                           : itSkillCategoryRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc();
+    }
+
+    /** ADセミナー分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可（null は全件）。 */
+    @Transactional(readOnly = true)
+    public List<AdSeminarCategory> getAdSeminarCategories(Boolean isActive) {
+        return isActive == null
+                ? adSeminarCategoryRepository.findAllByOrderBySortOrderAsc()
+                : adSeminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+    }
 
     /** スキルレベルを新規作成する。 */
     @Transactional

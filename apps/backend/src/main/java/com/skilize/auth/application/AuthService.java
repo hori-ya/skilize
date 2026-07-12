@@ -21,8 +21,8 @@ import com.skilize.auth.application.query.LoginQueryResult;
 import com.skilize.auth.application.query.MeQueryResult;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.infrastructure.JwtUtil;
-import com.skilize.user.domain.User;
-import com.skilize.user.domain.UserRepository;
+import com.skilize.user.domain.model.User;
+import com.skilize.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -69,14 +69,15 @@ public class AuthService {
      */
     @Transactional
     public void changePassword(ChangePasswordCommand command, User currentUser) {
-        // SecurityContext のユーザーは JPA 管理外の可能性があるため ID で再フェッチしてトランザクション内で更新する
-        // （JPA の管理外エンティティへの変更は DB に保存されない）
+        // SecurityContext のユーザーは古い状態の可能性があるため ID で再フェッチしてから更新する
         User user = userRepository.findById(currentUser.getId()).orElseThrow();
         if (!passwordEncoder.matches(command.currentPassword(), user.getPasswordHash())) {
             throw new AuthException("CURRENT_PASSWORD_WRONG", "");
         }
         // passwordEncoder.encode(): 新しいパスワードを BCrypt でハッシュ化してから保存する
         user.changePassword(passwordEncoder.encode(command.newPassword()));
+        // User はJPA管理外の純粋なドメインモデルのため、明示的にsaveしない限りDBへ反映されない
+        userRepository.save(user);
     }
 
     /**

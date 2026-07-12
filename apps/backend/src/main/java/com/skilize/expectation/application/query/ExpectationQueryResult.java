@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.expectation.application.query;
 
-import com.skilize.expectation.domain.UserExpectation;
+import com.skilize.expectation.domain.model.UserExpectation;
 
 /**
  * 期待情報クエリ結果。GET /api/users/{userId}/expectation のレスポンスに使用する。

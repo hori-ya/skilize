@@ -15,11 +15,12 @@
  **************************************************************************************************************/
 package com.skilize.report.application;
 
-import com.skilize.inventory.domain.*;
-import com.skilize.master.domain.ItSkillCategory;
+import com.skilize.inventory.domain.model.*;
+import com.skilize.inventory.domain.repository.*;
+import com.skilize.master.domain.model.ItSkillCategory;
 import com.skilize.report.application.query.*;
 import com.skilize.shared.domain.exception.AuthException;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -165,7 +166,7 @@ public class ReportService {
                     String cat2 = "";
                     String skillName;
                     if (g.getItSkill() != null) {
-                        ItSkillCategory cat = g.getItSkill().getCategory();
+                        ItSkillCategory cat =g.getItSkill().getCategory();
                         if (cat != null) {
                             if (cat.getParent() != null) {
                                 cat1 = cat.getParent().getName();
@@ -192,7 +193,7 @@ public class ReportService {
                     String cat2 = "";
                     String skillName;
                     if (d.getItSkill() != null) {
-                        ItSkillCategory cat = d.getItSkill().getCategory();
+                        ItSkillCategory cat =d.getItSkill().getCategory();
                         if (cat != null) {
                             if (cat.getParent() != null) {
                                 cat1 = cat.getParent().getName();

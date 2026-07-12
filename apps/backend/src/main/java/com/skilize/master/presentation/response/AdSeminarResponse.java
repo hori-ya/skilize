@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.AdSeminar;
+import com.skilize.master.domain.model.AdSeminar;
 
 /**
  * ADセミナーマスタ1件のレスポンス。GET /api/ad-seminars などのレスポンスに使用する。

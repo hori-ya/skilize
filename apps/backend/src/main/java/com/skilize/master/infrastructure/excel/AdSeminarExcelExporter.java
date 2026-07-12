@@ -15,8 +15,8 @@
  **************************************************************************************************************/
 package com.skilize.master.infrastructure.excel;
 
-import com.skilize.master.domain.AdSeminar;
-import com.skilize.master.domain.AdSeminarCategory;
+import com.skilize.master.domain.model.AdSeminar;
+import com.skilize.master.domain.model.AdSeminarCategory;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;

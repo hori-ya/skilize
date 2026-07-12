@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.shared.infrastructure;
 
-import com.skilize.user.domain.User;
+import com.skilize.user.infrastructure.security.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,15 +54,15 @@ public class InitialPasswordFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain chain) throws ServletException, IOException {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        // `instanceof User user` はJava16以降のパターンマッチング。
-        // 型チェックとキャストを1行で行い、以降のブロックで `user` 変数として使える。
-        // getPrincipal() が User でない場合（匿名アクセス等）はフィルタースキップ。
-        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User user)) {
+        // `instanceof UserPrincipal principal` はJava16以降のパターンマッチング。
+        // 型チェックとキャストを1行で行い、以降のブロックで `principal` 変数として使える。
+        // getPrincipal() が UserPrincipal でない場合（匿名アクセス等）はフィルタースキップ。
+        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UserPrincipal principal)) {
             chain.doFilter(request, response);
             return;
         }
 
-        if (user.isInitialPassword() && !ALLOWED_PATHS.contains(request.getServletPath())) {
+        if (principal.getUser().isInitialPassword() && !ALLOWED_PATHS.contains(request.getServletPath())) {
             log.warn("Initial password change required. Blocked path={}", request.getServletPath());
             response.setStatus(HttpServletResponse.SC_FORBIDDEN);
             response.setContentType("application/json;charset=UTF-8");

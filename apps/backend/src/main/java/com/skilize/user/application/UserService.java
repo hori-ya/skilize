@@ -15,13 +15,13 @@
  **************************************************************************************************************/
 package com.skilize.user.application;
 
-import com.skilize.fiscalyear.domain.FiscalYear;
-import com.skilize.fiscalyear.domain.FiscalYearRepository;
-import com.skilize.inventory.domain.Inventory;
-import com.skilize.inventory.domain.InventoryRepository;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
-import com.skilize.user.domain.UserRepository;
+import com.skilize.fiscalyear.domain.model.FiscalYear;
+import com.skilize.fiscalyear.domain.repository.FiscalYearRepository;
+import com.skilize.inventory.domain.model.Inventory;
+import com.skilize.inventory.domain.repository.InventoryRepository;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
+import com.skilize.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,6 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -102,5 +103,31 @@ public class UserService {
     @Transactional(readOnly = true)
     public Optional<Inventory> findCurrentInventory(int userId, int fiscalYearId) {
         return inventoryRepository.findByUserIdAndFiscalYearId(userId, fiscalYearId);
+    }
+
+    /** 全ユーザーをユーザーID昇順で返す。 */
+    @Transactional(readOnly = true)
+    public List<User> findAllOrdered() {
+        return userRepository.findAllByOrderByUserIdAsc();
+    }
+
+    /** 内部IDでユーザーを取得する。存在しない場合は Optional.empty() を返す。 */
+    @Transactional(readOnly = true)
+    public Optional<User> findById(int id) {
+        return userRepository.findById(id);
+    }
+
+    /** currentUser のロールに応じた担当チームメンバー一覧を返す（ADMIN は全有効ユーザー、TL は自分の担当ユーザーのみ）。 */
+    @Transactional(readOnly = true)
+    public List<User> findActiveMembersFor(User currentUser) {
+        return currentUser.getRole() == Role.ADMIN
+                ? userRepository.findByActiveTrue()
+                : userRepository.findByTlUserIdAndActiveTrue(currentUser.getId());
+    }
+
+    /** 指定ユーザーの棚卸一覧を年度情報付きで返す。 */
+    @Transactional(readOnly = true)
+    public List<Inventory> findInventoriesByUserId(int userId) {
+        return inventoryRepository.findByUserIdWithFiscalYear(userId);
     }
 }

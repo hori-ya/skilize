@@ -15,8 +15,8 @@
  **************************************************************************************************************/
 package com.skilize.master.infrastructure.excel;
 
-import com.skilize.master.domain.ItSkill;
-import com.skilize.master.domain.ItSkillCategory;
+import com.skilize.master.domain.model.ItSkill;
+import com.skilize.master.domain.model.ItSkillCategory;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.poi.ss.usermodel.*;

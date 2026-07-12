@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.QualificationCategory;
+import com.skilize.master.domain.model.QualificationCategory;
 
 /**
  * 資格カテゴリ1件のレスポンス。GET /api/qualification-categories などのレスポンスに使用する。

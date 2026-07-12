@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.interview.presentation.request;
 
-import com.skilize.interview.domain.DetailType;
+import com.skilize.interview.domain.model.DetailType;
 import jakarta.validation.constraints.NotNull;
 
 /**

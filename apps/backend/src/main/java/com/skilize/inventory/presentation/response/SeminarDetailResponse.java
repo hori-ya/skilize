@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
-import com.skilize.inventory.domain.SeminarDetail;
+import com.skilize.inventory.domain.model.SeminarDetail;
 
 /**
  * セミナー明細1件のレスポンス。ADセミナーと自由入力セミナーの両方を表現する。

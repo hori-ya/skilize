@@ -5,8 +5,9 @@ import com.skilize.ai.application.AiChatService;
 import com.skilize.ai.application.mapper.AiChatApplicationMapper;
 import com.skilize.ai.application.query.AiChatQueryResult;
 import com.skilize.shared.presentation.GlobalExceptionHandler;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
+import com.skilize.user.infrastructure.security.UserPrincipal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -60,9 +61,10 @@ class AiChatControllerTest {
         ReflectionTestUtils.setField(generalUser, "id", 1);
         // SecurityContextHolder にテストユーザーの認証情報を設定する
         // （スタンドアローン MockMvc は同一スレッドで実行されるためスレッドローカルが有効）
+        UserPrincipal principal = new UserPrincipal(generalUser);
         SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(
-                        generalUser, null, generalUser.getAuthorities()));
+                        principal, null, principal.getAuthorities()));
     }
 
     @AfterEach

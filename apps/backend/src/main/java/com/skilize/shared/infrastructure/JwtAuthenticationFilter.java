@@ -15,7 +15,8 @@
  **************************************************************************************************************/
 package com.skilize.shared.infrastructure;
 
-import com.skilize.user.domain.UserRepository;
+import com.skilize.user.domain.repository.UserRepository;
+import com.skilize.user.infrastructure.security.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -68,8 +69,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     // is_active=false のユーザーは JWT が有効でもブロックする（アカウント無効化の即時反映）
                     if (user.isActive() && jwtUtil.isTokenValid(token)) {
                         // credentials（第2引数）は JWT 検証済みのため null。第3引数に権限リストを渡す。
+                        UserPrincipal principal = new UserPrincipal(user);
                         UsernamePasswordAuthenticationToken auth =
-                                new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+                                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
                         // リクエストの IP アドレス・セッション ID を認証オブジェクトに付与（監査ログ用）
                         auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                         // SecurityContextHolder はスレッドローカルな認証ストア。

@@ -16,11 +16,11 @@
 package com.skilize.expectation.application;
 
 import com.skilize.expectation.application.query.ExpectationQueryResult;
-import com.skilize.expectation.domain.UserExpectation;
-import com.skilize.expectation.domain.UserExpectationRepository;
-import com.skilize.user.domain.Role;
-import com.skilize.user.domain.User;
-import com.skilize.user.domain.UserRepository;
+import com.skilize.expectation.domain.model.UserExpectation;
+import com.skilize.expectation.domain.repository.UserExpectationRepository;
+import com.skilize.user.domain.model.Role;
+import com.skilize.user.domain.model.User;
+import com.skilize.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

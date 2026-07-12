@@ -21,7 +21,7 @@ import com.skilize.auth.application.query.LoginQueryResult;
 import com.skilize.auth.application.query.MeQueryResult;
 import com.skilize.auth.presentation.request.ChangePasswordRequest;
 import com.skilize.auth.presentation.request.LoginRequest;
-import com.skilize.user.domain.User;
+import com.skilize.user.domain.model.User;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -66,7 +66,7 @@ public class AuthController {
      */
     @PostMapping("/change-password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
-                                               @AuthenticationPrincipal User user) {
+                                               @AuthenticationPrincipal(expression = "user") User user) {
         authService.changePassword(authApplicationMapper.toCommand(request), user);
         return ResponseEntity.noContent().build();
     }
@@ -76,7 +76,7 @@ public class AuthController {
      * @param user @AuthenticationPrincipal → JwtAuthenticationFilter が JWT から復元したユーザー
      */
     @GetMapping("/me")
-    public ResponseEntity<MeQueryResult> me(@AuthenticationPrincipal User user) {
+    public ResponseEntity<MeQueryResult> me(@AuthenticationPrincipal(expression = "user") User user) {
         return ResponseEntity.ok(authService.getMe(user));
     }
 }

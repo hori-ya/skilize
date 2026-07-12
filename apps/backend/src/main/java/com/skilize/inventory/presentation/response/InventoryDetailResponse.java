@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.presentation.response;
 
-import com.skilize.inventory.domain.Inventory;
+import com.skilize.inventory.domain.model.Inventory;
 
 /**
  * 棚卸詳細レスポンス。GET /api/inventories/{id} のレスポンスに使用する。

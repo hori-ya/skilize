@@ -15,8 +15,8 @@
  **************************************************************************************************************/
 package com.skilize.user.presentation.response;
 
-import com.skilize.inventory.domain.Inventory;
-import com.skilize.user.domain.User;
+import com.skilize.inventory.domain.model.Inventory;
+import com.skilize.user.domain.model.User;
 
 import java.util.Map;
 

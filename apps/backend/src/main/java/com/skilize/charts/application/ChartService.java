@@ -22,11 +22,13 @@ import com.skilize.charts.application.query.HeatmapQueryResult.HeatmapRow;
 import com.skilize.charts.application.query.HeatmapQueryResult.HeatmapSkill;
 import com.skilize.charts.application.query.RadarQueryResult.RadarAxis;
 import com.skilize.charts.application.query.TimelineQueryResult.TimelineEvent;
-import com.skilize.fiscalyear.domain.FiscalYear;
-import com.skilize.fiscalyear.domain.FiscalYearRepository;
-import com.skilize.inventory.domain.*;
-import com.skilize.master.domain.*;
-import com.skilize.user.domain.User;
+import com.skilize.fiscalyear.domain.model.FiscalYear;
+import com.skilize.fiscalyear.domain.repository.FiscalYearRepository;
+import com.skilize.inventory.domain.model.*;
+import com.skilize.inventory.domain.repository.*;
+import com.skilize.master.domain.model.*;
+import com.skilize.master.domain.repository.*;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -250,7 +252,7 @@ public class ChartService {
         // 過去に登録されたスキルが後からマスタ削除された場合の表示継続を保証する。
         for (ItSkillDetail d : details) {
             if (d.getItSkill() == null || activeSkillIds.contains(d.getItSkill().getId())) continue;
-            ItSkill skill = d.getItSkill();
+            var skill = d.getItSkill();
             ItSkillCategory cat1 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 1);
             if (cat1 == null || !structure.containsKey(cat1.getId())) continue;
             ItSkillCategory cat2 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 2);

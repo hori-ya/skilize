@@ -40,6 +40,27 @@ infrastructure → domain / application を実装する
 
 ---
 
+# 永続化レイヤーの分離（ORMを使う場合）
+
+ORM（JPA/Hibernate等）を採用する場合、domain 層は ORM フレームワークに一切依存させず、永続化の実装詳細は infrastructure 層に閉じ込める。
+
+```text
+domain/
+├── model/       ← 純粋なドメインモデル（ORMアノテーションなし）
+└── repository/  ← Repository interface のみ（ORM実装クラスを継承しない）
+
+infrastructure/persistence/
+├── entity/      ← ORMエンティティ（アノテーションはここにのみ記述する）
+├── repository/  ← ORM実装のリポジトリ + domain.repository の実装クラス
+└── mapper/      ← エンティティ⇄ドメインモデルの変換
+```
+
+- ドメインモデルは「新規生成用ファクトリ」と「永続化状態からの復元用ファクトリ」を分けて用意する（後者は変換Mapperからのみ呼び出す）
+- 他featureのモデルへの参照は、参照先featureが既にこの構成に従っている場合のみドメインモデルとして保持する。参照先がまだ移行されていない場合は、暫定的にORMエンティティを参照してよい（参照先の移行完了時に解消する）
+- 単なるID以外の用途がない逆参照（子から親への参照等）は、オブジェクト全体ではなくID（スカラー値）で保持し、不要な変換・追加クエリを避ける
+
+---
+
 # 依存性注入
 
 - コンストラクタインジェクションのみを使用する
@@ -95,6 +116,12 @@ infrastructure → domain / application を実装する
 | メソッド・フィールド | camelCase | `findById`, `createdAt` |
 | DB テーブル・カラム | snake_case | `orders`, `created_at` |
 | 定数 | SCREAMING_SNAKE_CASE | `MAX_RETRY_COUNT` |
+| ドメインモデル | `Xxx` | `Order`, `User` |
+| Repository（インターフェース） | `XxxRepository` | `OrderRepository` |
+| ORMエンティティ | `XxxEntity` | `OrderEntity` |
+| ORM実装のリポジトリ | `XxxJpaRepository`（JPAの場合） | `OrderJpaRepository` |
+| Repository実装 | `XxxRepositoryImpl` | `OrderRepositoryImpl` |
+| エンティティ⇄ドメイン変換 | `XxxPersistenceMapper` | `OrderPersistenceMapper` |
 
 ---
 

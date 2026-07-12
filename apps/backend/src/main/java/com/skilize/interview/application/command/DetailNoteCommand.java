@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.interview.application.command;
 
-import com.skilize.interview.domain.DetailType;
+import com.skilize.interview.domain.model.DetailType;
 
 /**
  * 面談メモ明細1件の保存コマンド。PUT /api/interviews/inventory/{inventoryId} のリクエスト内アイテム単位。

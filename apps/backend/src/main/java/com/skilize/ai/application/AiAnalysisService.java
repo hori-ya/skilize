@@ -16,8 +16,8 @@
 package com.skilize.ai.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.skilize.ai.domain.AiCareerAnalysis;
-import com.skilize.ai.domain.AiCareerAnalysisRepository;
+import com.skilize.ai.domain.model.AiCareerAnalysis;
+import com.skilize.ai.domain.repository.AiCareerAnalysisRepository;
 import com.skilize.ai.application.query.AiAnalysisQueryResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

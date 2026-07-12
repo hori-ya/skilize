@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.SeminarCategory;
+import com.skilize.master.domain.model.SeminarCategory;
 
 /**
  * セミナーカテゴリ1件のレスポンス。GET /api/seminar-categories などのレスポンスに使用する。

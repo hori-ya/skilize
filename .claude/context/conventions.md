@@ -35,6 +35,23 @@
 
 ---
 
+# Backend Domain/Infrastructure 命名規則
+
+各featureの `domain/` は JPA/Springに依存しない純粋なドメインモデルのみを置き、永続化の実装詳細は `infrastructure/persistence/` に分離する。
+
+| 種別 | 配置先 | 命名パターン | 例 |
+|---|---|---|---|
+| ドメインモデル | `domain/model/` | `Xxx` | `User`, `Inventory` |
+| Repository（インターフェース） | `domain/repository/` | `XxxRepository` | `UserRepository` |
+| JPAエンティティ | `infrastructure/persistence/entity/` | `XxxEntity` | `UserEntity` |
+| Spring Data JPA リポジトリ | `infrastructure/persistence/repository/` | `XxxJpaRepository` | `UserJpaRepository` |
+| Repository実装 | `infrastructure/persistence/repository/` | `XxxRepositoryImpl` | `UserRepositoryImpl` |
+| Entity⇄Domain変換Mapper | `infrastructure/persistence/mapper/` | `XxxPersistenceMapper` | `UserPersistenceMapper` |
+
+> サブパッケージ構成・実装パターンの詳細は `.claude/context/backend-architecture.md` の「Layer Responsibilities」（domain / infrastructure）を参照。
+
+---
+
 # ファイル・フォルダ命名規則
 
 | 対象 | 規則 | 例 |

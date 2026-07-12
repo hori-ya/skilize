@@ -14,7 +14,7 @@
  **************************************************************************************************************/
 package com.skilize.master.presentation.response;
 
-import com.skilize.master.domain.Qualification;
+import com.skilize.master.domain.model.Qualification;
 
 /**
  * 資格マスタ1件のレスポンス。GET /api/qualifications などのレスポンスに使用する。

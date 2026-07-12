@@ -20,17 +20,14 @@ import com.skilize.fiscalyear.presentation.request.FiscalYearRequest;
 import com.skilize.fiscalyear.presentation.request.FiscalYearSettingsRequest;
 import com.skilize.fiscalyear.presentation.response.FiscalYearResponse;
 import com.skilize.fiscalyear.presentation.response.FiscalYearSettingsResponse;
-import com.skilize.fiscalyear.domain.FiscalYear;
-import com.skilize.fiscalyear.domain.FiscalYearRepository;
-import com.skilize.fiscalyear.domain.FiscalYearSettings;
-import com.skilize.fiscalyear.domain.FiscalYearSettingsRepository;
+import com.skilize.fiscalyear.domain.model.FiscalYear;
+import com.skilize.fiscalyear.domain.model.FiscalYearSettings;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -45,15 +42,11 @@ import java.util.List;
 public class FiscalYearController {
 
     private final FiscalYearService fiscalYearService;
-    private final FiscalYearRepository fiscalYearRepository;
-    private final FiscalYearSettingsRepository settingsRepository;
 
     /** 全年度を開始日降順（新しい順）で返す。ロール制限なし。 */
     @GetMapping("/fiscal-years")
     public List<FiscalYearResponse> list() {
-        return fiscalYearRepository.findAll().stream()
-                // 開始日の降順（新しい年度が先頭）でソートする
-                .sorted((a, b) -> b.getStartDate().compareTo(a.getStartDate()))
+        return fiscalYearService.findAllOrderByStartDateDesc().stream()
                 .map(FiscalYearResponse::from)
                 .toList();
     }
@@ -62,7 +55,7 @@ public class FiscalYearController {
     @GetMapping("/fiscal-years/current")
     public ResponseEntity<FiscalYearResponse> current() {
         // findCurrent() は today が startDate〜endDate に含まれる年度を返す
-        return fiscalYearRepository.findCurrent(LocalDate.now())
+        return fiscalYearService.findCurrent(LocalDate.now())
                 .map(FiscalYearResponse::from)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -86,14 +79,11 @@ public class FiscalYearController {
 
     /**
      * 年度情報を更新する（ADMIN のみ）。
-     * active フラグが未送信の場合は現在の値を維持する（部分更新パターン）。
+     * active フラグが未送信の場合は現在の値を維持する（部分更新パターン。Service側で解決する）。
      */
     @PutMapping("/fiscal-years/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public FiscalYearResponse update(@PathVariable int id, @Valid @RequestBody FiscalYearRequest req) {
-        // active が未送信（null）の場合、既存の値をそのまま引き継ぐ
-        FiscalYear existing = fiscalYearRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         FiscalYear updated = fiscalYearService.updateFiscalYear(
                 id,
                 req.name(),
@@ -101,7 +91,7 @@ public class FiscalYearController {
                 LocalDate.parse(req.endDate()),
                 req.inputStartDate() != null ? LocalDate.parse(req.inputStartDate()) : null,
                 req.inputEndDate() != null ? LocalDate.parse(req.inputEndDate()) : null,
-                req.active() != null ? req.active() : existing.isActive()
+                req.active()
         );
         return FiscalYearResponse.from(updated);
     }
@@ -109,9 +99,7 @@ public class FiscalYearController {
     /** 年度設定（年度開始月）を取得する。ロール制限なし。 */
     @GetMapping("/fiscal-year-settings")
     public FiscalYearSettingsResponse getSettings() {
-        // FiscalYearSettings はシングルトン（id=1 のみ）
-        FiscalYearSettings s = settingsRepository.findById((short) 1)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        FiscalYearSettings s = fiscalYearService.getSettings();
         return new FiscalYearSettingsResponse(s.getFiscalYearStartMonth());
     }
 

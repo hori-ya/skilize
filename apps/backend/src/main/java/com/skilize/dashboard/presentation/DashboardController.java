@@ -15,19 +15,17 @@
  **************************************************************************************************************/
 package com.skilize.dashboard.presentation;
 
+import com.skilize.dashboard.application.DashboardService;
+import com.skilize.dashboard.application.query.DashboardQueryResult;
 import com.skilize.dashboard.presentation.response.DashboardResponse;
-import com.skilize.fiscalyear.domain.FiscalYear;
-import com.skilize.fiscalyear.domain.FiscalYearRepository;
-import com.skilize.inventory.domain.*;
-import com.skilize.user.domain.User;
+import com.skilize.fiscalyear.domain.model.FiscalYear;
+import com.skilize.inventory.domain.model.Inventory;
+import com.skilize.user.domain.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDate;
-import java.util.List;
 
 /**
  * ダッシュボード情報の REST API コントローラー。
@@ -39,23 +37,18 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DashboardController {
 
-    private final FiscalYearRepository fiscalYearRepository;
-    private final InventoryRepository inventoryRepository;
-    private final ItSkillDetailRepository itSkillDetailRepository;
-    private final QualificationDetailRepository qualificationDetailRepository;
-    private final SeminarDetailRepository seminarDetailRepository;
+    private final DashboardService dashboardService;
 
     /**
      * ダッシュボード情報を返す。取得できない情報は null として返す（段階的な null チェック）。
-     * 今日の日付 → 現在年度 → 今年度の棚卸 の順に検索し、途中で見つからなければその後の情報は null になる。
      */
     @GetMapping
-    public DashboardResponse getDashboard(@AuthenticationPrincipal User user) {
+    public DashboardResponse getDashboard(@AuthenticationPrincipal(expression = "user") User user) {
         DashboardResponse.UserInfo userInfo = new DashboardResponse.UserInfo(
                 user.getId(), user.getName(), user.getRole().name());
 
-        // 今日の日付を基準に現在の有効年度を取得する
-        FiscalYear currentFy = fiscalYearRepository.findCurrent(LocalDate.now()).orElse(null);
+        DashboardQueryResult result = dashboardService.getDashboard(user.getId());
+        FiscalYear currentFy = result.fiscalYear();
         if (currentFy == null) {
             // 有効年度なし → 棚卸情報も年度情報も null で返す
             return new DashboardResponse(userInfo, null, null);
@@ -66,25 +59,15 @@ public class DashboardController {
                 currentFy.getInputStartDate() != null ? currentFy.getInputStartDate().toString() : null,
                 currentFy.getInputEndDate()   != null ? currentFy.getInputEndDate().toString()   : null);
 
-        // 全棚卸を取得し、今年度分をフィルタリングする
-        List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(user.getId());
-        Inventory currentInv = inventories.stream()
-                .filter(i -> i.getFiscalYear().getId().equals(currentFy.getId()))
-                .findFirst().orElse(null);
-
+        Inventory currentInv = result.inventory();
         if (currentInv == null) {
             // 今年度の棚卸が未作成 → 棚卸情報は null で返す
             return new DashboardResponse(userInfo, fyRef, null);
         }
 
-        // 各明細の件数を取得する（size() でカウント。N+1 ではなく棚卸IDで直接引く）
-        int itCount = itSkillDetailRepository.findByInventoryId(currentInv.getId()).size();
-        int qualCount = qualificationDetailRepository.findByInventoryId(currentInv.getId()).size();
-        int semCount = seminarDetailRepository.findByInventoryId(currentInv.getId()).size();
-
         DashboardResponse.CurrentInventoryInfo invInfo = new DashboardResponse.CurrentInventoryInfo(
                 currentInv.getId(), currentInv.getStatus().name(),
-                itCount, qualCount, semCount,
+                result.itSkillCount(), result.qualificationCount(), result.seminarCount(),
                 currentInv.getSubmittedAt() != null ? currentInv.getSubmittedAt().toString() : null,
                 currentInv.getGoalReviewCompletedAt() != null ? currentInv.getGoalReviewCompletedAt().toString() : null,
                 currentInv.getGoalCompletedAt() != null ? currentInv.getGoalCompletedAt().toString() : null);

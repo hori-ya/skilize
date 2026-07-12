@@ -15,7 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.interview.presentation.response;
 
-import com.skilize.interview.domain.InventoryInterview;
+import com.skilize.interview.domain.model.InventoryInterview;
 
 import java.util.List;
 
