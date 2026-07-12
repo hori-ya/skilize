@@ -18,11 +18,11 @@
 
 # レイヤー別の規約
 
-| レイヤー | code-style | api-design | testing |
-|---|---|---|---|
-| backend | [backend/code-style.md](backend/code-style.md) | [backend/api-design.md](backend/api-design.md) | [backend/testing.md](backend/testing.md) |
-| frontend | [frontend/code-style.md](frontend/code-style.md) | [frontend/api-design.md](frontend/api-design.md) | [frontend/testing.md](frontend/testing.md) |
-| ai | [ai/code-style.md](ai/code-style.md) | [ai/api-design.md](ai/api-design.md) | [ai/testing.md](ai/testing.md) |
+| レイヤー | 言語 / フレームワーク | code-style | comments | api-design | testing |
+|---|---|---|---|---|---|
+| backend | Java（Spring Boot） | [backend/code-style.md](backend/code-style.md) | [backend/comments.md](backend/comments.md) | [backend/api-design.md](backend/api-design.md) | [backend/testing.md](backend/testing.md) |
+| frontend | TypeScript（React） | [frontend/code-style.md](frontend/code-style.md) | [frontend/comments.md](frontend/comments.md) | [frontend/api-design.md](frontend/api-design.md) | [frontend/testing.md](frontend/testing.md) |
+| ai | Python（FastAPI） | [ai/code-style.md](ai/code-style.md) | [ai/comments.md](ai/comments.md) | [ai/api-design.md](ai/api-design.md) | [ai/testing.md](ai/testing.md) |
 
 ---
 

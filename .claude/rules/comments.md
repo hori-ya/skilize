@@ -10,6 +10,14 @@ paths:
 
 ソースコードの可読性・保守性向上を目的としたコメント記載規約。言語・フレームワークを問わず適用する。
 
+言語・フレームワーク固有の記載例と追加ルールは以下を参照。
+
+| 言語 / フレームワーク | ファイル |
+|---|---|
+| Java（Spring Boot） | [backend/comments.md](backend/comments.md) |
+| TypeScript（React） | [frontend/comments.md](frontend/comments.md) |
+| Python（FastAPI） | [ai/comments.md](ai/comments.md) |
+
 ---
 
 # 目的
