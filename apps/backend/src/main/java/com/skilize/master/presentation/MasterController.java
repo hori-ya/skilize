@@ -26,7 +26,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * マスタデータ（スキルレベル・ITスキル・資格・ADセミナーとその各分類）の REST API コントローラー。
@@ -43,7 +45,11 @@ public class MasterController {
     /** スキルレベル一覧を levelValue 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/skill-levels")
     public List<SkillLevelResponse> getSkillLevels(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getSkillLevels(isActive).stream().map(SkillLevelResponse::from).toList();
+        List<SkillLevelResponse> responses = new ArrayList<>();
+        for (SkillLevel level : masterService.getSkillLevels(isActive)) {
+            responses.add(SkillLevelResponse.from(level));
+        }
+        return responses;
     }
 
     /** スキルレベルを新規作成する（ADMIN のみ）。 */
@@ -67,7 +73,11 @@ public class MasterController {
      */
     @GetMapping("/it-skills")
     public List<ItSkillResponse> getItSkills(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getItSkills(isActive).stream().map(this::toItSkillResponse).toList();
+        List<ItSkillResponse> responses = new ArrayList<>();
+        for (ItSkill skill : masterService.getItSkills(isActive)) {
+            responses.add(toItSkillResponse(skill));
+        }
+        return responses;
     }
 
     /** ITスキルを新規作成する（ADMIN のみ）。resolveCategory1() で表示用の大分類を解決する。 */
@@ -91,9 +101,7 @@ public class MasterController {
     @GetMapping("/it-skills/custom-unregistered")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public List<CustomUnregisteredResponse> getCustomUnregisteredItSkills() {
-        return masterService.getCustomUnregisteredItSkills().stream()
-                .map(row -> new CustomUnregisteredResponse((String) row[0], (long) row[1]))
-                .toList();
+        return toCustomUnregisteredResponses(masterService.getCustomUnregisteredItSkills());
     }
 
     /** カスタムITスキルをマスタに昇格し、同名の棚卸明細をマスタへ紐付ける（TL/ADMIN のみ）。 */
@@ -108,7 +116,11 @@ public class MasterController {
     /** 資格一覧を返す。isActive で有効/無効を絞り込み可。全件・無効のみは分類→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。 */
     @GetMapping("/qualifications")
     public List<QualificationResponse> getQualifications(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getQualifications(isActive).stream().map(QualificationResponse::from).toList();
+        List<QualificationResponse> responses = new ArrayList<>();
+        for (Qualification q : masterService.getQualifications(isActive)) {
+            responses.add(QualificationResponse.from(q));
+        }
+        return responses;
     }
 
     /** 資格を新規作成する（ADMIN のみ）。 */
@@ -131,9 +143,15 @@ public class MasterController {
     @GetMapping("/qualifications/custom-unregistered")
     @PreAuthorize("hasAnyRole('TL', 'ADMIN')")
     public List<CustomUnregisteredResponse> getCustomUnregisteredQualifications() {
-        return masterService.getCustomUnregisteredQualifications().stream()
-                .map(row -> new CustomUnregisteredResponse((String) row[0], (long) row[1]))
-                .toList();
+        return toCustomUnregisteredResponses(masterService.getCustomUnregisteredQualifications());
+    }
+
+    private List<CustomUnregisteredResponse> toCustomUnregisteredResponses(List<Object[]> rows) {
+        List<CustomUnregisteredResponse> responses = new ArrayList<>();
+        for (Object[] row : rows) {
+            responses.add(new CustomUnregisteredResponse((String) row[0], (long) row[1]));
+        }
+        return responses;
     }
 
     /** カスタム資格をマスタに昇格し、同名の棚卸明細をマスタへ紐付ける（TL/ADMIN のみ）。 */
@@ -148,7 +166,11 @@ public class MasterController {
     /** 資格分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/qualification-categories")
     public List<QualificationCategoryResponse> getQualificationCategories(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getQualificationCategories(isActive).stream().map(QualificationCategoryResponse::from).toList();
+        List<QualificationCategoryResponse> responses = new ArrayList<>();
+        for (QualificationCategory c : masterService.getQualificationCategories(isActive)) {
+            responses.add(QualificationCategoryResponse.from(c));
+        }
+        return responses;
     }
 
     /** 資格分類を新規作成する（ADMIN のみ）。 */
@@ -172,7 +194,11 @@ public class MasterController {
     /** ADセミナー一覧を返す。isActive で有効/無効を絞り込み可。全件・無効のみは分類→並順でソート。有効のみは棚卸入力画面向けのため従来順を維持。 */
     @GetMapping("/ad-seminars")
     public List<AdSeminarResponse> getAdSeminars(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getAdSeminars(isActive).stream().map(AdSeminarResponse::from).toList();
+        List<AdSeminarResponse> responses = new ArrayList<>();
+        for (AdSeminar a : masterService.getAdSeminars(isActive)) {
+            responses.add(AdSeminarResponse.from(a));
+        }
+        return responses;
     }
 
     /** ADセミナーを新規作成する（ADMIN のみ）。 */
@@ -194,7 +220,11 @@ public class MasterController {
     /** 有効なセミナー分類一覧を sortOrder 昇順で返す（isActive フィルタなし・常に有効のみ）。 */
     @GetMapping("/seminar-categories")
     public List<SeminarCategoryResponse> getSeminarCategories() {
-        return masterService.getSeminarCategories().stream().map(SeminarCategoryResponse::from).toList();
+        List<SeminarCategoryResponse> responses = new ArrayList<>();
+        for (SeminarCategory c : masterService.getSeminarCategories()) {
+            responses.add(SeminarCategoryResponse.from(c));
+        }
+        return responses;
     }
 
     /**
@@ -204,7 +234,11 @@ public class MasterController {
      */
     @GetMapping("/it-skill-categories")
     public List<ItSkillCategoryResponse> getItSkillCategories(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getItSkillCategories(isActive).stream().map(ItSkillCategoryResponse::from).toList();
+        List<ItSkillCategoryResponse> responses = new ArrayList<>();
+        for (ItSkillCategory c : masterService.getItSkillCategories(isActive)) {
+            responses.add(ItSkillCategoryResponse.from(c));
+        }
+        return responses;
     }
 
     /** ITスキル分類を新規作成する（ADMIN のみ）。 */
@@ -227,7 +261,11 @@ public class MasterController {
     /** ADセミナー分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可。 */
     @GetMapping("/ad-seminar-categories")
     public List<AdSeminarCategoryResponse> getAdSeminarCategories(@RequestParam(required = false) Boolean isActive) {
-        return masterService.getAdSeminarCategories(isActive).stream().map(AdSeminarCategoryResponse::from).toList();
+        List<AdSeminarCategoryResponse> responses = new ArrayList<>();
+        for (AdSeminarCategory c : masterService.getAdSeminarCategories(isActive)) {
+            responses.add(AdSeminarCategoryResponse.from(c));
+        }
+        return responses;
     }
 
     /** ADセミナー分類を新規作成する（ADMIN のみ）。 */
@@ -255,11 +293,22 @@ public class MasterController {
      */
     private ItSkillCategory resolveCategory1(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
-        if (cat.getLevel() == 1) return cat;
-        return masterService.findItSkillCategoryById(cat.getParentId())
-                .map(parent -> parent.getLevel() == 1 ? parent
-                        : masterService.findItSkillCategoryById(parent.getParentId()).orElse(parent))
-                .orElse(cat);
+        if (cat.getLevel() == 1) {
+            return cat;
+        }
+        Optional<ItSkillCategory> parentOptional = masterService.findItSkillCategoryById(cat.getParentId());
+        if (parentOptional.isEmpty()) {
+            return cat;
+        }
+        ItSkillCategory parent = parentOptional.get();
+        if (parent.getLevel() == 1) {
+            return parent;
+        }
+        Optional<ItSkillCategory> grandParentOptional = masterService.findItSkillCategoryById(parent.getParentId());
+        if (grandParentOptional.isPresent()) {
+            return grandParentOptional.get();
+        }
+        return parent;
     }
 
     /**
@@ -269,8 +318,14 @@ public class MasterController {
      */
     private ItSkillCategory resolveCategory2(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
-        if (cat.getLevel() != 3) return null;
-        return masterService.findItSkillCategoryById(cat.getParentId()).orElse(null);
+        if (cat.getLevel() != 3) {
+            return null;
+        }
+        Optional<ItSkillCategory> parentOptional = masterService.findItSkillCategoryById(cat.getParentId());
+        if (parentOptional.isPresent()) {
+            return parentOptional.get();
+        }
+        return null;
     }
 
     private ItSkillResponse toItSkillResponse(ItSkill skill) {

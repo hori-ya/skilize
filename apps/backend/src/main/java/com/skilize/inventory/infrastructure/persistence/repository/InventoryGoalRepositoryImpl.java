@@ -27,6 +27,7 @@ import com.skilize.master.infrastructure.persistence.repository.QualificationJpa
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,7 +45,11 @@ public class InventoryGoalRepositoryImpl implements InventoryGoalRepository {
 
     @Override
     public Optional<InventoryGoal> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<InventoryGoalEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -54,36 +59,60 @@ public class InventoryGoalRepositoryImpl implements InventoryGoalRepository {
 
     @Override
     public List<InventoryGoal> saveAll(List<InventoryGoal> goals) {
-        List<InventoryGoalEntity> entities = goals.stream().map(this::toEntity).toList();
-        return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).toList();
+        List<InventoryGoalEntity> entities = new ArrayList<>();
+        for (InventoryGoal goal : goals) {
+            entities.add(toEntity(goal));
+        }
+        List<InventoryGoal> saved = new ArrayList<>();
+        for (InventoryGoalEntity entity : jpaRepository.saveAll(entities)) {
+            saved.add(mapper.toDomain(entity));
+        }
+        return saved;
     }
 
     private InventoryGoalEntity toEntity(InventoryGoal goal) {
         if (goal.getId() == null) {
-            ItSkillEntity itSkillEntity = goal.getItSkill() != null
-                    ? itSkillJpaRepository.getReferenceById(goal.getItSkill().getId()) : null;
-            QualificationEntity qualificationEntity = goal.getQualification() != null
-                    ? qualificationJpaRepository.getReferenceById(goal.getQualification().getId()) : null;
-            AdSeminarEntity adSeminarEntity = goal.getAdSeminar() != null
-                    ? adSeminarJpaRepository.getReferenceById(goal.getAdSeminar().getId()) : null;
+            ItSkillEntity itSkillEntity = null;
+            if (goal.getItSkill() != null) {
+                itSkillEntity = itSkillJpaRepository.getReferenceById(goal.getItSkill().getId());
+            }
+            QualificationEntity qualificationEntity = null;
+            if (goal.getQualification() != null) {
+                qualificationEntity = qualificationJpaRepository.getReferenceById(goal.getQualification().getId());
+            }
+            AdSeminarEntity adSeminarEntity = null;
+            if (goal.getAdSeminar() != null) {
+                adSeminarEntity = adSeminarJpaRepository.getReferenceById(goal.getAdSeminar().getId());
+            }
             return InventoryGoalEntity.create(inventoryJpaRepository.getReferenceById(goal.getInventoryId()),
                     goal.getGoalCategory(), itSkillEntity, qualificationEntity, adSeminarEntity,
                     goal.getCustomName(), goal.getTargetPeriod(), goal.getReason());
         }
-        InventoryGoalEntity entity = jpaRepository.findById(goal.getId())
-                .orElseThrow(() -> new IllegalStateException("InventoryGoal not found: id=" + goal.getId()));
+        Optional<InventoryGoalEntity> entityOptional = jpaRepository.findById(goal.getId());
+        if (entityOptional.isEmpty()) {
+            throw new IllegalStateException("InventoryGoal not found: id=" + goal.getId());
+        }
+        InventoryGoalEntity entity = entityOptional.get();
         entity.updateReview(goal.getAchievementStatus(), goal.getReviewNote());
         return entity;
     }
 
     @Override
     public List<InventoryGoal> findByInventoryId(int inventoryId) {
-        return jpaRepository.findByInventoryId(inventoryId).stream().map(mapper::toDomain).toList();
+        List<InventoryGoal> goals = new ArrayList<>();
+        for (InventoryGoalEntity entity : jpaRepository.findByInventoryId(inventoryId)) {
+            goals.add(mapper.toDomain(entity));
+        }
+        return goals;
     }
 
     @Override
     public List<InventoryGoal> findByInventoryIdForReport(int inventoryId) {
-        return jpaRepository.findByInventoryIdForReport(inventoryId).stream().map(mapper::toDomain).toList();
+        List<InventoryGoal> goals = new ArrayList<>();
+        for (InventoryGoalEntity entity : jpaRepository.findByInventoryIdForReport(inventoryId)) {
+            goals.add(mapper.toDomain(entity));
+        }
+        return goals;
     }
 
     @Override

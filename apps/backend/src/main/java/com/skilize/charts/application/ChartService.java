@@ -35,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * スキル統計グラフ（レーダー・成長推移・ヒートマップ・タイムライン）の集計ロジック。
@@ -68,27 +67,38 @@ public class ChartService {
         List<ItSkillCategory> cat1List = getActiveCat1List(catMap);
         int maxLevelValue = getMaxLevelValue();
 
-        FiscalYear currentFy = fiscalYearRepository.findCurrent(LocalDate.now()).orElse(null);
-        if (currentFy == null) {
-            List<RadarAxis> axes = cat1List.stream()
-                    .map(c -> new RadarAxis(c.getId(), c.getName(), 0.0, null))
-                    .toList();
+        Optional<FiscalYear> currentFyOptional = fiscalYearRepository.findCurrent(LocalDate.now());
+        if (currentFyOptional.isEmpty()) {
+            List<RadarAxis> axes = new ArrayList<>();
+            for (ItSkillCategory c : cat1List) {
+                axes.add(new RadarAxis(c.getId(), c.getName(), 0.0, null));
+            }
             return new RadarQueryResult(null, null, false, maxLevelValue, axes);
         }
+        FiscalYear currentFy = currentFyOptional.get();
 
         List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(user.getId());
-        Inventory currentInv = inventories.stream()
-                .filter(i -> i.getFiscalYear().getId().equals(currentFy.getId()))
-                .findFirst().orElse(null);
+        Inventory currentInv = null;
+        for (Inventory i : inventories) {
+            if (i.getFiscalYear().getId().equals(currentFy.getId())) {
+                currentInv = i;
+                break;
+            }
+        }
 
-        Inventory prevInv = currentInv != null
-                ? inventories.stream()
-                        .filter(i -> !i.getId().equals(currentInv.getId()))
-                        .filter(i -> i.getFiscalYear().getEndDate().isBefore(currentFy.getStartDate()))
-                        .findFirst().orElse(null)
-                : null;
+        Inventory prevInv = null;
+        if (currentInv != null) {
+            for (Inventory i : inventories) {
+                if (i.getId().equals(currentInv.getId())) {
+                    continue;
+                }
+                if (i.getFiscalYear().getEndDate().isBefore(currentFy.getStartDate())) {
+                    prevInv = i;
+                    break;
+                }
+            }
+        }
 
-        // computeIfAbsent: キーが存在しない場合のみ新しいリストを作成してマップに挿入する。
         // cat1（大分類）ごとにスコア重みを集約し、後で平均を計算する。
         // cat1Id → scored scoreWeights
         Map<Integer, List<Integer>> currentByCat1 = new HashMap<>();
@@ -98,8 +108,7 @@ public class ChartService {
                 if (d.getItSkill() == null) continue;
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
-                currentByCat1.computeIfAbsent(cat1.getId(), k -> new ArrayList<>())
-                        .add(d.getSkillLevel().getScoreWeight());
+                getOrCreateList(currentByCat1, cat1.getId()).add(d.getSkillLevel().getScoreWeight());
                 hasCurrentYearData = true;
             }
         }
@@ -110,21 +119,30 @@ public class ChartService {
                 if (d.getItSkill() == null) continue;
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
-                prevByCat1.computeIfAbsent(cat1.getId(), k -> new ArrayList<>())
-                        .add(d.getSkillLevel().getScoreWeight());
+                getOrCreateList(prevByCat1, cat1.getId()).add(d.getSkillLevel().getScoreWeight());
             }
         }
 
-        final boolean hasPrevInv = prevInv != null;
-        List<RadarAxis> axes = cat1List.stream().map(cat1 -> {
+        boolean hasPrevInv = prevInv != null;
+        List<RadarAxis> axes = new ArrayList<>();
+        for (ItSkillCategory cat1 : cat1List) {
             List<Integer> cs = currentByCat1.getOrDefault(cat1.getId(), List.of());
             List<Integer> ps = prevByCat1.getOrDefault(cat1.getId(), List.of());
-            double currentAvg = cs.isEmpty() ? 0.0 : round1(averageInt(cs));
-            Double prevAvg = hasPrevInv ? (ps.isEmpty() ? null : round1(averageInt(ps))) : null;
-            return new RadarAxis(cat1.getId(), cat1.getName(), currentAvg, prevAvg);
-        }).toList();
+            double currentAvg = 0.0;
+            if (!cs.isEmpty()) {
+                currentAvg = round1(averageInt(cs));
+            }
+            Double prevAvg = null;
+            if (hasPrevInv && !ps.isEmpty()) {
+                prevAvg = round1(averageInt(ps));
+            }
+            axes.add(new RadarAxis(cat1.getId(), cat1.getName(), currentAvg, prevAvg));
+        }
 
-        String prevFyName = prevInv != null ? prevInv.getFiscalYear().getName() : null;
+        String prevFyName = null;
+        if (prevInv != null) {
+            prevFyName = prevInv.getFiscalYear().getName();
+        }
         return new RadarQueryResult(currentFy.getName(), prevFyName, hasCurrentYearData, getMaxScoreWeight(), axes);
     }
 
@@ -132,63 +150,84 @@ public class ChartService {
 
     /**
      * 成長推移グラフデータを返す。提出済み棚卸を年度順に並べ、大分類ごとのスコア合計を集計する。
-     * カスタムスキルは大分類に属さないため、別途 CUSTOM_SERIES_ID（-1）の系列として末尾に追加する。
+     * カスタムスキルは大分類に属さないため、別途 customSeriesId（-1）の系列として末尾に追加する。
      */
     @Transactional(readOnly = true)
     public GrowthQueryResult getGrowth(User user) {
         Map<Integer, ItSkillCategory> catMap = buildCategoryMap();
         List<ItSkillCategory> cat1List = getActiveCat1List(catMap);
 
-        List<Inventory> submitted = inventoryRepository.findByUserIdWithFiscalYear(user.getId()).stream()
-                .filter(i -> i.getStatus() == InventoryStatus.PENDING_GOAL
-                        || i.getStatus() == InventoryStatus.COMPLETED)
-                .sorted(Comparator.comparing(i -> i.getFiscalYear().getStartDate()))
-                .toList();
+        List<Inventory> submitted = new ArrayList<>();
+        for (Inventory i : inventoryRepository.findByUserIdWithFiscalYear(user.getId())) {
+            if (i.getStatus() == InventoryStatus.PENDING_GOAL || i.getStatus() == InventoryStatus.COMPLETED) {
+                submitted.add(i);
+            }
+        }
+        submitted.sort(new Comparator<Inventory>() {
+            @Override
+            public int compare(Inventory a, Inventory b) {
+                return a.getFiscalYear().getStartDate().compareTo(b.getFiscalYear().getStartDate());
+            }
+        });
 
         if (submitted.isEmpty()) {
-            List<GrowthSeries> series = cat1List.stream()
-                    .map(c -> new GrowthSeries(c.getId(), c.getName(), List.of()))
-                    .toList();
+            List<GrowthSeries> series = new ArrayList<>();
+            for (ItSkillCategory c : cat1List) {
+                series.add(new GrowthSeries(c.getId(), c.getName(), List.of()));
+            }
             return new GrowthQueryResult(List.of(), series);
         }
 
         // カスタムスキルは最大重みで集計するため取得しておく
         int maxWeight = getMaxScoreWeight();
         // カスタムスキル用の仮 ID（マスタ cat1 と衝突しない負値）
-        final int CUSTOM_SERIES_ID = -1;
+        int customSeriesId = -1;
 
-        // invId → (cat1Id | CUSTOM_SERIES_ID) → total score
+        // invId → (cat1Id | customSeriesId) → total score
         Map<Integer, Map<Integer, Integer>> scoreMap = new HashMap<>();
         for (Inventory inv : submitted) {
             Map<Integer, Integer> cat1Score = new HashMap<>();
             for (ItSkillDetail d : itSkillDetailRepository.findByInventoryId(inv.getId())) {
                 if (d.getItSkill() == null) {
                     // カスタムスキル: スコアへの寄与を最大重みで扱う
-                    cat1Score.merge(CUSTOM_SERIES_ID, maxWeight, Integer::sum);
+                    addToMap(cat1Score, customSeriesId, maxWeight);
                     continue;
                 }
                 ItSkillCategory cat1 = resolveAncestorById(d.getItSkill().getCategory().getId(), catMap, (short) 1);
                 if (cat1 == null) continue;
-                // Map.merge: キーが存在すればマージ関数（Integer::sum）で合計、存在しなければ新規挿入する
-                cat1Score.merge(cat1.getId(), d.getSkillLevel().getScoreWeight(), Integer::sum);
+                addToMap(cat1Score, cat1.getId(), d.getSkillLevel().getScoreWeight());
             }
             scoreMap.put(inv.getId(), cat1Score);
         }
 
-        List<String> fiscalYears = submitted.stream().map(i -> i.getFiscalYear().getName()).toList();
-        List<GrowthSeries> series = new ArrayList<>(cat1List.stream().map(cat1 -> {
-            List<Integer> scores = submitted.stream()
-                    .map(inv -> scoreMap.getOrDefault(inv.getId(), Map.of()).getOrDefault(cat1.getId(), 0))
-                    .toList();
-            return new GrowthSeries(cat1.getId(), cat1.getName(), scores);
-        }).toList());
+        List<String> fiscalYears = new ArrayList<>();
+        for (Inventory i : submitted) {
+            fiscalYears.add(i.getFiscalYear().getName());
+        }
+
+        List<GrowthSeries> series = new ArrayList<>();
+        for (ItSkillCategory cat1 : cat1List) {
+            List<Integer> scores = new ArrayList<>();
+            for (Inventory inv : submitted) {
+                scores.add(scoreMap.getOrDefault(inv.getId(), Map.of()).getOrDefault(cat1.getId(), 0));
+            }
+            series.add(new GrowthSeries(cat1.getId(), cat1.getName(), scores));
+        }
 
         // カスタムスキルが1件以上あれば末尾に追加
-        List<Integer> customScores = submitted.stream()
-                .map(inv -> scoreMap.getOrDefault(inv.getId(), Map.of()).getOrDefault(CUSTOM_SERIES_ID, 0))
-                .toList();
-        if (customScores.stream().anyMatch(s -> s > 0)) {
-            series.add(new GrowthSeries(CUSTOM_SERIES_ID, "カスタムスキル", customScores));
+        List<Integer> customScores = new ArrayList<>();
+        for (Inventory inv : submitted) {
+            customScores.add(scoreMap.getOrDefault(inv.getId(), Map.of()).getOrDefault(customSeriesId, 0));
+        }
+        boolean hasCustomScore = false;
+        for (Integer s : customScores) {
+            if (s > 0) {
+                hasCustomScore = true;
+                break;
+            }
+        }
+        if (hasCustomScore) {
+            series.add(new GrowthSeries(customSeriesId, "カスタムスキル", customScores));
         }
 
         return new GrowthQueryResult(fiscalYears, series);
@@ -207,14 +246,19 @@ public class ChartService {
         int maxLevelValue = getMaxLevelValue();
         List<ItSkill> activeSkills = itSkillRepository.findAllActiveWithCategory();
 
-        FiscalYear currentFy = fiscalYearRepository.findCurrent(LocalDate.now()).orElse(null);
-        if (currentFy == null) {
-            return buildHeatmapNoScores(currentFy, cat1List, catMap, activeSkills, maxLevelValue);
+        Optional<FiscalYear> currentFyOptional = fiscalYearRepository.findCurrent(LocalDate.now());
+        if (currentFyOptional.isEmpty()) {
+            return buildHeatmapNoScores(null, cat1List, catMap, activeSkills, maxLevelValue);
         }
+        FiscalYear currentFy = currentFyOptional.get();
 
-        Inventory currentInv = inventoryRepository.findByUserIdWithFiscalYear(user.getId()).stream()
-                .filter(i -> i.getFiscalYear().getId().equals(currentFy.getId()))
-                .findFirst().orElse(null);
+        Inventory currentInv = null;
+        for (Inventory i : inventoryRepository.findByUserIdWithFiscalYear(user.getId())) {
+            if (i.getFiscalYear().getId().equals(currentFy.getId())) {
+                currentInv = i;
+                break;
+            }
+        }
 
         if (currentInv == null) {
             return buildHeatmapNoScores(currentFy, cat1List, catMap, activeSkills, maxLevelValue);
@@ -228,7 +272,10 @@ public class ChartService {
             }
         }
 
-        Set<Integer> activeSkillIds = activeSkills.stream().map(ItSkill::getId).collect(Collectors.toSet());
+        Set<Integer> activeSkillIds = new HashSet<>();
+        for (ItSkill skill : activeSkills) {
+            activeSkillIds.add(skill.getId());
+        }
 
         // LinkedHashMap: 挿入順を保持する HashMap。cat1 の表示順を維持するために使用する。
         // 通常の HashMap はキーの順序を保証しない。
@@ -240,12 +287,9 @@ public class ChartService {
             ItSkillCategory cat1 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 1);
             if (cat1 == null || !structure.containsKey(cat1.getId())) continue;
             ItSkillCategory cat2 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 2);
-            Cat2Key cat2Key = cat2 != null ? new Cat2Key(cat2.getId(), cat2.getName())
-                    : new Cat2Key(null, "(分類なし)");
+            Cat2Key cat2Key = toCat2Key(cat2);
             Short levelValue = scoredBySkillId.get(skill.getId());
-            structure.get(cat1.getId())
-                    .computeIfAbsent(cat2Key, k -> new ArrayList<>())
-                    .add(new SkillEntry(skill.getName(), levelValue));
+            getOrCreateList(structure.get(cat1.getId()), cat2Key).add(new SkillEntry(skill.getName(), levelValue));
         }
 
         // 無効化済みスキル（is_active=false）でもユーザーが採点している場合はヒートマップに表示する。
@@ -256,10 +300,8 @@ public class ChartService {
             ItSkillCategory cat1 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 1);
             if (cat1 == null || !structure.containsKey(cat1.getId())) continue;
             ItSkillCategory cat2 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 2);
-            Cat2Key cat2Key = cat2 != null ? new Cat2Key(cat2.getId(), cat2.getName())
-                    : new Cat2Key(null, "(分類なし)");
-            structure.get(cat1.getId())
-                    .computeIfAbsent(cat2Key, k -> new ArrayList<>())
+            Cat2Key cat2Key = toCat2Key(cat2);
+            getOrCreateList(structure.get(cat1.getId()), cat2Key)
                     .add(new SkillEntry(skill.getName(), d.getSkillLevel().getLevelValue()));
         }
 
@@ -279,15 +321,23 @@ public class ChartService {
             ItSkillCategory cat1 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 1);
             if (cat1 == null || !structure.containsKey(cat1.getId())) continue;
             ItSkillCategory cat2 = resolveAncestorById(skill.getCategory().getId(), catMap, (short) 2);
-            Cat2Key cat2Key = cat2 != null ? new Cat2Key(cat2.getId(), cat2.getName())
-                    : new Cat2Key(null, "(分類なし)");
-            structure.get(cat1.getId())
-                    .computeIfAbsent(cat2Key, k -> new ArrayList<>())
-                    .add(new SkillEntry(skill.getName(), null));
+            Cat2Key cat2Key = toCat2Key(cat2);
+            getOrCreateList(structure.get(cat1.getId()), cat2Key).add(new SkillEntry(skill.getName(), null));
         }
         List<HeatmapRow> rows = buildHeatmapRows(cat1List, structure);
-        String fyName = currentFy != null ? currentFy.getName() : null;
+        String fyName = null;
+        if (currentFy != null) {
+            fyName = currentFy.getName();
+        }
         return new HeatmapQueryResult(fyName, false, maxLevelValue, rows);
+    }
+
+    /** 中分類カテゴリから Cat2Key を組み立てる。中分類が存在しない場合は「(分類なし)」を返す。 */
+    private Cat2Key toCat2Key(ItSkillCategory cat2) {
+        if (cat2 != null) {
+            return new Cat2Key(cat2.getId(), cat2.getName());
+        }
+        return new Cat2Key(null, "(分類なし)");
     }
 
     /** ヒートマップの大分類→中分類→スキルエントリの入れ子マップ構造を初期化する。挿入順保持のため LinkedHashMap を使用する。 */
@@ -302,24 +352,36 @@ public class ChartService {
     /** ヒートマップ表示用の行リストを構築する。大分類→中分類→スキルの階層で平均レベルを集計する。 */
     private List<HeatmapRow> buildHeatmapRows(List<ItSkillCategory> cat1List,
                                                Map<Integer, LinkedHashMap<Cat2Key, List<SkillEntry>>> structure) {
-        return cat1List.stream().map(cat1 -> {
+        List<HeatmapRow> rows = new ArrayList<>();
+        for (ItSkillCategory cat1 : cat1List) {
             LinkedHashMap<Cat2Key, List<SkillEntry>> cellMap = structure.get(cat1.getId());
-            List<HeatmapCell> cells = cellMap.entrySet().stream().map(e -> {
+            List<HeatmapCell> cells = new ArrayList<>();
+            for (Map.Entry<Cat2Key, List<SkillEntry>> e : cellMap.entrySet()) {
                 Cat2Key cat2Key = e.getKey();
                 List<SkillEntry> entries = e.getValue();
-                List<Short> scored = entries.stream()
-                        .filter(s -> s.levelValue() != null)
-                        .map(SkillEntry::levelValue)
-                        .toList();
-                Double avgLevelValue = scored.isEmpty() ? null : round1(average(scored));
-                List<HeatmapSkill> skills = entries.stream()
-                        .map(s -> new HeatmapSkill(s.skillName(),
-                                s.levelValue() != null ? s.levelValue().intValue() : null))
-                        .toList();
-                return new HeatmapCell(cat2Key.id(), cat2Key.name(), avgLevelValue, scored.size(), skills);
-            }).toList();
-            return new HeatmapRow(cat1.getId(), cat1.getName(), cells);
-        }).toList();
+                List<Short> scored = new ArrayList<>();
+                for (SkillEntry entry : entries) {
+                    if (entry.levelValue() != null) {
+                        scored.add(entry.levelValue());
+                    }
+                }
+                Double avgLevelValue = null;
+                if (!scored.isEmpty()) {
+                    avgLevelValue = round1(average(scored));
+                }
+                List<HeatmapSkill> skills = new ArrayList<>();
+                for (SkillEntry entry : entries) {
+                    Integer levelValue = null;
+                    if (entry.levelValue() != null) {
+                        levelValue = entry.levelValue().intValue();
+                    }
+                    skills.add(new HeatmapSkill(entry.skillName(), levelValue));
+                }
+                cells.add(new HeatmapCell(cat2Key.id(), cat2Key.name(), avgLevelValue, scored.size(), skills));
+            }
+            rows.add(new HeatmapRow(cat1.getId(), cat1.getName(), cells));
+        }
+        return rows;
     }
 
     // ===== Timeline =====
@@ -336,23 +398,30 @@ public class ChartService {
 
         // 資格・セミナー実績は複数年度の棚卸に同じデータが重複して登録される場合があるため、
         // 最新の提出済み棚卸 1 件のみを実績ソースとして扱う
-        Optional<Inventory> achievementSourceOpt = inventories.stream()
-                .filter(i -> i.getStatus() == InventoryStatus.PENDING_GOAL
-                        || i.getStatus() == InventoryStatus.COMPLETED)
-                .max(Comparator.comparing(i -> i.getFiscalYear().getId()));
+        Inventory achievementSource = null;
+        for (Inventory i : inventories) {
+            if (i.getStatus() != InventoryStatus.PENDING_GOAL && i.getStatus() != InventoryStatus.COMPLETED) {
+                continue;
+            }
+            if (achievementSource == null || i.getFiscalYear().getId() > achievementSource.getFiscalYear().getId()) {
+                achievementSource = i;
+            }
+        }
 
-        if (achievementSourceOpt.isPresent()) {
-            Inventory src = achievementSourceOpt.get();
-            for (QualificationDetail qd : qualificationDetailRepository.findByInventoryId(src.getId())) {
+        if (achievementSource != null) {
+            for (QualificationDetail qd : qualificationDetailRepository.findByInventoryId(achievementSource.getId())) {
                 if (qd.getAcquiredYearMonth() == null) continue;
-                String name = qd.getQualification() != null
-                        ? qd.getQualification().getName()
-                        : qd.getCustomQualificationName();
+                String name;
+                if (qd.getQualification() != null) {
+                    name = qd.getQualification().getName();
+                } else {
+                    name = qd.getCustomQualificationName();
+                }
                 LocalDate ym = qd.getAcquiredYearMonth().withDayOfMonth(1);
                 events.add(new TimelineEvent("QUALIFICATION", "ACHIEVEMENT", name,
                         ym.toString(), ym.isBefore(firstOfMonth)));
             }
-            for (SeminarDetail sd : seminarDetailRepository.findByInventoryId(src.getId())) {
+            for (SeminarDetail sd : seminarDetailRepository.findByInventoryId(achievementSource.getId())) {
                 if (sd.getAttendedYearMonth() == null) continue;
                 LocalDate ym = sd.getAttendedYearMonth().withDayOfMonth(1);
                 if (sd.getAdSeminar() != null) {
@@ -365,23 +434,46 @@ public class ChartService {
             }
         }
 
-        Optional<Inventory> latestInvOpt = inventories.stream()
-                .max(Comparator.comparing(i -> i.getFiscalYear().getId()));
-        if (latestInvOpt.isPresent()) {
-            for (InventoryGoal goal : inventoryGoalRepository.findByInventoryId(latestInvOpt.get().getId())) {
+        Inventory latestInv = null;
+        for (Inventory i : inventories) {
+            if (latestInv == null || i.getFiscalYear().getId() > latestInv.getFiscalYear().getId()) {
+                latestInv = i;
+            }
+        }
+        if (latestInv != null) {
+            for (InventoryGoal goal : inventoryGoalRepository.findByInventoryId(latestInv.getId())) {
                 LocalDate ym = goal.getTargetPeriod().withDayOfMonth(1);
-                String type = switch (goal.getGoalCategory()) {
-                    case QUALIFICATION -> "GOAL_QUALIFICATION";
-                    case IT_SKILL -> "GOAL_IT_SKILL";
-                    case AD -> "GOAL_AD";
-                };
-                String lane = goal.getGoalCategory() == GoalCategory.QUALIFICATION ? "ACHIEVEMENT" : "ACTIVITY";
+                String type;
+                switch (goal.getGoalCategory()) {
+                    case QUALIFICATION:
+                        type = "GOAL_QUALIFICATION";
+                        break;
+                    case IT_SKILL:
+                        type = "GOAL_IT_SKILL";
+                        break;
+                    case AD:
+                        type = "GOAL_AD";
+                        break;
+                    default:
+                        throw new IllegalStateException("Unexpected goal category: " + goal.getGoalCategory());
+                }
+                String lane;
+                if (goal.getGoalCategory() == GoalCategory.QUALIFICATION) {
+                    lane = "ACHIEVEMENT";
+                } else {
+                    lane = "ACTIVITY";
+                }
                 String name = resolveGoalName(goal);
                 events.add(new TimelineEvent(type, lane, name, ym.toString(), ym.isBefore(firstOfMonth)));
             }
         }
 
-        events.sort(Comparator.comparing(TimelineEvent::yearMonth));
+        events.sort(new Comparator<TimelineEvent>() {
+            @Override
+            public int compare(TimelineEvent a, TimelineEvent b) {
+                return a.yearMonth().compareTo(b.yearMonth());
+            }
+        });
         return new TimelineQueryResult(events);
     }
 
@@ -389,32 +481,56 @@ public class ChartService {
 
     /** 全ITスキル分類を ID→エンティティ のマップで返す。ツリー遡上時に高速アクセスするために使用する。 */
     private Map<Integer, ItSkillCategory> buildCategoryMap() {
-        return itSkillCategoryRepository.findAllByOrderByLevelAscSortOrderAsc().stream()
-                .collect(Collectors.toMap(ItSkillCategory::getId, c -> c));
+        Map<Integer, ItSkillCategory> map = new HashMap<>();
+        for (ItSkillCategory c : itSkillCategoryRepository.findAllByOrderByLevelAscSortOrderAsc()) {
+            map.put(c.getId(), c);
+        }
+        return map;
     }
 
     /** 全分類マップからアクティブなレベル1（大分類）を sortOrder 昇順で返す。 */
     private List<ItSkillCategory> getActiveCat1List(Map<Integer, ItSkillCategory> catMap) {
-        return catMap.values().stream()
-                .filter(c -> c.getLevel() == 1 && c.isActive())
-                .sorted(Comparator.comparingInt(ItSkillCategory::getSortOrder))
-                .toList();
+        List<ItSkillCategory> result = new ArrayList<>();
+        for (ItSkillCategory c : catMap.values()) {
+            if (c.getLevel() == 1 && c.isActive()) {
+                result.add(c);
+            }
+        }
+        result.sort(new Comparator<ItSkillCategory>() {
+            @Override
+            public int compare(ItSkillCategory a, ItSkillCategory b) {
+                return Integer.compare(a.getSortOrder(), b.getSortOrder());
+            }
+        });
+        return result;
     }
 
     /** アクティブなスキルレベルの最大 levelValue を返す。スキルレベル未設定の場合は 5 を返す。 */
     private int getMaxLevelValue() {
-        return skillLevelRepository.findByActiveOrderByLevelValueAsc(true).stream()
-                .mapToInt(s -> (int) s.getLevelValue())
-                .max()
-                .orElse(5);
+        int max = 5;
+        boolean found = false;
+        for (SkillLevel s : skillLevelRepository.findByActiveOrderByLevelValueAsc(true)) {
+            int value = s.getLevelValue();
+            if (!found || value > max) {
+                max = value;
+                found = true;
+            }
+        }
+        return max;
     }
 
     /** アクティブなスキルレベルの最大 scoreWeight を返す。スキルレベル未設定の場合は 4 を返す。 */
     private int getMaxScoreWeight() {
-        return skillLevelRepository.findByActiveOrderByLevelValueAsc(true).stream()
-                .mapToInt(SkillLevel::getScoreWeight)
-                .max()
-                .orElse(4);
+        int max = 4;
+        boolean found = false;
+        for (SkillLevel s : skillLevelRepository.findByActiveOrderByLevelValueAsc(true)) {
+            int value = s.getScoreWeight();
+            if (!found || value > max) {
+                max = value;
+                found = true;
+            }
+        }
+        return max;
     }
 
     // カテゴリツリーを leaf から上方向にたどり targetLevel の祖先カテゴリを返す
@@ -435,12 +551,26 @@ public class ChartService {
 
     /** Short リストの平均値を計算する。 */
     private double average(List<Short> values) {
-        return values.stream().mapToInt(Short::intValue).average().orElse(0.0);
+        if (values.isEmpty()) {
+            return 0.0;
+        }
+        int sum = 0;
+        for (Short v : values) {
+            sum += v;
+        }
+        return (double) sum / values.size();
     }
 
     /** Integer リストの平均値を計算する。 */
     private double averageInt(List<Integer> values) {
-        return values.stream().mapToInt(Integer::intValue).average().orElse(0.0);
+        if (values.isEmpty()) {
+            return 0.0;
+        }
+        int sum = 0;
+        for (Integer v : values) {
+            sum += v;
+        }
+        return (double) sum / values.size();
     }
 
     // 小数第1位に丸める。Math.round は最近接偶数丸めではなく四捨五入（0.5 → 切り上げ）。
@@ -454,6 +584,26 @@ public class ChartService {
         if (g.getQualification() != null) return g.getQualification().getName();
         if (g.getAdSeminar() != null) return g.getAdSeminar().getName();
         return g.getCustomName();
+    }
+
+    /** マップにキーが存在しなければ空リストを作成して登録し、そのリストを返す（computeIfAbsentの明示版）。 */
+    private <K, V> List<V> getOrCreateList(Map<K, List<V>> map, K key) {
+        List<V> list = map.get(key);
+        if (list == null) {
+            list = new ArrayList<>();
+            map.put(key, list);
+        }
+        return list;
+    }
+
+    /** マップの値に加算する（キーが存在しなければ新規登録する。Map.mergeの明示版）。 */
+    private void addToMap(Map<Integer, Integer> map, int key, int amount) {
+        Integer current = map.get(key);
+        if (current == null) {
+            map.put(key, amount);
+        } else {
+            map.put(key, current + amount);
+        }
     }
 
     // Internal value objects

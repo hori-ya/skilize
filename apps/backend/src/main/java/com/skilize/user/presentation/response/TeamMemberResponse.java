@@ -56,12 +56,18 @@ public record TeamMemberResponse(int id, String userId, String name, String emai
      * @return チームメンバーレスポンス
      */
     public static TeamMemberResponse from(User u, Inventory inv, Map<Integer, String> nameById) {
-        CurrentInventoryInfo invInfo = inv == null ? null : new CurrentInventoryInfo(
-                inv.getId(),
-                new FiscalYearRef(inv.getFiscalYear().getId(), inv.getFiscalYear().getName()),
-                inv.getStatus().name()
-        );
-        String tlName = u.getTlUserId() != null ? nameById.get(u.getTlUserId()) : null;
+        CurrentInventoryInfo invInfo = null;
+        if (inv != null) {
+            invInfo = new CurrentInventoryInfo(
+                    inv.getId(),
+                    new FiscalYearRef(inv.getFiscalYear().getId(), inv.getFiscalYear().getName()),
+                    inv.getStatus().name()
+            );
+        }
+        String tlName = null;
+        if (u.getTlUserId() != null) {
+            tlName = nameById.get(u.getTlUserId());
+        }
         return new TeamMemberResponse(u.getId(), u.getUserId(), u.getName(), u.getEmail(),
                 u.getRole().name(), u.getTlUserId(), tlName, u.isActive(), invInfo);
     }

@@ -21,6 +21,7 @@ import com.skilize.interview.infrastructure.persistence.mapper.InterviewDetailNo
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** domain.repository.InterviewDetailNoteRepository の実装。 */
@@ -34,16 +35,26 @@ public class InterviewDetailNoteRepositoryImpl implements InterviewDetailNoteRep
 
     @Override
     public List<InterviewDetailNote> saveAll(List<InterviewDetailNote> notes) {
-        List<InterviewDetailNoteEntity> entities = notes.stream().map(note ->
-                InterviewDetailNoteEntity.create(interviewJpaRepository.getReferenceById(note.getInterviewId()),
-                        note.getDetailType(), note.getDetailId(), note.getNote())
-        ).toList();
-        return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).toList();
+        List<InterviewDetailNoteEntity> entities = new ArrayList<>();
+        for (InterviewDetailNote note : notes) {
+            entities.add(InterviewDetailNoteEntity.create(
+                    interviewJpaRepository.getReferenceById(note.getInterviewId()),
+                    note.getDetailType(), note.getDetailId(), note.getNote()));
+        }
+        List<InterviewDetailNote> saved = new ArrayList<>();
+        for (InterviewDetailNoteEntity entity : jpaRepository.saveAll(entities)) {
+            saved.add(mapper.toDomain(entity));
+        }
+        return saved;
     }
 
     @Override
     public List<InterviewDetailNote> findByInterviewId(int interviewId) {
-        return jpaRepository.findByInterviewId(interviewId).stream().map(mapper::toDomain).toList();
+        List<InterviewDetailNote> notes = new ArrayList<>();
+        for (InterviewDetailNoteEntity entity : jpaRepository.findByInterviewId(interviewId)) {
+            notes.add(mapper.toDomain(entity));
+        }
+        return notes;
     }
 
     @Override

@@ -87,8 +87,11 @@ public class ReportService {
      */
     @Transactional(readOnly = true)
     public byte[] generateInventoryReport(Long inventoryId, User loginUser) {
-        Inventory inv = inventoryRepository.findByIdWithAssociations(inventoryId.intValue())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "INVENTORY_NOT_FOUND"));
+        Optional<Inventory> inventoryOptional = inventoryRepository.findByIdWithAssociations(inventoryId.intValue());
+        if (inventoryOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "INVENTORY_NOT_FOUND");
+        }
+        Inventory inv = inventoryOptional.get();
 
         checkAccess(inv, loginUser);
 
@@ -137,79 +140,131 @@ public class ReportService {
     }
 
     private List<AdSeminarGoalRow> buildAdSeminarGoalRows(List<InventoryGoal> goals) {
-        return goals.stream()
-                .filter(g -> g.getGoalCategory() == GoalCategory.AD && g.getAdSeminar() != null)
-                .map(g -> new AdSeminarGoalRow(
-                        g.getAdSeminar().getCategory() != null ? g.getAdSeminar().getCategory().getName() : "",
-                        g.getAdSeminar().getName() != null ? g.getAdSeminar().getName() : "",
-                        g.getTargetPeriod() != null ? g.getTargetPeriod().getMonthValue() : null,
-                        g.getReason() != null ? g.getReason() : ""))
-                .toList();
+        List<AdSeminarGoalRow> rows = new ArrayList<>();
+        for (InventoryGoal g : goals) {
+            if (g.getGoalCategory() != GoalCategory.AD || g.getAdSeminar() == null) {
+                continue;
+            }
+            String category = "";
+            if (g.getAdSeminar().getCategory() != null) {
+                category = g.getAdSeminar().getCategory().getName();
+            }
+            String seminarName = "";
+            if (g.getAdSeminar().getName() != null) {
+                seminarName = g.getAdSeminar().getName();
+            }
+            Integer scheduledMonth = null;
+            if (g.getTargetPeriod() != null) {
+                scheduledMonth = g.getTargetPeriod().getMonthValue();
+            }
+            String remark = "";
+            if (g.getReason() != null) {
+                remark = g.getReason();
+            }
+            rows.add(new AdSeminarGoalRow(category, seminarName, scheduledMonth, remark));
+        }
+        return rows;
     }
 
     private List<AdSeminarActualRow> buildAdSeminarActualRows(List<SeminarDetail> seminarDetails) {
-        return seminarDetails.stream()
-                .filter(d -> d.getAdSeminar() != null)
-                .map(d -> new AdSeminarActualRow(
-                        d.getAdSeminar().getCategory() != null ? d.getAdSeminar().getCategory().getName() : "",
-                        d.getAdSeminar().getName() != null ? d.getAdSeminar().getName() : "",
-                        d.getAttendedYearMonth() != null ? d.getAttendedYearMonth().getMonthValue() : null,
-                        d.getRemarks() != null ? d.getRemarks() : ""))
-                .toList();
+        List<AdSeminarActualRow> rows = new ArrayList<>();
+        for (SeminarDetail d : seminarDetails) {
+            if (d.getAdSeminar() == null) {
+                continue;
+            }
+            String category = "";
+            if (d.getAdSeminar().getCategory() != null) {
+                category = d.getAdSeminar().getCategory().getName();
+            }
+            String seminarName = "";
+            if (d.getAdSeminar().getName() != null) {
+                seminarName = d.getAdSeminar().getName();
+            }
+            Integer attendedMonth = null;
+            if (d.getAttendedYearMonth() != null) {
+                attendedMonth = d.getAttendedYearMonth().getMonthValue();
+            }
+            String remark = "";
+            if (d.getRemarks() != null) {
+                remark = d.getRemarks();
+            }
+            rows.add(new AdSeminarActualRow(category, seminarName, attendedMonth, remark));
+        }
+        return rows;
     }
 
     private List<ItSkillGoalRow> buildItSkillGoalRows(List<InventoryGoal> goals) {
-        return goals.stream()
-                .filter(g -> g.getGoalCategory() == GoalCategory.IT_SKILL)
-                .map(g -> {
-                    String cat1 = "";
-                    String cat2 = "";
-                    String skillName;
-                    if (g.getItSkill() != null) {
-                        ItSkillCategory cat =g.getItSkill().getCategory();
-                        if (cat != null) {
-                            if (cat.getParent() != null) {
-                                cat1 = cat.getParent().getName();
-                                cat2 = cat.getName();
-                            } else {
-                                cat1 = cat.getName();
-                            }
-                        }
-                        skillName = g.getItSkill().getName();
+        List<ItSkillGoalRow> rows = new ArrayList<>();
+        for (InventoryGoal g : goals) {
+            if (g.getGoalCategory() != GoalCategory.IT_SKILL) {
+                continue;
+            }
+            String cat1 = "";
+            String cat2 = "";
+            String skillName;
+            if (g.getItSkill() != null) {
+                ItSkillCategory cat = g.getItSkill().getCategory();
+                if (cat != null) {
+                    if (cat.getParent() != null) {
+                        cat1 = cat.getParent().getName();
+                        cat2 = cat.getName();
                     } else {
-                        skillName = g.getCustomName() != null ? g.getCustomName() : "";
+                        cat1 = cat.getName();
                     }
-                    return new ItSkillGoalRow(cat1, cat2, skillName,
-                            g.getTargetPeriod() != null ? g.getTargetPeriod().getMonthValue() : null,
-                            g.getReason() != null ? g.getReason() : "");
-                })
-                .toList();
+                }
+                skillName = g.getItSkill().getName();
+            } else {
+                skillName = "";
+                if (g.getCustomName() != null) {
+                    skillName = g.getCustomName();
+                }
+            }
+            Integer scheduledMonth = null;
+            if (g.getTargetPeriod() != null) {
+                scheduledMonth = g.getTargetPeriod().getMonthValue();
+            }
+            String remark = "";
+            if (g.getReason() != null) {
+                remark = g.getReason();
+            }
+            rows.add(new ItSkillGoalRow(cat1, cat2, skillName, scheduledMonth, remark));
+        }
+        return rows;
     }
 
     private List<ItSkillActualRow> buildItSkillActualRows(List<ItSkillDetail> details) {
-        return details.stream()
-                .map(d -> {
-                    String cat1 = "";
-                    String cat2 = "";
-                    String skillName;
-                    if (d.getItSkill() != null) {
-                        ItSkillCategory cat =d.getItSkill().getCategory();
-                        if (cat != null) {
-                            if (cat.getParent() != null) {
-                                cat1 = cat.getParent().getName();
-                                cat2 = cat.getName();
-                            } else {
-                                cat1 = cat.getName();
-                            }
-                        }
-                        skillName = d.getItSkill().getName();
+        List<ItSkillActualRow> rows = new ArrayList<>();
+        for (ItSkillDetail d : details) {
+            String cat1 = "";
+            String cat2 = "";
+            String skillName;
+            if (d.getItSkill() != null) {
+                ItSkillCategory cat = d.getItSkill().getCategory();
+                if (cat != null) {
+                    if (cat.getParent() != null) {
+                        cat1 = cat.getParent().getName();
+                        cat2 = cat.getName();
                     } else {
-                        skillName = d.getCustomSkillName() != null ? d.getCustomSkillName() : "";
+                        cat1 = cat.getName();
                     }
-                    return new ItSkillActualRow(cat1, cat2, skillName,
-                            d.getSkillLevel() != null ? d.getSkillLevel().getLevelValue().intValue() : null,
-                            d.getRemarks() != null ? d.getRemarks() : "");
-                })
-                .toList();
+                }
+                skillName = d.getItSkill().getName();
+            } else {
+                skillName = "";
+                if (d.getCustomSkillName() != null) {
+                    skillName = d.getCustomSkillName();
+                }
+            }
+            Integer level = null;
+            if (d.getSkillLevel() != null) {
+                level = d.getSkillLevel().getLevelValue().intValue();
+            }
+            String remark = "";
+            if (d.getRemarks() != null) {
+                remark = d.getRemarks();
+            }
+            rows.add(new ItSkillActualRow(cat1, cat2, skillName, level, remark));
+        }
+        return rows;
     }
 }

@@ -31,9 +31,14 @@ public record AdSeminarResponse(int id, String name, Integer categoryId, String 
                                  String description, int sortOrder, boolean isActive) {
 
     public static AdSeminarResponse from(AdSeminar a) {
+        Integer categoryId = null;
+        String categoryName = null;
+        if (a.getCategory() != null) {
+            categoryId = a.getCategory().getId();
+            categoryName = a.getCategory().getName();
+        }
         return new AdSeminarResponse(a.getId(), a.getName(),
-                a.getCategory() != null ? a.getCategory().getId() : null,
-                a.getCategory() != null ? a.getCategory().getName() : null,
+                categoryId, categoryName,
                 a.getDescription(), a.getSortOrder(), a.isActive());
     }
 }

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * ダッシュボード情報（今年度棚卸サマリー）の参照ビジネスロジック。
@@ -47,16 +48,21 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public DashboardQueryResult getDashboard(int userId) {
         // 今日の日付を基準に現在の有効年度を取得する
-        FiscalYear currentFy = fiscalYearRepository.findCurrent(LocalDate.now()).orElse(null);
-        if (currentFy == null) {
+        Optional<FiscalYear> currentFyOptional = fiscalYearRepository.findCurrent(LocalDate.now());
+        if (currentFyOptional.isEmpty()) {
             return new DashboardQueryResult(null, null, 0, 0, 0);
         }
+        FiscalYear currentFy = currentFyOptional.get();
 
         // 全棚卸を取得し、今年度分をフィルタリングする
         List<Inventory> inventories = inventoryRepository.findByUserIdWithFiscalYear(userId);
-        Inventory currentInv = inventories.stream()
-                .filter(i -> i.getFiscalYear().getId().equals(currentFy.getId()))
-                .findFirst().orElse(null);
+        Inventory currentInv = null;
+        for (Inventory inventory : inventories) {
+            if (inventory.getFiscalYear().getId().equals(currentFy.getId())) {
+                currentInv = inventory;
+                break;
+            }
+        }
 
         if (currentInv == null) {
             return new DashboardQueryResult(currentFy, null, 0, 0, 0);

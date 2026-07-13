@@ -28,6 +28,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
 /**
  * ログイン・パスワード変更・自情報取得のビジネスロジック。
  * ユーザーIDの存在有無を外部に漏らさないため、ユーザー不在とパスワード不一致で同一エラーを返す。
@@ -46,8 +49,11 @@ public class AuthService {
      */
     public LoginQueryResult login(LoginCommand command) {
         // ユーザーIDが存在しない場合もパスワード不一致と同じエラーメッセージを返す（ユーザー列挙攻撃対策）
-        User user = userRepository.findByUserId(command.userId())
-                .orElseThrow(() -> new AuthException("AUTH_FAILED", ""));
+        Optional<User> userOptional = userRepository.findByUserId(command.userId());
+        if (userOptional.isEmpty()) {
+            throw new AuthException("AUTH_FAILED", "");
+        }
+        User user = userOptional.get();
 
         // 無効化済みアカウントは認証前に弾く
         if (!user.isActive()) {
@@ -70,7 +76,11 @@ public class AuthService {
     @Transactional
     public void changePassword(ChangePasswordCommand command, User currentUser) {
         // SecurityContext のユーザーは古い状態の可能性があるため ID で再フェッチしてから更新する
-        User user = userRepository.findById(currentUser.getId()).orElseThrow();
+        Optional<User> userOptional = userRepository.findById(currentUser.getId());
+        if (userOptional.isEmpty()) {
+            throw new NoSuchElementException();
+        }
+        User user = userOptional.get();
         if (!passwordEncoder.matches(command.currentPassword(), user.getPasswordHash())) {
             throw new AuthException("CURRENT_PASSWORD_WRONG", "");
         }
@@ -110,10 +120,14 @@ public class AuthService {
 
     /** TLユーザーIDが設定されている場合のみ DB を参照してTL情報（ID・氏名）を返す。null は上長なし。 */
     private LoginQueryResult.TlUserInfo resolveTlUser(Integer tlUserId) {
-        if (tlUserId == null) return null;
-        // map(): Optional の中身を変換する。TLが存在しない場合は orElse(null) で空を返す。
-        return userRepository.findById(tlUserId)
-                .map(tl -> new LoginQueryResult.TlUserInfo(tl.getId(), tl.getName()))
-                .orElse(null);
+        if (tlUserId == null) {
+            return null;
+        }
+        Optional<User> tlUserOptional = userRepository.findById(tlUserId);
+        if (tlUserOptional.isEmpty()) {
+            return null;
+        }
+        User tlUser = tlUserOptional.get();
+        return new LoginQueryResult.TlUserInfo(tlUser.getId(), tlUser.getName());
     }
 }

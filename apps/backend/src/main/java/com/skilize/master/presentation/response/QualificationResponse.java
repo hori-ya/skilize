@@ -31,9 +31,14 @@ public record QualificationResponse(int id, String name, Integer categoryId, Str
                                      String description, int sortOrder, boolean isActive) {
 
     public static QualificationResponse from(Qualification q) {
+        Integer categoryId = null;
+        String categoryName = null;
+        if (q.getCategory() != null) {
+            categoryId = q.getCategory().getId();
+            categoryName = q.getCategory().getName();
+        }
         return new QualificationResponse(q.getId(), q.getName(),
-                q.getCategory() != null ? q.getCategory().getId() : null,
-                q.getCategory() != null ? q.getCategory().getName() : null,
+                categoryId, categoryName,
                 q.getDescription(), q.getSortOrder(), q.isActive());
     }
 }

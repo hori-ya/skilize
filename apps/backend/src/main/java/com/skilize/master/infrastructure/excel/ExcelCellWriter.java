@@ -65,7 +65,11 @@ public final class ExcelCellWriter {
      */
     public static void setString(Row row, int col, String value, CellStyle style) {
         Cell cell = row.createCell(col, CellType.STRING);
-        cell.setCellValue(value != null ? value : "");
+        String cellValue = "";
+        if (value != null) {
+            cellValue = value;
+        }
+        cell.setCellValue(cellValue);
         cell.setCellStyle(style);
     }
 

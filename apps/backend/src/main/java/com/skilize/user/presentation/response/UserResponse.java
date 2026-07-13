@@ -45,13 +45,21 @@ public record UserResponse(int id, String userId, String name, String email, Str
      * @return ユーザーレスポンス
      */
     public static UserResponse from(User u, Map<Integer, String> nameById) {
+        String tlName = null;
+        if (u.getTlUserId() != null) {
+            tlName = nameById.get(u.getTlUserId());
+        }
+        String createdAt = null;
+        if (u.getCreatedAt() != null) {
+            createdAt = u.getCreatedAt().toString();
+        }
         return new UserResponse(
                 u.getId(), u.getUserId(), u.getName(), u.getEmail(),
                 u.getRole().name(),
                 u.getTlUserId(),
-                u.getTlUserId() != null ? nameById.get(u.getTlUserId()) : null,
+                tlName,
                 u.isInitialPassword(), u.isActive(),
-                u.getCreatedAt() != null ? u.getCreatedAt().toString() : null
+                createdAt
         );
     }
 }

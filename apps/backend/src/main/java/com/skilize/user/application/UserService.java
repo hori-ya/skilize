@@ -68,8 +68,11 @@ public class UserService {
     /** ユーザー情報（氏名・メール・ロール・上長・有効フラグ）を更新する。 */
     @Transactional
     public User update(int id, String name, String email, Role role, Integer tlUserId, boolean active) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Optional<User> userOptional = userRepository.findById(id);
+        if (userOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        User user = userOptional.get();
         user.update(name, email, role, tlUserId, active);
         User saved = userRepository.save(user);
         log.info("User updated: id={} userId={} role={} active={}", id, user.getUserId(), role, active);
@@ -83,8 +86,11 @@ public class UserService {
      */
     @Transactional
     public String resetPassword(int id) {
-        User user = userRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Optional<User> userOptional = userRepository.findById(id);
+        if (userOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        User user = userOptional.get();
         // 仮パスワードはユーザーIDと同一（ADMIN から本人に口頭・メール等で伝える）
         String tempPassword = user.getUserId();
         user.resetPassword(passwordEncoder.encode(tempPassword));

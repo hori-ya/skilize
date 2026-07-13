@@ -27,7 +27,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * マスタ Excel 出力・取込サービス。
@@ -109,10 +108,14 @@ public class MasterExcelService {
         List<MasterImportErrorDetail> errors = new ArrayList<>();
 
         // 既存 DB データを取得（カテゴリは後続のスキル保存でも参照するためミュータブルなマップ）
-        Map<Integer, ItSkillCategory> dbCategories = new HashMap<>(itSkillCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(ItSkillCategory::getId, c -> c)));
-        Map<Integer, ItSkill> dbSkills = itSkillRepository.findAll()
-                .stream().collect(Collectors.toMap(ItSkill::getId, s -> s));
+        Map<Integer, ItSkillCategory> dbCategories = new HashMap<>();
+        for (ItSkillCategory c : itSkillCategoryRepository.findAll()) {
+            dbCategories.put(c.getId(), c);
+        }
+        Map<Integer, ItSkill> dbSkills = new HashMap<>();
+        for (ItSkill s : itSkillRepository.findAll()) {
+            dbSkills.put(s.getId(), s);
+        }
 
         // バリデーション（全行のエラーを収集してから判定）
         validateItSkillCategories(data.categoryRows(), dbCategories, errors);
@@ -122,22 +125,26 @@ public class MasterExcelService {
             return MasterImportQueryResult.ofErrors(errors);
         }
 
-        // カテゴリ保存（⑩: 新規保存後は dbCategories に追加してスキル保存で再利用）
+        // カテゴリ保存（新規保存後は dbCategories に追加してスキル保存で再利用）
         Set<Integer> excelCategoryIds = new HashSet<>();
         int catCreated = 0, catUpdated = 0;
 
         for (ItSkillExcelImporter.CategoryRow row : data.categoryRows()) {
             if (row.id() != null) {
                 ItSkillCategory cat = dbCategories.get(row.id());
-                boolean active = row.active() != null ? row.active() : cat.isActive();
+                boolean active = resolveOrDefault(row.active(), cat.isActive());
                 cat.update(row.name(), row.siblingOrder(), active);
                 itSkillCategoryRepository.save(cat);
                 excelCategoryIds.add(row.id());
                 catUpdated++;
             } else {
                 Integer parentId = row.parentId();
-                short level = parentId == null ? (short) 1
-                        : (short) (dbCategories.get(parentId).getLevel() + 1);
+                short level;
+                if (parentId == null) {
+                    level = 1;
+                } else {
+                    level = (short) (dbCategories.get(parentId).getLevel() + 1);
+                }
                 ItSkillCategory newCat = ItSkillCategory.create(parentId, level, row.name(), row.siblingOrder());
                 if (Boolean.FALSE.equals(row.active())) {
                     newCat.update(newCat.getName(), newCat.getSortOrder(), false);
@@ -167,7 +174,7 @@ public class MasterExcelService {
             ItSkillCategory category = dbCategories.get(row.categoryId());
             if (row.id() != null) {
                 ItSkill skill = dbSkills.get(row.id());
-                boolean active = row.active() != null ? row.active() : skill.isActive();
+                boolean active = resolveOrDefault(row.active(), skill.isActive());
                 skill.update(category, row.name(), row.description(), row.siblingOrder(), active);
                 itSkillRepository.save(skill);
                 excelSkillIds.add(row.id());
@@ -211,10 +218,14 @@ public class MasterExcelService {
         QualificationExcelImporter.QualificationImportData data = qualificationImporter.parse(file);
         List<MasterImportErrorDetail> errors = new ArrayList<>();
 
-        Map<Integer, QualificationCategory> dbCategories = new HashMap<>(qualificationCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(QualificationCategory::getId, c -> c)));
-        Map<Integer, Qualification> dbQuals = qualificationRepository.findAll()
-                .stream().collect(Collectors.toMap(Qualification::getId, q -> q));
+        Map<Integer, QualificationCategory> dbCategories = new HashMap<>();
+        for (QualificationCategory c : qualificationCategoryRepository.findAll()) {
+            dbCategories.put(c.getId(), c);
+        }
+        Map<Integer, Qualification> dbQuals = new HashMap<>();
+        for (Qualification q : qualificationRepository.findAll()) {
+            dbQuals.put(q.getId(), q);
+        }
 
         validateQualificationCategories(data.categoryRows(), dbCategories, errors);
         validateQualifications(data.qualRows(), dbCategories, dbQuals, errors);
@@ -228,14 +239,16 @@ public class MasterExcelService {
         for (QualificationExcelImporter.CategoryRow row : data.categoryRows()) {
             if (row.id() != null) {
                 QualificationCategory cat = dbCategories.get(row.id());
-                boolean active = row.active() != null ? row.active() : cat.isActive();
+                boolean active = resolveOrDefault(row.active(), cat.isActive());
                 cat.update(row.name(), row.siblingOrder(), active);
                 qualificationCategoryRepository.save(cat);
                 excelCatIds.add(row.id());
                 catUpdated++;
             } else {
                 QualificationCategory newCat = QualificationCategory.create(row.name(), row.siblingOrder());
-                if (Boolean.FALSE.equals(row.active())) newCat.update(newCat.getName(), newCat.getSortOrder(), false);
+                if (Boolean.FALSE.equals(row.active())) {
+                    newCat.update(newCat.getName(), newCat.getSortOrder(), false);
+                }
                 QualificationCategory saved = qualificationCategoryRepository.save(newCat);
                 dbCategories.put(saved.getId(), saved);
                 catCreated++;
@@ -254,17 +267,22 @@ public class MasterExcelService {
         Set<Integer> excelQualIds = new HashSet<>();
         int qualCreated = 0, qualUpdated = 0;
         for (QualificationExcelImporter.QualificationRow row : data.qualRows()) {
-            QualificationCategory cat = row.categoryId() != null ? dbCategories.get(row.categoryId()) : null;
+            QualificationCategory cat = null;
+            if (row.categoryId() != null) {
+                cat = dbCategories.get(row.categoryId());
+            }
             if (row.id() != null) {
                 Qualification q = dbQuals.get(row.id());
-                boolean active = row.active() != null ? row.active() : q.isActive();
+                boolean active = resolveOrDefault(row.active(), q.isActive());
                 q.update(cat, row.name(), row.description(), row.siblingOrder(), active);
                 qualificationRepository.save(q);
                 excelQualIds.add(row.id());
                 qualUpdated++;
             } else {
                 Qualification newQ = Qualification.create(cat, row.name(), row.description(), row.siblingOrder());
-                if (Boolean.FALSE.equals(row.active())) newQ.update(newQ.getCategory(), newQ.getName(), newQ.getDescription(), newQ.getSortOrder(), false);
+                if (Boolean.FALSE.equals(row.active())) {
+                    newQ.update(newQ.getCategory(), newQ.getName(), newQ.getDescription(), newQ.getSortOrder(), false);
+                }
                 qualificationRepository.save(newQ);
                 qualCreated++;
             }
@@ -300,10 +318,14 @@ public class MasterExcelService {
         AdSeminarExcelImporter.AdSeminarImportData data = adSeminarImporter.parse(file);
         List<MasterImportErrorDetail> errors = new ArrayList<>();
 
-        Map<Integer, AdSeminarCategory> dbCategories = new HashMap<>(adSeminarCategoryRepository.findAll()
-                .stream().collect(Collectors.toMap(AdSeminarCategory::getId, c -> c)));
-        Map<Integer, AdSeminar> dbSeminars = adSeminarRepository.findAll()
-                .stream().collect(Collectors.toMap(AdSeminar::getId, s -> s));
+        Map<Integer, AdSeminarCategory> dbCategories = new HashMap<>();
+        for (AdSeminarCategory c : adSeminarCategoryRepository.findAll()) {
+            dbCategories.put(c.getId(), c);
+        }
+        Map<Integer, AdSeminar> dbSeminars = new HashMap<>();
+        for (AdSeminar s : adSeminarRepository.findAll()) {
+            dbSeminars.put(s.getId(), s);
+        }
 
         validateAdSeminarCategories(data.categoryRows(), dbCategories, errors);
         validateAdSeminars(data.seminarRows(), dbCategories, dbSeminars, errors);
@@ -317,14 +339,16 @@ public class MasterExcelService {
         for (AdSeminarExcelImporter.CategoryRow row : data.categoryRows()) {
             if (row.id() != null) {
                 AdSeminarCategory cat = dbCategories.get(row.id());
-                boolean active = row.active() != null ? row.active() : cat.isActive();
+                boolean active = resolveOrDefault(row.active(), cat.isActive());
                 cat.update(row.name(), row.siblingOrder(), active);
                 adSeminarCategoryRepository.save(cat);
                 excelCatIds.add(row.id());
                 catUpdated++;
             } else {
                 AdSeminarCategory newCat = AdSeminarCategory.create(row.name(), row.siblingOrder());
-                if (Boolean.FALSE.equals(row.active())) newCat.update(newCat.getName(), newCat.getSortOrder(), false);
+                if (Boolean.FALSE.equals(row.active())) {
+                    newCat.update(newCat.getName(), newCat.getSortOrder(), false);
+                }
                 AdSeminarCategory saved = adSeminarCategoryRepository.save(newCat);
                 dbCategories.put(saved.getId(), saved);
                 catCreated++;
@@ -343,17 +367,22 @@ public class MasterExcelService {
         Set<Integer> excelSeminarIds = new HashSet<>();
         int semCreated = 0, semUpdated = 0;
         for (AdSeminarExcelImporter.SeminarRow row : data.seminarRows()) {
-            AdSeminarCategory cat = row.categoryId() != null ? dbCategories.get(row.categoryId()) : null;
+            AdSeminarCategory cat = null;
+            if (row.categoryId() != null) {
+                cat = dbCategories.get(row.categoryId());
+            }
             if (row.id() != null) {
                 AdSeminar s = dbSeminars.get(row.id());
-                boolean active = row.active() != null ? row.active() : s.isActive();
+                boolean active = resolveOrDefault(row.active(), s.isActive());
                 s.update(cat, row.name(), row.description(), row.siblingOrder(), active);
                 adSeminarRepository.save(s);
                 excelSeminarIds.add(row.id());
                 semUpdated++;
             } else {
                 AdSeminar newS = AdSeminar.create(cat, row.name(), row.description(), row.siblingOrder());
-                if (Boolean.FALSE.equals(row.active())) newS.update(newS.getCategory(), newS.getName(), newS.getDescription(), newS.getSortOrder(), false);
+                if (Boolean.FALSE.equals(row.active())) {
+                    newS.update(newS.getCategory(), newS.getName(), newS.getDescription(), newS.getSortOrder(), false);
+                }
                 adSeminarRepository.save(newS);
                 semCreated++;
             }
@@ -375,7 +404,7 @@ public class MasterExcelService {
     }
 
     // ─── バリデーション ──────────────────────────────────────────────────────────
-    // ⑨: 各行のエラーをまとめてから追加することで、MAX_ERRORS 到達時に行の途中で切れないようにする
+    // 各行のエラーをまとめてから追加することで、MAX_ERRORS 到達時に行の途中で切れないようにする
 
     private void validateItSkillCategories(List<ItSkillExcelImporter.CategoryRow> rows,
                                             Map<Integer, ItSkillCategory> dbMap,
@@ -520,10 +549,24 @@ public class MasterExcelService {
 
     private void addMaxErrorsMessage(List<MasterImportErrorDetail> errors) {
         // 重複追加を防ぐ
-        boolean alreadyAdded = errors.stream().anyMatch(e -> e.column().isEmpty());
+        boolean alreadyAdded = false;
+        for (MasterImportErrorDetail e : errors) {
+            if (e.column().isEmpty()) {
+                alreadyAdded = true;
+                break;
+            }
+        }
         if (!alreadyAdded) {
             errors.add(new MasterImportErrorDetail("", 0, "",
                     "100 件を超えるエラーがあります。ファイルを修正してから再度取込してください。"));
         }
+    }
+
+    /** 値が null でなければその値を、null なら defaultValue を返す（部分更新パターンの共通処理）。 */
+    private boolean resolveOrDefault(Boolean value, boolean defaultValue) {
+        if (value != null) {
+            return value;
+        }
+        return defaultValue;
     }
 }

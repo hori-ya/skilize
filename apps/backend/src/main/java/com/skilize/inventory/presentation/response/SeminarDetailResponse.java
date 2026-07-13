@@ -44,15 +44,34 @@ public record SeminarDetailResponse(int id, Integer adSeminarId, String adSemina
      * @return セミナー明細レスポンス
      */
     public static SeminarDetailResponse from(SeminarDetail d) {
+        Integer adSeminarId = null;
+        String adSeminarName = null;
+        Integer adSeminarCategoryId = null;
+        String adSeminarCategoryName = null;
+        if (d.getAdSeminar() != null) {
+            adSeminarId = d.getAdSeminar().getId();
+            adSeminarName = d.getAdSeminar().getName();
+            if (d.getAdSeminar().getCategory() != null) {
+                adSeminarCategoryId = d.getAdSeminar().getCategory().getId();
+                adSeminarCategoryName = d.getAdSeminar().getCategory().getName();
+            }
+        }
+        Integer seminarCategoryId = null;
+        String seminarCategoryName = null;
+        if (d.getSeminarCategory() != null) {
+            seminarCategoryId = d.getSeminarCategory().getId();
+            seminarCategoryName = d.getSeminarCategory().getName();
+        }
+        String attendedYearMonth = null;
+        if (d.getAttendedYearMonth() != null) {
+            attendedYearMonth = d.getAttendedYearMonth().toString();
+        }
         return new SeminarDetailResponse(d.getId(),
-                d.getAdSeminar() != null ? d.getAdSeminar().getId() : null,
-                d.getAdSeminar() != null ? d.getAdSeminar().getName() : null,
-                d.getAdSeminar() != null && d.getAdSeminar().getCategory() != null ? d.getAdSeminar().getCategory().getId() : null,
-                d.getAdSeminar() != null && d.getAdSeminar().getCategory() != null ? d.getAdSeminar().getCategory().getName() : null,
+                adSeminarId, adSeminarName,
+                adSeminarCategoryId, adSeminarCategoryName,
                 d.getSeminarName(),
-                d.getSeminarCategory() != null ? d.getSeminarCategory().getId() : null,
-                d.getSeminarCategory() != null ? d.getSeminarCategory().getName() : null,
-                d.getAttendedYearMonth() != null ? d.getAttendedYearMonth().toString() : null,
+                seminarCategoryId, seminarCategoryName,
+                attendedYearMonth,
                 d.getRemarks());
     }
 }

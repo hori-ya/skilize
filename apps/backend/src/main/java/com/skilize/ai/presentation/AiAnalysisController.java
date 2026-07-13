@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * AI キャリア分析結果の REST API コントローラー。
@@ -58,8 +59,11 @@ public class AiAnalysisController {
     public List<AiAnalysisQueryResult> getMemberAnalyses(
             @PathVariable int userId,
             @AuthenticationPrincipal(expression = "user") User currentUser) {
-        User targetUser = userService.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+        Optional<User> targetUserOptional = userService.findById(userId);
+        if (targetUserOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません");
+        }
+        User targetUser = targetUserOptional.get();
 
         // TL は担当チームメンバー（tl_user_id が自分のID のユーザー）のみ参照可
         if (currentUser.getRole() == Role.TL) {

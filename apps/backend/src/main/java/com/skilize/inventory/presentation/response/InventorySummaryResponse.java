@@ -35,10 +35,18 @@ public record InventorySummaryResponse(int id, FiscalYearRef fiscalYear, String 
      * @return 棚卸サマリレスポンス
      */
     public static InventorySummaryResponse from(Inventory i) {
+        String submittedAt = null;
+        if (i.getSubmittedAt() != null) {
+            submittedAt = i.getSubmittedAt().toString();
+        }
+        String goalCompletedAt = null;
+        if (i.getGoalCompletedAt() != null) {
+            goalCompletedAt = i.getGoalCompletedAt().toString();
+        }
         return new InventorySummaryResponse(i.getId(),
                 new FiscalYearRef(i.getFiscalYear().getId(), i.getFiscalYear().getName()),
                 i.getStatus().name(),
-                i.getSubmittedAt() != null ? i.getSubmittedAt().toString() : null,
-                i.getGoalCompletedAt() != null ? i.getGoalCompletedAt().toString() : null);
+                submittedAt,
+                goalCompletedAt);
     }
 }

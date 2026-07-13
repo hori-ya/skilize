@@ -44,8 +44,11 @@ public class InventoryInterviewRepositoryImpl implements InventoryInterviewRepos
                     userJpaRepository.getReferenceById(interview.getInterviewer().getId()),
                     interview.getGeneralNote());
         } else {
-            entity = jpaRepository.findById(interview.getId())
-                    .orElseThrow(() -> new IllegalStateException("InventoryInterview not found: id=" + interview.getId()));
+            Optional<InventoryInterviewEntity> entityOptional = jpaRepository.findById(interview.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("InventoryInterview not found: id=" + interview.getId());
+            }
+            entity = entityOptional.get();
             entity.update(interview.getGeneralNote());
         }
         return mapper.toDomain(jpaRepository.save(entity));
@@ -53,6 +56,11 @@ public class InventoryInterviewRepositoryImpl implements InventoryInterviewRepos
 
     @Override
     public Optional<InventoryInterview> findByInventoryIdAndInterviewerId(int inventoryId, int interviewerId) {
-        return jpaRepository.findByInventoryIdAndInterviewerId(inventoryId, interviewerId).map(mapper::toDomain);
+        Optional<InventoryInterviewEntity> entityOptional =
+                jpaRepository.findByInventoryIdAndInterviewerId(inventoryId, interviewerId);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 }

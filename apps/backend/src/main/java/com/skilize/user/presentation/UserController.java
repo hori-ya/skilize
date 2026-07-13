@@ -15,6 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.user.presentation;
 
+import com.skilize.fiscalyear.domain.model.FiscalYear;
 import com.skilize.inventory.domain.model.Inventory;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.application.UserService;
@@ -35,9 +36,11 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * ユーザー管理・チーム照会の REST API コントローラー。
@@ -62,9 +65,12 @@ public class UserController {
     public List<UserResponse> list() {
         List<User> users = userService.findAllOrdered();
         // TL名を tlUserId から引けるよう「内部ID → 氏名」のマップを構築する
-        Map<Integer, String> nameById = users.stream()
-                .collect(Collectors.toMap(User::getId, User::getName));
-        return users.stream().map(u -> UserResponse.from(u, nameById)).toList();
+        Map<Integer, String> nameById = buildNameById(users);
+        List<UserResponse> responses = new ArrayList<>();
+        for (User u : users) {
+            responses.add(UserResponse.from(u, nameById));
+        }
+        return responses;
     }
 
     /**
@@ -79,7 +85,7 @@ public class UserController {
                 Role.valueOf(req.role()), req.tlUserId());
         // 作成後に全ユーザーを再取得してTL名マップを更新する（作成ユーザーを含むため）
         List<User> all = userService.findAllOrdered();
-        Map<Integer, String> nameById = all.stream().collect(Collectors.toMap(User::getId, User::getName));
+        Map<Integer, String> nameById = buildNameById(all);
         return ResponseEntity.status(HttpStatus.CREATED).body(UserResponse.from(saved, nameById));
     }
 
@@ -92,10 +98,14 @@ public class UserController {
     public UserResponse update(@PathVariable int id, @Valid @RequestBody UpdateUserRequest req) {
         validateRole(req.role());
         // active が null（未送信）の場合は true をデフォルトとする
+        boolean active = true;
+        if (req.active() != null) {
+            active = req.active();
+        }
         User saved = userService.update(id, req.name(), req.email(), Role.valueOf(req.role()),
-                req.tlUserId(), req.active() != null ? req.active() : true);
+                req.tlUserId(), active);
         List<User> all = userService.findAllOrdered();
-        Map<Integer, String> nameById = all.stream().collect(Collectors.toMap(User::getId, User::getName));
+        Map<Integer, String> nameById = buildNameById(all);
         return UserResponse.from(saved, nameById);
     }
 
@@ -124,19 +134,25 @@ public class UserController {
         List<User> members = userService.findActiveMembersFor(currentUser);
 
         // 今日の日付を基準に現在の有効年度を取得する（存在しない場合は棚卸情報が null になる）
-        var currentFy = userService.findCurrentFiscalYear();
+        Optional<FiscalYear> currentFy = userService.findCurrentFiscalYear();
 
         List<User> allUsers = userService.findAllOrdered();
-        Map<Integer, String> nameById = allUsers.stream()
-                .collect(Collectors.toMap(User::getId, User::getName));
+        Map<Integer, String> nameById = buildNameById(allUsers);
 
-        return members.stream().map(member -> {
+        List<TeamMemberResponse> responses = new ArrayList<>();
+        for (User member : members) {
             // 今年度の棚卸を取得する。年度なし・棚卸なしの場合は null を設定する
-            Inventory inv = currentFy
-                    .flatMap(fy -> userService.findCurrentInventory(member.getId(), fy.getId()))
-                    .orElse(null);
-            return TeamMemberResponse.from(member, inv, nameById);
-        }).toList();
+            Inventory inv = null;
+            if (currentFy.isPresent()) {
+                Optional<Inventory> inventoryOptional =
+                        userService.findCurrentInventory(member.getId(), currentFy.get().getId());
+                if (inventoryOptional.isPresent()) {
+                    inv = inventoryOptional.get();
+                }
+            }
+            responses.add(TeamMemberResponse.from(member, inv, nameById));
+        }
+        return responses;
     }
 
     /**
@@ -148,8 +164,11 @@ public class UserController {
     public List<MemberInventorySummaryResponse> getUserInventories(
             @PathVariable int id,
             @AuthenticationPrincipal(expression = "user") User currentUser) {
-        User targetUser = userService.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND"));
+        Optional<User> targetUserOptional = userService.findById(id);
+        if (targetUserOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND");
+        }
+        User targetUser = targetUserOptional.get();
 
         // TL は担当チームメンバー（tl_user_id が自分のID のユーザー）のみ参照可
         if (currentUser.getRole() == Role.TL) {
@@ -158,10 +177,11 @@ public class UserController {
             }
         }
 
-        return userService.findInventoriesByUserId(id)
-                .stream()
-                .map(MemberInventorySummaryResponse::from)
-                .toList();
+        List<MemberInventorySummaryResponse> responses = new ArrayList<>();
+        for (Inventory inv : userService.findInventoriesByUserId(id)) {
+            responses.add(MemberInventorySummaryResponse.from(inv));
+        }
+        return responses;
     }
 
     // ─── Helpers ──────────────────────────────────────────────────────────────
@@ -176,6 +196,15 @@ public class UserController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_ROLE");
         }
+    }
+
+    /** ユーザー内部PK → 氏名 のマップを構築する（TL名表示の解決に使用する）。 */
+    private Map<Integer, String> buildNameById(List<User> users) {
+        Map<Integer, String> nameById = new HashMap<>();
+        for (User u : users) {
+            nameById.put(u.getId(), u.getName());
+        }
+        return nameById;
     }
 
 }

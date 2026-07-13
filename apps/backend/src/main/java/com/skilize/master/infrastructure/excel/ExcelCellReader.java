@@ -31,7 +31,10 @@ public final class ExcelCellReader {
      * @return 整数値（空・変換不可の場合は null）
      */
     public static Integer getInt(Row row, int col) {
-        return getInt(row == null ? null : row.getCell(col));
+        if (row == null) {
+            return getInt((Cell) null);
+        }
+        return getInt(row.getCell(col));
     }
 
     /**
@@ -41,16 +44,25 @@ public final class ExcelCellReader {
      * @return 整数値（空・変換不可の場合は null）
      */
     public static Integer getInt(Cell cell) {
-        if (cell == null) return null;
-        return switch (cell.getCellType()) {
-            case NUMERIC -> (int) cell.getNumericCellValue();
-            case STRING -> {
+        if (cell == null) {
+            return null;
+        }
+        switch (cell.getCellType()) {
+            case NUMERIC:
+                return (int) cell.getNumericCellValue();
+            case STRING:
                 String s = cell.getStringCellValue().trim();
-                try { yield s.isEmpty() ? null : Integer.parseInt(s); }
-                catch (NumberFormatException e) { yield null; }
-            }
-            default -> null;
-        };
+                if (s.isEmpty()) {
+                    return null;
+                }
+                try {
+                    return Integer.parseInt(s);
+                } catch (NumberFormatException e) {
+                    return null;
+                }
+            default:
+                return null;
+        }
     }
 
     /**
@@ -61,7 +73,10 @@ public final class ExcelCellReader {
      * @return 文字列値（トリム済み。null の場合は空文字）
      */
     public static String getString(Row row, int col) {
-        return getString(row == null ? null : row.getCell(col));
+        if (row == null) {
+            return getString((Cell) null);
+        }
+        return getString(row.getCell(col));
     }
 
     /**
@@ -71,13 +86,19 @@ public final class ExcelCellReader {
      * @return 文字列値（トリム済み）
      */
     public static String getString(Cell cell) {
-        if (cell == null) return "";
-        return switch (cell.getCellType()) {
-            case STRING -> cell.getStringCellValue().trim();
-            case NUMERIC -> String.valueOf((long) cell.getNumericCellValue());
-            case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
-            default -> "";
-        };
+        if (cell == null) {
+            return "";
+        }
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue().trim();
+            case NUMERIC:
+                return String.valueOf((long) cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return "";
+        }
     }
 
     /** 有効列の読み取り。「有効」→ true / 「無効」→ false / 空白 → null（省略扱い）。 */

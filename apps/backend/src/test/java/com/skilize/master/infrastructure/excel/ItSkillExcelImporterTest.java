@@ -107,9 +107,12 @@ class ItSkillExcelImporterTest {
             MockMultipartFile file = new MockMultipartFile("file", "test.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
 
-            assertThatThrownBy(() -> importer.parse(file))
-                    .isInstanceOf(ExcelFormatException.class)
-                    .hasMessageContaining("EXCEL_SHEET_NOT_FOUND");
+            try {
+                importer.parse(file);
+                fail("ExcelFormatException が発生する想定");
+            } catch (ExcelFormatException e) {
+                assertThat(e.getMessage()).contains("EXCEL_SHEET_NOT_FOUND");
+            }
         }
 
         @Test
@@ -118,9 +121,12 @@ class ItSkillExcelImporterTest {
             MockMultipartFile file = new MockMultipartFile("file", "test.xlsx",
                     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", bytes);
 
-            assertThatThrownBy(() -> importer.parse(file))
-                    .isInstanceOf(ExcelFormatException.class)
-                    .hasMessageContaining("EXCEL_SHEET_NOT_FOUND");
+            try {
+                importer.parse(file);
+                fail("ExcelFormatException が発生する想定");
+            } catch (ExcelFormatException e) {
+                assertThat(e.getMessage()).contains("EXCEL_SHEET_NOT_FOUND");
+            }
         }
     }
 

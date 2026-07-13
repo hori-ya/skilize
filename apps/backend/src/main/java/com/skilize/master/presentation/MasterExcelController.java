@@ -16,6 +16,7 @@
 package com.skilize.master.presentation;
 
 import com.skilize.master.application.MasterExcelService;
+import com.skilize.master.application.query.MasterImportErrorDetail;
 import com.skilize.master.application.query.MasterImportQueryResult;
 import com.skilize.master.infrastructure.excel.ExcelFormatException;
 import com.skilize.master.presentation.response.MasterImportResponse;
@@ -30,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -166,13 +169,15 @@ public class MasterExcelController {
     /** バリデーションエラーがあれば 400 EXCEL_IMPORT_ERROR を返し、なければ 200 MasterImportResponse を返す。 */
     private ResponseEntity<?> toImportResponse(MasterImportQueryResult result) {
         if (result.hasErrors()) {
-            List<Map<String, Object>> errorList = result.errors().stream()
-                    .map(e -> Map.<String, Object>of(
-                            "sheet", e.sheet(),
-                            "row", e.row(),
-                            "column", e.column(),
-                            "message", e.message()))
-                    .toList();
+            List<Map<String, Object>> errorList = new ArrayList<>();
+            for (MasterImportErrorDetail e : result.errors()) {
+                Map<String, Object> errorMap = new HashMap<>();
+                errorMap.put("sheet", e.sheet());
+                errorMap.put("row", e.row());
+                errorMap.put("column", e.column());
+                errorMap.put("message", e.message());
+                errorList.add(errorMap);
+            }
             return ResponseEntity.badRequest().body(Map.of(
                     "code", "EXCEL_IMPORT_ERROR",
                     "message", "取込データに誤りがあります",

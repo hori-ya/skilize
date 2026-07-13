@@ -179,15 +179,23 @@ class InventoryServiceComparisonTest {
             assertThat(result.hasPrevYear()).isTrue();
             assertThat(result.items()).hasSize(2);
 
-            ComparisonItem masterItem = result.items().stream()
-                    .filter(i -> i.itSkillId() != null).findFirst().orElseThrow();
+            ComparisonItem masterItem = null;
+            ComparisonItem customItem = null;
+            for (ComparisonItem i : result.items()) {
+                if (i.itSkillId() != null) {
+                    masterItem = i;
+                } else {
+                    customItem = i;
+                }
+            }
+            assertThat(masterItem).isNotNull();
+            assertThat(customItem).isNotNull();
+
             assertThat(masterItem.skillName()).isEqualTo("Java");
             assertThat(masterItem.currentLevelValue()).isEqualTo(3);
             assertThat(masterItem.prevLevelValue()).isEqualTo(2);
             assertThat(masterItem.diff()).isEqualTo(1);
 
-            ComparisonItem customItem = result.items().stream()
-                    .filter(i -> i.itSkillId() == null).findFirst().orElseThrow();
             assertThat(customItem.skillName()).isEqualTo("自作フレームワーク");
             assertThat(customItem.currentLevelValue()).isNull();
             assertThat(customItem.prevLevelValue()).isNull();
@@ -205,9 +213,12 @@ class InventoryServiceComparisonTest {
 
             when(inventoryRepository.findByIdWithAssociations(10)).thenReturn(Optional.of(otherInv));
 
-            assertThatThrownBy(() -> inventoryService.getComparison(10, generalUser))
-                    .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "FORBIDDEN");
+            try {
+                inventoryService.getComparison(10, generalUser);
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                assertThat(e.getCode()).isEqualTo("FORBIDDEN");
+            }
         }
     }
 }

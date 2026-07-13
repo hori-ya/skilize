@@ -26,6 +26,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +46,14 @@ public class FiscalYearService {
     /** 全年度を開始日降順（新しい順）で返す。 */
     @Transactional(readOnly = true)
     public List<FiscalYear> findAllOrderByStartDateDesc() {
-        return fiscalYearRepository.findAll().stream()
-                .sorted((a, b) -> b.getStartDate().compareTo(a.getStartDate()))
-                .toList();
+        List<FiscalYear> fiscalYears = new ArrayList<>(fiscalYearRepository.findAll());
+        fiscalYears.sort(new Comparator<FiscalYear>() {
+            @Override
+            public int compare(FiscalYear a, FiscalYear b) {
+                return b.getStartDate().compareTo(a.getStartDate());
+            }
+        });
+        return fiscalYears;
     }
 
     /** 今日の日付を基準に現在有効な年度を取得する。存在しない場合は Optional.empty() を返す。 */
@@ -58,8 +65,11 @@ public class FiscalYearService {
     /** 年度設定（年度開始月）を取得する。FiscalYearSettings はシングルトン（id=1 の1件のみ）。 */
     @Transactional(readOnly = true)
     public FiscalYearSettings getSettings() {
-        return settingsRepository.findById((short) 1)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Optional<FiscalYearSettings> settingsOptional = settingsRepository.findById((short) 1);
+        if (settingsOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        return settingsOptional.get();
     }
 
     /** 年度を新規作成する。入力期間（inputStartDate / inputEndDate）は省略可能（null 許容）。 */
@@ -78,9 +88,18 @@ public class FiscalYearService {
     @Transactional
     public FiscalYear updateFiscalYear(int id, String name, LocalDate startDate, LocalDate endDate,
                                        LocalDate inputStartDate, LocalDate inputEndDate, Boolean active) {
-        FiscalYear fy = fiscalYearRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        fy.update(name, startDate, endDate, inputStartDate, inputEndDate, active != null ? active : fy.isActive());
+        Optional<FiscalYear> fiscalYearOptional = fiscalYearRepository.findById(id);
+        if (fiscalYearOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        FiscalYear fy = fiscalYearOptional.get();
+        boolean resolvedActive;
+        if (active != null) {
+            resolvedActive = active;
+        } else {
+            resolvedActive = fy.isActive();
+        }
+        fy.update(name, startDate, endDate, inputStartDate, inputEndDate, resolvedActive);
         return fiscalYearRepository.save(fy);
     }
 
@@ -91,8 +110,11 @@ public class FiscalYearService {
     @Transactional
     public FiscalYearSettings updateSettings(short fiscalYearStartMonth) {
         // id=1 のシングルトンレコードを取得する（存在しない場合は初期化漏れのため 404 をスローする）
-        FiscalYearSettings s = settingsRepository.findById((short) 1)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Optional<FiscalYearSettings> settingsOptional = settingsRepository.findById((short) 1);
+        if (settingsOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        FiscalYearSettings s = settingsOptional.get();
         s.setFiscalYearStartMonth(fiscalYearStartMonth);
         return settingsRepository.save(s);
     }

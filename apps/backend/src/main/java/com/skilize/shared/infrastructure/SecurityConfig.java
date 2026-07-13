@@ -20,10 +20,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.AuthorizeHttpRequestsConfigurer;
+import org.springframework.security.config.annotation.web.configurers.CorsConfigurer;
+import org.springframework.security.config.annotation.web.configurers.CsrfConfigurer;
+import org.springframework.security.config.annotation.web.configurers.SessionManagementConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -33,6 +37,7 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -58,9 +63,11 @@ public class SecurityConfig {
 
     // 環境変数 FRONTEND_ORIGIN はカンマ区切りで複数オリジンを指定できる
     private List<String> allowedOrigins() {
-        return java.util.Arrays.stream(frontendOrigin.split(","))
-                .map(String::trim)
-                .toList();
+        List<String> origins = new ArrayList<>();
+        for (String origin : frontendOrigin.split(",")) {
+            origins.add(origin.trim());
+        }
+        return origins;
     }
 
     /**
@@ -75,16 +82,35 @@ public class SecurityConfig {
         http
                 // REST API のため CSRF 不要。JWT でステートレス認証を行う。
                 // CSRF はブラウザのクッキー自動送信を悪用する攻撃。JWT を Authorization ヘッダーで送る場合は対象外。
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(new Customizer<CsrfConfigurer<HttpSecurity>>() {
+                    @Override
+                    public void customize(CsrfConfigurer<HttpSecurity> csrf) {
+                        csrf.disable();
+                    }
+                })
                 // STATELESS: Spring がHTTPセッションを一切生成・使用しない。認証情報はリクエストごとの JWT のみ。
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
-                        .requestMatchers("/api/health").permitAll()
-                        // 上記以外はすべて認証必須。ロール別制御は各コントローラーの @PreAuthorize が担う。
-                        .anyRequest().authenticated()
-                )
+                .sessionManagement(new Customizer<SessionManagementConfigurer<HttpSecurity>>() {
+                    @Override
+                    public void customize(SessionManagementConfigurer<HttpSecurity> sm) {
+                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS);
+                    }
+                })
+                .cors(new Customizer<CorsConfigurer<HttpSecurity>>() {
+                    @Override
+                    public void customize(CorsConfigurer<HttpSecurity> cors) {
+                        cors.configurationSource(corsConfigurationSource());
+                    }
+                })
+                .authorizeHttpRequests(new Customizer<AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry>() {
+                    @Override
+                    public void customize(
+                            AuthorizeHttpRequestsConfigurer<HttpSecurity>.AuthorizationManagerRequestMatcherRegistry auth) {
+                        auth.requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                                .requestMatchers("/api/health").permitAll()
+                                // 上記以外はすべて認証必須。ロール別制御は各コントローラーの @PreAuthorize が担う。
+                                .anyRequest().authenticated();
+                    }
+                })
                 // フィルター順: LoggingFilter(MDC) → JwtAuthenticationFilter(認証) → InitialPasswordFilter(初回PW)
                 // JwtAuthenticationFilter を先に登録してから、LoggingFilter を「その前」として参照する
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

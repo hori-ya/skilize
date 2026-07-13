@@ -43,14 +43,22 @@ public record ItSkillResponse(int id, String name, int categoryId, Integer categ
         String cat2 = null, cat3 = null;
         if (cat.getLevel() == 3) {
             cat3 = cat.getName();
-            cat2 = cat2Category != null ? cat2Category.getName() : null;
+            if (cat2Category != null) {
+                cat2 = cat2Category.getName();
+            }
         } else if (cat.getLevel() == 2) {
             cat2 = cat.getName();
         }
+        Integer category1Id = null;
+        String category1Name = null;
+        int category1SortOrder = 0;
+        if (cat1 != null) {
+            category1Id = cat1.getId();
+            category1Name = cat1.getName();
+            category1SortOrder = cat1.getSortOrder();
+        }
         return new ItSkillResponse(s.getId(), s.getName(), cat.getId(),
-                cat1 != null ? cat1.getId() : null,
-                cat1 != null ? cat1.getName() : null,
-                cat1 != null ? cat1.getSortOrder() : 0,
+                category1Id, category1Name, category1SortOrder,
                 cat2, cat3, s.getDescription(), s.getSortOrder(), s.isActive());
     }
 }

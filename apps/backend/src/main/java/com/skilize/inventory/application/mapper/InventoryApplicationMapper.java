@@ -19,6 +19,7 @@ import com.skilize.inventory.application.command.*;
 import com.skilize.inventory.presentation.request.*;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -35,9 +36,11 @@ public class InventoryApplicationMapper {
      * @return ITスキル明細コマンドのリスト
      */
     public List<ItSkillDetailCommand> toCommands(List<ItSkillDetailItem> items) {
-        return items.stream()
-                .map(i -> new ItSkillDetailCommand(i.id(), i.itSkillId(), i.customSkillName(), i.skillLevelId(), i.remarks()))
-                .toList();
+        List<ItSkillDetailCommand> commands = new ArrayList<>();
+        for (ItSkillDetailItem i : items) {
+            commands.add(new ItSkillDetailCommand(i.id(), i.itSkillId(), i.customSkillName(), i.skillLevelId(), i.remarks()));
+        }
+        return commands;
     }
 
     /**
@@ -47,9 +50,11 @@ public class InventoryApplicationMapper {
      * @return 資格明細コマンドのリスト
      */
     public List<QualificationDetailCommand> toQualificationCommands(List<QualificationDetailItem> items) {
-        return items.stream()
-                .map(i -> new QualificationDetailCommand(i.id(), i.qualificationId(), i.customQualificationName(), i.acquiredYearMonth(), i.remarks()))
-                .toList();
+        List<QualificationDetailCommand> commands = new ArrayList<>();
+        for (QualificationDetailItem i : items) {
+            commands.add(new QualificationDetailCommand(i.id(), i.qualificationId(), i.customQualificationName(), i.acquiredYearMonth(), i.remarks()));
+        }
+        return commands;
     }
 
     /**
@@ -59,9 +64,11 @@ public class InventoryApplicationMapper {
      * @return セミナー明細コマンドのリスト
      */
     public List<SeminarDetailCommand> toSeminarCommands(List<SeminarDetailItem> items) {
-        return items.stream()
-                .map(i -> new SeminarDetailCommand(i.id(), i.adSeminarId(), i.seminarName(), i.seminarCategoryId(), i.attendedYearMonth(), i.remarks()))
-                .toList();
+        List<SeminarDetailCommand> commands = new ArrayList<>();
+        for (SeminarDetailItem i : items) {
+            commands.add(new SeminarDetailCommand(i.id(), i.adSeminarId(), i.seminarName(), i.seminarCategoryId(), i.attendedYearMonth(), i.remarks()));
+        }
+        return commands;
     }
 
     /**
@@ -71,9 +78,11 @@ public class InventoryApplicationMapper {
      * @return 目標コマンドのリスト
      */
     public List<GoalCommand> toGoalCommands(List<GoalItem> items) {
-        return items.stream()
-                .map(i -> new GoalCommand(i.id(), i.goalCategory(), i.itSkillId(), i.qualificationId(), i.adSeminarId(), i.customName(), i.targetPeriod(), i.reason()))
-                .toList();
+        List<GoalCommand> commands = new ArrayList<>();
+        for (GoalItem i : items) {
+            commands.add(new GoalCommand(i.id(), i.goalCategory(), i.itSkillId(), i.qualificationId(), i.adSeminarId(), i.customName(), i.targetPeriod(), i.reason()));
+        }
+        return commands;
     }
 
     /**
@@ -83,8 +92,10 @@ public class InventoryApplicationMapper {
      * @return 目標振り返り更新コマンドのリスト
      */
     public List<GoalReviewUpdateCommand> toGoalReviewUpdateCommands(List<GoalReviewUpdateItem> items) {
-        return items.stream()
-                .map(i -> new GoalReviewUpdateCommand(i.prevGoalId(), i.achievementStatus(), i.reviewNote()))
-                .toList();
+        List<GoalReviewUpdateCommand> commands = new ArrayList<>();
+        for (GoalReviewUpdateItem i : items) {
+            commands.add(new GoalReviewUpdateCommand(i.prevGoalId(), i.achievementStatus(), i.reviewNote()));
+        }
+        return commands;
     }
 }

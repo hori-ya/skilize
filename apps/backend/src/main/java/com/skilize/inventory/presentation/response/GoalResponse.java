@@ -45,13 +45,28 @@ public record GoalResponse(int id, String goalCategory,
      * @return 目標レスポンス
      */
     public static GoalResponse from(InventoryGoal g) {
+        Integer itSkillId = null;
+        String itSkillName = null;
+        if (g.getItSkill() != null) {
+            itSkillId = g.getItSkill().getId();
+            itSkillName = g.getItSkill().getName();
+        }
+        Integer qualificationId = null;
+        String qualificationName = null;
+        if (g.getQualification() != null) {
+            qualificationId = g.getQualification().getId();
+            qualificationName = g.getQualification().getName();
+        }
+        Integer adSeminarId = null;
+        String adSeminarName = null;
+        if (g.getAdSeminar() != null) {
+            adSeminarId = g.getAdSeminar().getId();
+            adSeminarName = g.getAdSeminar().getName();
+        }
         return new GoalResponse(g.getId(), g.getGoalCategory().name(),
-                g.getItSkill() != null ? g.getItSkill().getId() : null,
-                g.getItSkill() != null ? g.getItSkill().getName() : null,
-                g.getQualification() != null ? g.getQualification().getId() : null,
-                g.getQualification() != null ? g.getQualification().getName() : null,
-                g.getAdSeminar() != null ? g.getAdSeminar().getId() : null,
-                g.getAdSeminar() != null ? g.getAdSeminar().getName() : null,
+                itSkillId, itSkillName,
+                qualificationId, qualificationName,
+                adSeminarId, adSeminarName,
                 g.getCustomName(),
                 g.getTargetPeriod().toString(), g.getReason());
     }

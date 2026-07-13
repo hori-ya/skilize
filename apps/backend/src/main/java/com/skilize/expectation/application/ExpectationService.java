@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Optional;
+
 /**
  * ユーザーへの期待（TL期待・会社期待）の取得・保存ビジネスロジック。
  * TL期待はそのユーザーの担当TL（tl_user_id が一致する TL）のみ編集可。
@@ -47,11 +49,12 @@ public class ExpectationService {
     @Transactional(readOnly = true)
     public ExpectationQueryResult getForUser(int targetUserId, User requester) {
         requireAccess(targetUserId, requester);
-        // map() で Optional<UserExpectation> → Optional<ExpectationQueryResult> に変換し、
         // 存在しない場合は empty() を返す
-        return expectationRepository.findByUserId(targetUserId)
-                .map(ExpectationQueryResult::from)
-                .orElse(ExpectationQueryResult.empty());
+        Optional<UserExpectation> expectationOptional = expectationRepository.findByUserId(targetUserId);
+        if (expectationOptional.isEmpty()) {
+            return ExpectationQueryResult.empty();
+        }
+        return ExpectationQueryResult.from(expectationOptional.get());
     }
 
     /**
@@ -70,8 +73,13 @@ public class ExpectationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "EXPECTATION_ASSIGNED_TL_ONLY");
         }
         // upsert: レコードがなければ新規作成し、あれば取得して更新する
-        UserExpectation entity = expectationRepository.findByUserId(targetUserId)
-                .orElseGet(() -> UserExpectation.create(target));
+        Optional<UserExpectation> expectationOptional = expectationRepository.findByUserId(targetUserId);
+        UserExpectation entity;
+        if (expectationOptional.isPresent()) {
+            entity = expectationOptional.get();
+        } else {
+            entity = UserExpectation.create(target);
+        }
         entity.updateTlExpectation(expectation);
         return ExpectationQueryResult.from(expectationRepository.save(entity));
     }
@@ -86,8 +94,13 @@ public class ExpectationService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "EXPECTATION_ADMIN_ONLY");
         }
         User target = findUser(targetUserId);
-        UserExpectation entity = expectationRepository.findByUserId(targetUserId)
-                .orElseGet(() -> UserExpectation.create(target));
+        Optional<UserExpectation> expectationOptional = expectationRepository.findByUserId(targetUserId);
+        UserExpectation entity;
+        if (expectationOptional.isPresent()) {
+            entity = expectationOptional.get();
+        } else {
+            entity = UserExpectation.create(target);
+        }
         entity.updateCompanyExpectation(expectation);
         return ExpectationQueryResult.from(expectationRepository.save(entity));
     }
@@ -113,7 +126,10 @@ public class ExpectationService {
 
     /** ユーザーをIDで取得する。存在しない場合は 404 をスローする共通ヘルパー。 */
     private User findUser(int userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません"));
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "ユーザーが見つかりません");
+        }
+        return userOptional.get();
     }
 }

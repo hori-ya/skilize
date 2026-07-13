@@ -21,6 +21,7 @@ import com.skilize.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +35,11 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Optional<User> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<UserEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -44,8 +49,11 @@ public class UserRepositoryImpl implements UserRepository {
             entity = UserEntity.create(user.getUserId(), user.getName(), user.getEmail(), user.getRole(),
                     user.getTlUserId(), user.getPasswordHash());
         } else {
-            entity = jpaRepository.findById(user.getId())
-                    .orElseThrow(() -> new IllegalStateException("User not found: id=" + user.getId()));
+            Optional<UserEntity> entityOptional = jpaRepository.findById(user.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("User not found: id=" + user.getId());
+            }
+            entity = entityOptional.get();
             entity.update(user.getName(), user.getEmail(), user.getRole(), user.getTlUserId(), user.isActive());
             // update() はパスワード関連フィールドを変更しないため、changePassword/resetPassword由来の変更を反映する
             if (!entity.getPasswordHash().equals(user.getPasswordHash())) {
@@ -61,21 +69,37 @@ public class UserRepositoryImpl implements UserRepository {
 
     @Override
     public Optional<User> findByUserId(String userId) {
-        return jpaRepository.findByUserId(userId).map(mapper::toDomain);
+        Optional<UserEntity> entityOptional = jpaRepository.findByUserId(userId);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public List<User> findAllByOrderByUserIdAsc() {
-        return jpaRepository.findAllByOrderByUserIdAsc().stream().map(mapper::toDomain).toList();
+        List<User> users = new ArrayList<>();
+        for (UserEntity entity : jpaRepository.findAllByOrderByUserIdAsc()) {
+            users.add(mapper.toDomain(entity));
+        }
+        return users;
     }
 
     @Override
     public List<User> findByTlUserIdAndActiveTrue(int tlUserId) {
-        return jpaRepository.findByTlUserIdAndActiveTrue(tlUserId).stream().map(mapper::toDomain).toList();
+        List<User> users = new ArrayList<>();
+        for (UserEntity entity : jpaRepository.findByTlUserIdAndActiveTrue(tlUserId)) {
+            users.add(mapper.toDomain(entity));
+        }
+        return users;
     }
 
     @Override
     public List<User> findByActiveTrue() {
-        return jpaRepository.findByActiveTrue().stream().map(mapper::toDomain).toList();
+        List<User> users = new ArrayList<>();
+        for (UserEntity entity : jpaRepository.findByActiveTrue()) {
+            users.add(mapper.toDomain(entity));
+        }
+        return users;
     }
 }

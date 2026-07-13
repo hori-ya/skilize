@@ -26,6 +26,7 @@ import com.skilize.master.infrastructure.persistence.repository.SkillLevelJpaRep
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,7 +43,11 @@ public class ItSkillDetailRepositoryImpl implements ItSkillDetailRepository {
 
     @Override
     public Optional<ItSkillDetail> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<ItSkillDetailEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -52,32 +57,52 @@ public class ItSkillDetailRepositoryImpl implements ItSkillDetailRepository {
 
     @Override
     public List<ItSkillDetail> saveAll(List<ItSkillDetail> details) {
-        List<ItSkillDetailEntity> entities = details.stream().map(this::toEntity).toList();
-        return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).toList();
+        List<ItSkillDetailEntity> entities = new ArrayList<>();
+        for (ItSkillDetail detail : details) {
+            entities.add(toEntity(detail));
+        }
+        List<ItSkillDetail> saved = new ArrayList<>();
+        for (ItSkillDetailEntity entity : jpaRepository.saveAll(entities)) {
+            saved.add(mapper.toDomain(entity));
+        }
+        return saved;
     }
 
     private ItSkillDetailEntity toEntity(ItSkillDetail detail) {
-        ItSkillEntity itSkillEntity = detail.getItSkill() != null
-                ? itSkillJpaRepository.getReferenceById(detail.getItSkill().getId()) : null;
+        ItSkillEntity itSkillEntity = null;
+        if (detail.getItSkill() != null) {
+            itSkillEntity = itSkillJpaRepository.getReferenceById(detail.getItSkill().getId());
+        }
         SkillLevelEntity skillLevelEntity = skillLevelJpaRepository.getReferenceById(detail.getSkillLevel().getId());
         if (detail.getId() == null) {
             return ItSkillDetailEntity.create(inventoryJpaRepository.getReferenceById(detail.getInventoryId()),
                     itSkillEntity, detail.getCustomSkillName(), skillLevelEntity, detail.getRemarks());
         }
-        ItSkillDetailEntity entity = jpaRepository.findById(detail.getId())
-                .orElseThrow(() -> new IllegalStateException("ItSkillDetail not found: id=" + detail.getId()));
+        Optional<ItSkillDetailEntity> entityOptional = jpaRepository.findById(detail.getId());
+        if (entityOptional.isEmpty()) {
+            throw new IllegalStateException("ItSkillDetail not found: id=" + detail.getId());
+        }
+        ItSkillDetailEntity entity = entityOptional.get();
         entity.updateRemarks(detail.getRemarks());
         return entity;
     }
 
     @Override
     public List<ItSkillDetail> findByInventoryId(int inventoryId) {
-        return jpaRepository.findByInventoryId(inventoryId).stream().map(mapper::toDomain).toList();
+        List<ItSkillDetail> details = new ArrayList<>();
+        for (ItSkillDetailEntity entity : jpaRepository.findByInventoryId(inventoryId)) {
+            details.add(mapper.toDomain(entity));
+        }
+        return details;
     }
 
     @Override
     public List<ItSkillDetail> findByInventoryIdWithCategories(int inventoryId) {
-        return jpaRepository.findByInventoryIdWithCategories(inventoryId).stream().map(mapper::toDomain).toList();
+        List<ItSkillDetail> details = new ArrayList<>();
+        for (ItSkillDetailEntity entity : jpaRepository.findByInventoryIdWithCategories(inventoryId)) {
+            details.add(mapper.toDomain(entity));
+        }
+        return details;
     }
 
     @Override

@@ -30,7 +30,10 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Function;
 
 /**
  * AI キャリア分析サービス。棚卸完了イベント受信後、Python FastAPI（/analyze）を非同期で呼び出す。
@@ -61,10 +64,11 @@ public class AiAnalysisService {
      */
     @Transactional(readOnly = true)
     public List<AiAnalysisQueryResult> findByUserId(int userId) {
-        return repository.findByUserIdOrderByFiscalYearIdDesc(userId)
-                .stream()
-                .map(this::toQueryResult)
-                .toList();
+        List<AiAnalysisQueryResult> results = new ArrayList<>();
+        for (AiCareerAnalysis analysis : repository.findByUserIdOrderByFiscalYearIdDesc(userId)) {
+            results.add(toQueryResult(analysis));
+        }
+        return results;
     }
 
     /**
@@ -79,9 +83,14 @@ public class AiAnalysisService {
     @Async
     @Transactional
     public void upsertPendingAndTrigger(int userId, int fiscalYearId) {
-        AiCareerAnalysis analysis = repository.findByUserIdAndFiscalYearId(userId, fiscalYearId)
-                .map(existing -> { existing.resetToPending(); return existing; })
-                .orElseGet(() -> AiCareerAnalysis.createPending(userId, fiscalYearId));
+        Optional<AiCareerAnalysis> existingOptional = repository.findByUserIdAndFiscalYearId(userId, fiscalYearId);
+        AiCareerAnalysis analysis;
+        if (existingOptional.isPresent()) {
+            analysis = existingOptional.get();
+            analysis.resetToPending();
+        } else {
+            analysis = AiCareerAnalysis.createPending(userId, fiscalYearId);
+        }
         repository.save(analysis);
         log.info("AI analysis triggered: userId={} fiscalYearId={}", userId, fiscalYearId);
         callAiService(userId, fiscalYearId);
@@ -106,9 +115,12 @@ public class AiAnalysisService {
             HttpRequest request = requestBuilder.build();
             // fire-and-forget: AI サービスは非同期で処理するため応答を待たない
             client.sendAsync(request, HttpResponse.BodyHandlers.discarding())
-                    .exceptionally(ex -> {
-                        log.error("AI service call failed for user={} fiscalYear={}", userId, fiscalYearId, ex);
-                        return null;
+                    .exceptionally(new Function<Throwable, HttpResponse<Void>>() {
+                        @Override
+                        public HttpResponse<Void> apply(Throwable ex) {
+                            log.error("AI service call failed for user={} fiscalYear={}", userId, fiscalYearId, ex);
+                            return null;
+                        }
                     });
         } catch (Exception e) {
             log.error("Failed to call AI service for user={} fiscalYear={}", userId, fiscalYearId, e);

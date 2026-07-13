@@ -19,6 +19,7 @@ import com.skilize.ai.application.command.AiChatCommand;
 import com.skilize.ai.presentation.request.AiChatRequest;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -37,10 +38,12 @@ public class AiChatApplicationMapper {
      * @return AiChatCommand（アプリケーション層）
      */
     public AiChatCommand toCommand(AiChatRequest request, int userId) {
-        List<AiChatCommand.ChatHistoryItem> history = request.history() == null ? List.of() :
-                request.history().stream()
-                        .map(item -> new AiChatCommand.ChatHistoryItem(item.role(), item.content()))
-                        .toList();
+        List<AiChatCommand.ChatHistoryItem> history = new ArrayList<>();
+        if (request.history() != null) {
+            for (AiChatRequest.ChatHistoryItem item : request.history()) {
+                history.add(new AiChatCommand.ChatHistoryItem(item.role(), item.content()));
+            }
+        }
         return new AiChatCommand(request.message(), request.mode(), userId, history);
     }
 }

@@ -22,6 +22,7 @@ import com.skilize.master.infrastructure.persistence.mapper.AdSeminarPersistence
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,21 +37,33 @@ public class AdSeminarRepositoryImpl implements AdSeminarRepository {
 
     @Override
     public Optional<AdSeminar> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<AdSeminarEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public AdSeminar save(AdSeminar adSeminar) {
-        AdSeminarCategoryEntity categoryEntity = adSeminar.getCategory() != null
-                ? categoryJpaRepository.findById(adSeminar.getCategory().getId())
-                        .orElseThrow(() -> new IllegalStateException("AdSeminarCategory not found: id=" + adSeminar.getCategory().getId()))
-                : null;
+        AdSeminarCategoryEntity categoryEntity = null;
+        if (adSeminar.getCategory() != null) {
+            Optional<AdSeminarCategoryEntity> categoryOptional =
+                    categoryJpaRepository.findById(adSeminar.getCategory().getId());
+            if (categoryOptional.isEmpty()) {
+                throw new IllegalStateException("AdSeminarCategory not found: id=" + adSeminar.getCategory().getId());
+            }
+            categoryEntity = categoryOptional.get();
+        }
         AdSeminarEntity entity;
         if (adSeminar.getId() == null) {
             entity = AdSeminarEntity.create(categoryEntity, adSeminar.getName(), adSeminar.getDescription(), adSeminar.getSortOrder());
         } else {
-            entity = jpaRepository.findById(adSeminar.getId())
-                    .orElseThrow(() -> new IllegalStateException("AdSeminar not found: id=" + adSeminar.getId()));
+            Optional<AdSeminarEntity> entityOptional = jpaRepository.findById(adSeminar.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("AdSeminar not found: id=" + adSeminar.getId());
+            }
+            entity = entityOptional.get();
             entity.update(categoryEntity, adSeminar.getName(), adSeminar.getDescription(), adSeminar.getSortOrder(), adSeminar.isActive());
         }
         return mapper.toDomain(jpaRepository.save(entity));
@@ -58,21 +71,37 @@ public class AdSeminarRepositoryImpl implements AdSeminarRepository {
 
     @Override
     public List<AdSeminar> findAll() {
-        return jpaRepository.findAll().stream().map(mapper::toDomain).toList();
+        List<AdSeminar> seminars = new ArrayList<>();
+        for (AdSeminarEntity entity : jpaRepository.findAll()) {
+            seminars.add(mapper.toDomain(entity));
+        }
+        return seminars;
     }
 
     @Override
     public List<AdSeminar> findAllWithCategory() {
-        return jpaRepository.findAllWithCategory().stream().map(mapper::toDomain).toList();
+        List<AdSeminar> seminars = new ArrayList<>();
+        for (AdSeminarEntity entity : jpaRepository.findAllWithCategory()) {
+            seminars.add(mapper.toDomain(entity));
+        }
+        return seminars;
     }
 
     @Override
     public List<AdSeminar> findAllActiveWithCategory() {
-        return jpaRepository.findAllActiveWithCategory().stream().map(mapper::toDomain).toList();
+        List<AdSeminar> seminars = new ArrayList<>();
+        for (AdSeminarEntity entity : jpaRepository.findAllActiveWithCategory()) {
+            seminars.add(mapper.toDomain(entity));
+        }
+        return seminars;
     }
 
     @Override
     public List<AdSeminar> findAllWithCategoryByActive(boolean active) {
-        return jpaRepository.findAllWithCategoryByActive(active).stream().map(mapper::toDomain).toList();
+        List<AdSeminar> seminars = new ArrayList<>();
+        for (AdSeminarEntity entity : jpaRepository.findAllWithCategoryByActive(active)) {
+            seminars.add(mapper.toDomain(entity));
+        }
+        return seminars;
     }
 }

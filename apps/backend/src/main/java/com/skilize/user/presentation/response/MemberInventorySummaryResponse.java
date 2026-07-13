@@ -37,12 +37,20 @@ public record MemberInventorySummaryResponse(int id, FiscalYearRef fiscalYear, S
      * @return メンバー棚卸サマリレスポンス
      */
     public static MemberInventorySummaryResponse from(Inventory inv) {
+        String submittedAt = null;
+        if (inv.getSubmittedAt() != null) {
+            submittedAt = inv.getSubmittedAt().toString();
+        }
+        String goalCompletedAt = null;
+        if (inv.getGoalCompletedAt() != null) {
+            goalCompletedAt = inv.getGoalCompletedAt().toString();
+        }
         return new MemberInventorySummaryResponse(
                 inv.getId(),
                 new FiscalYearRef(inv.getFiscalYear().getId(), inv.getFiscalYear().getName()),
                 inv.getStatus().name(),
-                inv.getSubmittedAt() != null ? inv.getSubmittedAt().toString() : null,
-                inv.getGoalCompletedAt() != null ? inv.getGoalCompletedAt().toString() : null
+                submittedAt,
+                goalCompletedAt
         );
     }
 }

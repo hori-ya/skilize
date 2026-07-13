@@ -17,7 +17,9 @@ package com.skilize.interview.presentation;
 
 import com.skilize.interview.application.InterviewService;
 import com.skilize.interview.application.command.DetailNoteCommand;
+import com.skilize.interview.domain.model.InterviewDetailNote;
 import com.skilize.interview.domain.model.InventoryInterview;
+import com.skilize.interview.presentation.request.DetailNoteRequest;
 import com.skilize.interview.presentation.request.SaveInterviewRequest;
 import com.skilize.interview.presentation.response.DetailNoteResponse;
 import com.skilize.interview.presentation.response.InterviewResponse;
@@ -28,7 +30,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 面談メモの REST API コントローラー（TL/ADMIN 向け）。
@@ -48,14 +52,14 @@ public class InterviewController {
     @GetMapping("/inventory/{inventoryId}")
     public ResponseEntity<InterviewResponse> getMine(@PathVariable int inventoryId,
                                                       @AuthenticationPrincipal(expression = "user") User user) {
-        // Optional のまま処理し、存在する場合のみ明細ノートを取得して200を返す
-        return interviewService.findMine(inventoryId, user)
-                .map(interview -> {
-                    List<DetailNoteResponse> notes = interviewService.findDetailNotes(interview.getId())
-                            .stream().map(DetailNoteResponse::from).toList();
-                    return ResponseEntity.ok(InterviewResponse.from(interview, inventoryId, notes));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        // 存在する場合のみ明細ノートを取得して200を返す
+        Optional<InventoryInterview> interviewOptional = interviewService.findMine(inventoryId, user);
+        if (interviewOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        InventoryInterview interview = interviewOptional.get();
+        List<DetailNoteResponse> notes = buildDetailNoteResponses(interview.getId());
+        return ResponseEntity.ok(InterviewResponse.from(interview, inventoryId, notes));
     }
 
     /**
@@ -66,13 +70,13 @@ public class InterviewController {
     public InterviewResponse save(@PathVariable int inventoryId,
                                    @AuthenticationPrincipal(expression = "user") User user,
                                    @RequestBody @Valid SaveInterviewRequest req) {
-        List<DetailNoteCommand> commands = req.detailNotes().stream()
-                .map(d -> new DetailNoteCommand(d.detailType(), d.detailId(), d.note()))
-                .toList();
+        List<DetailNoteCommand> commands = new ArrayList<>();
+        for (DetailNoteRequest d : req.detailNotes()) {
+            commands.add(new DetailNoteCommand(d.detailType(), d.detailId(), d.note()));
+        }
         InventoryInterview saved = interviewService.save(inventoryId, user, req.generalNote(), commands);
         // 保存後に明細ノートを再取得してレスポンスに付与する
-        List<DetailNoteResponse> notes = interviewService.findDetailNotes(saved.getId())
-                .stream().map(DetailNoteResponse::from).toList();
+        List<DetailNoteResponse> notes = buildDetailNoteResponses(saved.getId());
         return InterviewResponse.from(saved, inventoryId, notes);
     }
 
@@ -83,12 +87,21 @@ public class InterviewController {
     @GetMapping("/inventory/{inventoryId}/prev-year")
     public ResponseEntity<InterviewResponse> getPrevYear(@PathVariable int inventoryId,
                                                           @AuthenticationPrincipal(expression = "user") User user) {
-        return interviewService.findPrevYear(inventoryId, user)
-                .map(interview -> {
-                    List<DetailNoteResponse> notes = interviewService.findDetailNotes(interview.getId())
-                            .stream().map(DetailNoteResponse::from).toList();
-                    return ResponseEntity.ok(InterviewResponse.from(interview, inventoryId, notes));
-                })
-                .orElse(ResponseEntity.notFound().build());
+        Optional<InventoryInterview> interviewOptional = interviewService.findPrevYear(inventoryId, user);
+        if (interviewOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        InventoryInterview interview = interviewOptional.get();
+        List<DetailNoteResponse> notes = buildDetailNoteResponses(interview.getId());
+        return ResponseEntity.ok(InterviewResponse.from(interview, inventoryId, notes));
+    }
+
+    /** 明細ノート一覧を取得し、レスポンス型に変換する。 */
+    private List<DetailNoteResponse> buildDetailNoteResponses(int interviewId) {
+        List<DetailNoteResponse> notes = new ArrayList<>();
+        for (InterviewDetailNote note : interviewService.findDetailNotes(interviewId)) {
+            notes.add(DetailNoteResponse.from(note));
+        }
+        return notes;
     }
 }

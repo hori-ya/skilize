@@ -94,10 +94,27 @@ public class QualificationExcelImporter {
             String name = getString(row, 3);
             String description = getString(row, 4);
             Boolean active = getActive(row, 5);
-            int order = siblingCounters.merge(categoryId, 1, Integer::sum);
+            int order = nextSiblingOrder(siblingCounters, categoryId);
+            String resolvedDescription = description;
+            if (description.isEmpty()) {
+                resolvedDescription = null;
+            }
             rows.add(new QualificationRow(id, categoryId, name,
-                    description.isEmpty() ? null : description, active, i + 1, order));
+                    resolvedDescription, active, i + 1, order));
         }
         return rows;
+    }
+
+    /** カテゴリ内での兄弟順序を1始まりで採番する（Map.mergeの明示版）。 */
+    private int nextSiblingOrder(Map<Integer, Integer> siblingCounters, Integer key) {
+        Integer count = siblingCounters.get(key);
+        int order;
+        if (count == null) {
+            order = 1;
+        } else {
+            order = count + 1;
+        }
+        siblingCounters.put(key, order);
+        return order;
     }
 }

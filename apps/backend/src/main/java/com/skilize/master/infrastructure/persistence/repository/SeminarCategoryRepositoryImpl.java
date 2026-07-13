@@ -16,10 +16,12 @@ package com.skilize.master.infrastructure.persistence.repository;
 
 import com.skilize.master.domain.model.SeminarCategory;
 import com.skilize.master.domain.repository.SeminarCategoryRepository;
+import com.skilize.master.infrastructure.persistence.entity.SeminarCategoryEntity;
 import com.skilize.master.infrastructure.persistence.mapper.SeminarCategoryPersistenceMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,11 +35,19 @@ public class SeminarCategoryRepositoryImpl implements SeminarCategoryRepository 
 
     @Override
     public Optional<SeminarCategory> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<SeminarCategoryEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public List<SeminarCategory> findByActiveTrueOrderBySortOrderAsc() {
-        return jpaRepository.findByActiveTrueOrderBySortOrderAsc().stream().map(mapper::toDomain).toList();
+        List<SeminarCategory> categories = new ArrayList<>();
+        for (SeminarCategoryEntity entity : jpaRepository.findByActiveTrueOrderBySortOrderAsc()) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 }

@@ -22,6 +22,7 @@ import com.skilize.master.infrastructure.persistence.mapper.ItSkillPersistenceMa
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,19 +37,29 @@ public class ItSkillRepositoryImpl implements ItSkillRepository {
 
     @Override
     public Optional<ItSkill> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<ItSkillEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public ItSkill save(ItSkill itSkill) {
-        ItSkillCategoryEntity categoryEntity = categoryJpaRepository.findById(itSkill.getCategory().getId())
-                .orElseThrow(() -> new IllegalStateException("ItSkillCategory not found: id=" + itSkill.getCategory().getId()));
+        Optional<ItSkillCategoryEntity> categoryOptional = categoryJpaRepository.findById(itSkill.getCategory().getId());
+        if (categoryOptional.isEmpty()) {
+            throw new IllegalStateException("ItSkillCategory not found: id=" + itSkill.getCategory().getId());
+        }
+        ItSkillCategoryEntity categoryEntity = categoryOptional.get();
         ItSkillEntity entity;
         if (itSkill.getId() == null) {
             entity = ItSkillEntity.create(categoryEntity, itSkill.getName(), itSkill.getDescription(), itSkill.getSortOrder());
         } else {
-            entity = jpaRepository.findById(itSkill.getId())
-                    .orElseThrow(() -> new IllegalStateException("ItSkill not found: id=" + itSkill.getId()));
+            Optional<ItSkillEntity> entityOptional = jpaRepository.findById(itSkill.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("ItSkill not found: id=" + itSkill.getId());
+            }
+            entity = entityOptional.get();
             entity.update(categoryEntity, itSkill.getName(), itSkill.getDescription(), itSkill.getSortOrder(), itSkill.isActive());
         }
         return mapper.toDomain(jpaRepository.save(entity));
@@ -56,21 +67,37 @@ public class ItSkillRepositoryImpl implements ItSkillRepository {
 
     @Override
     public List<ItSkill> findAll() {
-        return jpaRepository.findAll().stream().map(mapper::toDomain).toList();
+        List<ItSkill> skills = new ArrayList<>();
+        for (ItSkillEntity entity : jpaRepository.findAll()) {
+            skills.add(mapper.toDomain(entity));
+        }
+        return skills;
     }
 
     @Override
     public List<ItSkill> findAllOrderByHierarchy() {
-        return jpaRepository.findAllOrderByHierarchy().stream().map(mapper::toDomain).toList();
+        List<ItSkill> skills = new ArrayList<>();
+        for (ItSkillEntity entity : jpaRepository.findAllOrderByHierarchy()) {
+            skills.add(mapper.toDomain(entity));
+        }
+        return skills;
     }
 
     @Override
     public List<ItSkill> findAllActiveWithCategory() {
-        return jpaRepository.findAllActiveWithCategory().stream().map(mapper::toDomain).toList();
+        List<ItSkill> skills = new ArrayList<>();
+        for (ItSkillEntity entity : jpaRepository.findAllActiveWithCategory()) {
+            skills.add(mapper.toDomain(entity));
+        }
+        return skills;
     }
 
     @Override
     public List<ItSkill> findByActiveFalseOrderByHierarchy() {
-        return jpaRepository.findByActiveFalseOrderByHierarchy().stream().map(mapper::toDomain).toList();
+        List<ItSkill> skills = new ArrayList<>();
+        for (ItSkillEntity entity : jpaRepository.findByActiveFalseOrderByHierarchy()) {
+            skills.add(mapper.toDomain(entity));
+        }
+        return skills;
     }
 }

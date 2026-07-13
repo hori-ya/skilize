@@ -22,6 +22,7 @@ import com.skilize.master.infrastructure.persistence.mapper.QualificationPersist
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,21 +37,33 @@ public class QualificationRepositoryImpl implements QualificationRepository {
 
     @Override
     public Optional<Qualification> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<QualificationEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public Qualification save(Qualification qualification) {
-        QualificationCategoryEntity categoryEntity = qualification.getCategory() != null
-                ? categoryJpaRepository.findById(qualification.getCategory().getId())
-                        .orElseThrow(() -> new IllegalStateException("QualificationCategory not found: id=" + qualification.getCategory().getId()))
-                : null;
+        QualificationCategoryEntity categoryEntity = null;
+        if (qualification.getCategory() != null) {
+            Optional<QualificationCategoryEntity> categoryOptional =
+                    categoryJpaRepository.findById(qualification.getCategory().getId());
+            if (categoryOptional.isEmpty()) {
+                throw new IllegalStateException("QualificationCategory not found: id=" + qualification.getCategory().getId());
+            }
+            categoryEntity = categoryOptional.get();
+        }
         QualificationEntity entity;
         if (qualification.getId() == null) {
             entity = QualificationEntity.create(categoryEntity, qualification.getName(), qualification.getDescription(), qualification.getSortOrder());
         } else {
-            entity = jpaRepository.findById(qualification.getId())
-                    .orElseThrow(() -> new IllegalStateException("Qualification not found: id=" + qualification.getId()));
+            Optional<QualificationEntity> entityOptional = jpaRepository.findById(qualification.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("Qualification not found: id=" + qualification.getId());
+            }
+            entity = entityOptional.get();
             entity.update(categoryEntity, qualification.getName(), qualification.getDescription(), qualification.getSortOrder(), qualification.isActive());
         }
         return mapper.toDomain(jpaRepository.save(entity));
@@ -58,21 +71,37 @@ public class QualificationRepositoryImpl implements QualificationRepository {
 
     @Override
     public List<Qualification> findAll() {
-        return jpaRepository.findAll().stream().map(mapper::toDomain).toList();
+        List<Qualification> qualifications = new ArrayList<>();
+        for (QualificationEntity entity : jpaRepository.findAll()) {
+            qualifications.add(mapper.toDomain(entity));
+        }
+        return qualifications;
     }
 
     @Override
     public List<Qualification> findAllWithCategory() {
-        return jpaRepository.findAllWithCategory().stream().map(mapper::toDomain).toList();
+        List<Qualification> qualifications = new ArrayList<>();
+        for (QualificationEntity entity : jpaRepository.findAllWithCategory()) {
+            qualifications.add(mapper.toDomain(entity));
+        }
+        return qualifications;
     }
 
     @Override
     public List<Qualification> findAllActiveWithCategory() {
-        return jpaRepository.findAllActiveWithCategory().stream().map(mapper::toDomain).toList();
+        List<Qualification> qualifications = new ArrayList<>();
+        for (QualificationEntity entity : jpaRepository.findAllActiveWithCategory()) {
+            qualifications.add(mapper.toDomain(entity));
+        }
+        return qualifications;
     }
 
     @Override
     public List<Qualification> findAllWithCategoryByActive(boolean active) {
-        return jpaRepository.findAllWithCategoryByActive(active).stream().map(mapper::toDomain).toList();
+        List<Qualification> qualifications = new ArrayList<>();
+        for (QualificationEntity entity : jpaRepository.findAllWithCategoryByActive(active)) {
+            qualifications.add(mapper.toDomain(entity));
+        }
+        return qualifications;
     }
 }

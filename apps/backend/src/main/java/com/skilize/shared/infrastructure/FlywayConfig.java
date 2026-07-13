@@ -46,9 +46,12 @@ public class FlywayConfig {
      */
     @Bean
     public Flyway flyway(DataSource dataSource) {
-        String[] locations = loadTestData
-                ? new String[]{"classpath:db/migration", "classpath:db/testdata"}
-                : new String[]{"classpath:db/migration"};
+        String[] locations;
+        if (loadTestData) {
+            locations = new String[]{"classpath:db/migration", "classpath:db/testdata"};
+        } else {
+            locations = new String[]{"classpath:db/migration"};
+        }
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations(locations)

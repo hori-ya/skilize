@@ -71,9 +71,12 @@ class AuthServiceTest {
         void 異常系_ユーザー不在_AUTH_FAILEDをスロー() {
             when(userRepository.findByUserId("unknown")).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> authService.login(new LoginCommand("unknown", "pw")))
-                    .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "AUTH_FAILED");
+            try {
+                authService.login(new LoginCommand("unknown", "pw"));
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                assertThat(e.getCode()).isEqualTo("AUTH_FAILED");
+            }
         }
 
         @Test
@@ -81,9 +84,12 @@ class AuthServiceTest {
             when(userRepository.findByUserId("user01")).thenReturn(Optional.of(activeUser));
             when(passwordEncoder.matches("wrong", activeUser.getPasswordHash())).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.login(new LoginCommand("user01", "wrong")))
-                    .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "AUTH_FAILED");
+            try {
+                authService.login(new LoginCommand("user01", "wrong"));
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                assertThat(e.getCode()).isEqualTo("AUTH_FAILED");
+            }
         }
 
         @Test
@@ -92,9 +98,12 @@ class AuthServiceTest {
             inactiveUser.update("名前", null, Role.GENERAL, null, false);
             when(userRepository.findByUserId("user01")).thenReturn(Optional.of(inactiveUser));
 
-            assertThatThrownBy(() -> authService.login(new LoginCommand("user01", "pw")))
-                    .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "ACCOUNT_DISABLED");
+            try {
+                authService.login(new LoginCommand("user01", "pw"));
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                assertThat(e.getCode()).isEqualTo("ACCOUNT_DISABLED");
+            }
         }
 
         @Test
@@ -103,10 +112,20 @@ class AuthServiceTest {
             when(userRepository.findByUserId("user01")).thenReturn(Optional.of(activeUser));
             when(passwordEncoder.matches(any(), any())).thenReturn(false);
 
-            AuthException notFound = catchThrowableOfType(
-                    AuthException.class, () -> authService.login(new LoginCommand("unknown", "pw")));
-            AuthException badPassword = catchThrowableOfType(
-                    AuthException.class, () -> authService.login(new LoginCommand("user01", "pw")));
+            AuthException notFound = null;
+            try {
+                authService.login(new LoginCommand("unknown", "pw"));
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                notFound = e;
+            }
+            AuthException badPassword = null;
+            try {
+                authService.login(new LoginCommand("user01", "pw"));
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                badPassword = e;
+            }
 
             assertThat(notFound.getCode()).isEqualTo(badPassword.getCode());
             assertThat(notFound.getMessage()).isEqualTo(badPassword.getMessage());
@@ -151,10 +170,12 @@ class AuthServiceTest {
             when(userRepository.findById(1)).thenReturn(Optional.of(activeUser));
             when(passwordEncoder.matches("wrong", activeUser.getPasswordHash())).thenReturn(false);
 
-            assertThatThrownBy(() -> authService.changePassword(
-                    new ChangePasswordCommand("wrong", "newpass12"), activeUser))
-                    .isInstanceOf(AuthException.class)
-                    .hasFieldOrPropertyWithValue("code", "CURRENT_PASSWORD_WRONG");
+            try {
+                authService.changePassword(new ChangePasswordCommand("wrong", "newpass12"), activeUser);
+                fail("AuthException が発生する想定");
+            } catch (AuthException e) {
+                assertThat(e.getCode()).isEqualTo("CURRENT_PASSWORD_WRONG");
+            }
         }
     }
 

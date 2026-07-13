@@ -25,6 +25,7 @@ import com.skilize.master.infrastructure.persistence.repository.SeminarCategoryJ
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** domain.repository.SeminarDetailRepository の実装。 */
@@ -40,21 +41,34 @@ public class SeminarDetailRepositoryImpl implements SeminarDetailRepository {
 
     @Override
     public List<SeminarDetail> saveAll(List<SeminarDetail> details) {
-        List<SeminarDetailEntity> entities = details.stream().map(detail -> {
-            AdSeminarEntity adSeminarEntity = detail.getAdSeminar() != null
-                    ? adSeminarJpaRepository.getReferenceById(detail.getAdSeminar().getId()) : null;
-            SeminarCategoryEntity seminarCategoryEntity = detail.getSeminarCategory() != null
-                    ? seminarCategoryJpaRepository.getReferenceById(detail.getSeminarCategory().getId()) : null;
-            return SeminarDetailEntity.create(inventoryJpaRepository.getReferenceById(detail.getInventoryId()),
+        List<SeminarDetailEntity> entities = new ArrayList<>();
+        for (SeminarDetail detail : details) {
+            AdSeminarEntity adSeminarEntity = null;
+            if (detail.getAdSeminar() != null) {
+                adSeminarEntity = adSeminarJpaRepository.getReferenceById(detail.getAdSeminar().getId());
+            }
+            SeminarCategoryEntity seminarCategoryEntity = null;
+            if (detail.getSeminarCategory() != null) {
+                seminarCategoryEntity = seminarCategoryJpaRepository.getReferenceById(detail.getSeminarCategory().getId());
+            }
+            entities.add(SeminarDetailEntity.create(inventoryJpaRepository.getReferenceById(detail.getInventoryId()),
                     adSeminarEntity, detail.getSeminarName(), seminarCategoryEntity,
-                    detail.getAttendedYearMonth(), detail.getRemarks());
-        }).toList();
-        return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).toList();
+                    detail.getAttendedYearMonth(), detail.getRemarks()));
+        }
+        List<SeminarDetail> saved = new ArrayList<>();
+        for (SeminarDetailEntity entity : jpaRepository.saveAll(entities)) {
+            saved.add(mapper.toDomain(entity));
+        }
+        return saved;
     }
 
     @Override
     public List<SeminarDetail> findByInventoryId(int inventoryId) {
-        return jpaRepository.findByInventoryId(inventoryId).stream().map(mapper::toDomain).toList();
+        List<SeminarDetail> details = new ArrayList<>();
+        for (SeminarDetailEntity entity : jpaRepository.findByInventoryId(inventoryId)) {
+            details.add(mapper.toDomain(entity));
+        }
+        return details;
     }
 
     @Override

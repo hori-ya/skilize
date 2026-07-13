@@ -74,7 +74,11 @@ public class QualificationExcelExporter {
             Row row = sheet.createRow(rowIdx++);
             setInt(row, 0, cat.getId(), normalStyle);
             setString(row, 1, cat.getName(), normalStyle);
-            setString(row, 2, cat.isActive() ? "有効" : "無効", normalStyle);
+            String activeLabel = "無効";
+            if (cat.isActive()) {
+                activeLabel = "有効";
+            }
+            setString(row, 2, activeLabel, normalStyle);
         }
     }
 
@@ -100,12 +104,26 @@ public class QualificationExcelExporter {
         int rowIdx = 1;
         for (Qualification q : qualifications) {
             Row row = sheet.createRow(rowIdx++);
-            setIntOrBlank(row, 0, q.getCategory() != null ? q.getCategory().getId() : null, normalStyle);
+            Integer categoryId = null;
+            String categoryName = "";
+            if (q.getCategory() != null) {
+                categoryId = q.getCategory().getId();
+                categoryName = q.getCategory().getName();
+            }
+            setIntOrBlank(row, 0, categoryId, normalStyle);
             setInt(row, 1, q.getId(), normalStyle);
-            setString(row, 2, q.getCategory() != null ? q.getCategory().getName() : "", refStyle);
+            setString(row, 2, categoryName, refStyle);
             setString(row, 3, q.getName(), normalStyle);
-            setString(row, 4, q.getDescription() != null ? q.getDescription() : "", normalStyle);
-            setString(row, 5, q.isActive() ? "有効" : "無効", normalStyle);
+            String description = "";
+            if (q.getDescription() != null) {
+                description = q.getDescription();
+            }
+            setString(row, 4, description, normalStyle);
+            String activeLabel = "無効";
+            if (q.isActive()) {
+                activeLabel = "有効";
+            }
+            setString(row, 5, activeLabel, normalStyle);
         }
     }
 }

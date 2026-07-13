@@ -42,13 +42,33 @@ public record InventoryDetailResponse(int id, int userId, FiscalYearRef fiscalYe
      * @return 棚卸詳細レスポンス
      */
     public static InventoryDetailResponse from(Inventory i) {
+        String submittedAt = null;
+        if (i.getSubmittedAt() != null) {
+            submittedAt = i.getSubmittedAt().toString();
+        }
+        String goalReviewCompletedAt = null;
+        if (i.getGoalReviewCompletedAt() != null) {
+            goalReviewCompletedAt = i.getGoalReviewCompletedAt().toString();
+        }
+        String goalCompletedAt = null;
+        if (i.getGoalCompletedAt() != null) {
+            goalCompletedAt = i.getGoalCompletedAt().toString();
+        }
+        String createdAt = null;
+        if (i.getCreatedAt() != null) {
+            createdAt = i.getCreatedAt().toString();
+        }
+        String updatedAt = null;
+        if (i.getUpdatedAt() != null) {
+            updatedAt = i.getUpdatedAt().toString();
+        }
         return new InventoryDetailResponse(i.getId(), i.getUser().getId(),
                 new FiscalYearRef(i.getFiscalYear().getId(), i.getFiscalYear().getName()),
                 i.getStatus().name(),
-                i.getSubmittedAt() != null ? i.getSubmittedAt().toString() : null,
-                i.getGoalReviewCompletedAt() != null ? i.getGoalReviewCompletedAt().toString() : null,
-                i.getGoalCompletedAt() != null ? i.getGoalCompletedAt().toString() : null,
-                i.getCreatedAt() != null ? i.getCreatedAt().toString() : null,
-                i.getUpdatedAt() != null ? i.getUpdatedAt().toString() : null);
+                submittedAt,
+                goalReviewCompletedAt,
+                goalCompletedAt,
+                createdAt,
+                updatedAt);
     }
 }

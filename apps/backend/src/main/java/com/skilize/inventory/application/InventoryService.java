@@ -15,6 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.inventory.application;
 
+import com.skilize.fiscalyear.domain.model.FiscalYear;
 import com.skilize.fiscalyear.domain.repository.FiscalYearRepository;
 import com.skilize.inventory.application.command.*;
 import com.skilize.inventory.application.query.ComparisonQueryResult;
@@ -45,9 +46,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * スキル棚卸のビジネスロジック。
@@ -84,20 +87,25 @@ public class InventoryService {
     /** 棚卸を新規作成する。同年度に既存棚卸がある場合は 409 CONFLICT をスローする。 */
     @Transactional
     public Inventory create(User user, int fiscalYearId) {
-        fiscalYearRepository.findById(fiscalYearId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FISCAL_YEAR_NOT_FOUND"));
-        inventoryRepository.findByUserIdAndFiscalYearId(user.getId(), fiscalYearId).ifPresent(i -> {
+        Optional<FiscalYear> fiscalYearOptional = fiscalYearRepository.findById(fiscalYearId);
+        if (fiscalYearOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "FISCAL_YEAR_NOT_FOUND");
+        }
+        if (inventoryRepository.findByUserIdAndFiscalYearId(user.getId(), fiscalYearId).isPresent()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "INVENTORY_ALREADY_EXISTS");
-        });
-        var fy = fiscalYearRepository.findById(fiscalYearId).orElseThrow();
+        }
+        FiscalYear fy = fiscalYearOptional.get();
         return inventoryRepository.save(Inventory.create(user, fy));
     }
 
     /** 棚卸を ID で取得し、所有権チェックを行う。 */
     @Transactional(readOnly = true)
     public Inventory findById(int id, User user) {
-        Inventory inv = inventoryRepository.findByIdWithAssociations(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "INVENTORY_NOT_FOUND"));
+        Optional<Inventory> invOptional = inventoryRepository.findByIdWithAssociations(id);
+        if (invOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "INVENTORY_NOT_FOUND");
+        }
+        Inventory inv = invOptional.get();
         checkOwnership(inv, user);
         return inv;
     }
@@ -113,15 +121,23 @@ public class InventoryService {
                                                    List<ItSkillDetailCommand> commands) {
         Inventory inv = findById(inventoryId, user);
         itSkillDetailRepository.deleteByInventoryId(inventoryId);
-        List<ItSkillDetail> saved = commands.stream().map(cmd -> {
-            ItSkill skill = cmd.itSkillId() != null
-                    ? itSkillRepository.findById(cmd.itSkillId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "IT_SKILL_NOT_FOUND"))
-                    : null;
-            SkillLevel level = skillLevelRepository.findById(cmd.skillLevelId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "SKILL_LEVEL_NOT_FOUND"));
-            return ItSkillDetail.create(inv, skill, cmd.customSkillName(), level, cmd.remarks());
-        }).toList();
+        List<ItSkillDetail> saved = new ArrayList<>();
+        for (ItSkillDetailCommand cmd : commands) {
+            ItSkill skill = null;
+            if (cmd.itSkillId() != null) {
+                Optional<ItSkill> skillOptional = itSkillRepository.findById(cmd.itSkillId());
+                if (skillOptional.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "IT_SKILL_NOT_FOUND");
+                }
+                skill = skillOptional.get();
+            }
+            Optional<SkillLevel> levelOptional = skillLevelRepository.findById(cmd.skillLevelId());
+            if (levelOptional.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "SKILL_LEVEL_NOT_FOUND");
+            }
+            SkillLevel level = levelOptional.get();
+            saved.add(ItSkillDetail.create(inv, skill, cmd.customSkillName(), level, cmd.remarks()));
+        }
         itSkillDetailRepository.saveAll(saved);
         return itSkillDetailRepository.findByInventoryId(inventoryId);
     }
@@ -140,8 +156,11 @@ public class InventoryService {
     @Transactional
     public ItSkillDetail updateItSkillDetailRemarks(int inventoryId, int detailId, User user, String remarks) {
         findById(inventoryId, user);
-        ItSkillDetail detail = itSkillDetailRepository.findById(detailId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "DETAIL_NOT_FOUND"));
+        Optional<ItSkillDetail> detailOptional = itSkillDetailRepository.findById(detailId);
+        if (detailOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "DETAIL_NOT_FOUND");
+        }
+        ItSkillDetail detail = detailOptional.get();
         if (!detail.getInventoryId().equals(inventoryId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "FORBIDDEN");
         }
@@ -157,14 +176,22 @@ public class InventoryService {
                                                                List<QualificationDetailCommand> commands) {
         Inventory inv = findById(inventoryId, user);
         qualificationDetailRepository.deleteByInventoryId(inventoryId);
-        List<QualificationDetail> saved = commands.stream().map(cmd -> {
-            Qualification q = cmd.qualificationId() != null
-                    ? qualificationRepository.findById(cmd.qualificationId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "QUALIFICATION_NOT_FOUND"))
-                    : null;
-            LocalDate date = cmd.acquiredYearMonth() != null ? LocalDate.parse(cmd.acquiredYearMonth()) : null;
-            return QualificationDetail.create(inv, q, cmd.customQualificationName(), date, cmd.remarks());
-        }).toList();
+        List<QualificationDetail> saved = new ArrayList<>();
+        for (QualificationDetailCommand cmd : commands) {
+            Qualification q = null;
+            if (cmd.qualificationId() != null) {
+                Optional<Qualification> qualificationOptional = qualificationRepository.findById(cmd.qualificationId());
+                if (qualificationOptional.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "QUALIFICATION_NOT_FOUND");
+                }
+                q = qualificationOptional.get();
+            }
+            LocalDate date = null;
+            if (cmd.acquiredYearMonth() != null) {
+                date = LocalDate.parse(cmd.acquiredYearMonth());
+            }
+            saved.add(QualificationDetail.create(inv, q, cmd.customQualificationName(), date, cmd.remarks()));
+        }
         qualificationDetailRepository.saveAll(saved);
         return qualificationDetailRepository.findByInventoryId(inventoryId);
     }
@@ -187,17 +214,29 @@ public class InventoryService {
                                                    List<SeminarDetailCommand> commands) {
         Inventory inv = findById(inventoryId, user);
         seminarDetailRepository.deleteByInventoryId(inventoryId);
-        List<SeminarDetail> saved = commands.stream().map(cmd -> {
-            AdSeminar ad = cmd.adSeminarId() != null
-                    ? adSeminarRepository.findById(cmd.adSeminarId())
-                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "AD_SEMINAR_NOT_FOUND"))
-                    : null;
-            SeminarCategory cat = (cmd.seminarCategoryId() != null && cmd.adSeminarId() == null)
-                    ? seminarCategoryRepository.findById(cmd.seminarCategoryId()).orElse(null)
-                    : null;
-            LocalDate date = cmd.attendedYearMonth() != null ? LocalDate.parse(cmd.attendedYearMonth()) : null;
-            return SeminarDetail.create(inv, ad, cmd.seminarName(), cat, date, cmd.remarks());
-        }).toList();
+        List<SeminarDetail> saved = new ArrayList<>();
+        for (SeminarDetailCommand cmd : commands) {
+            AdSeminar ad = null;
+            if (cmd.adSeminarId() != null) {
+                Optional<AdSeminar> adOptional = adSeminarRepository.findById(cmd.adSeminarId());
+                if (adOptional.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "AD_SEMINAR_NOT_FOUND");
+                }
+                ad = adOptional.get();
+            }
+            SeminarCategory cat = null;
+            if (cmd.seminarCategoryId() != null && cmd.adSeminarId() == null) {
+                Optional<SeminarCategory> catOptional = seminarCategoryRepository.findById(cmd.seminarCategoryId());
+                if (catOptional.isPresent()) {
+                    cat = catOptional.get();
+                }
+            }
+            LocalDate date = null;
+            if (cmd.attendedYearMonth() != null) {
+                date = LocalDate.parse(cmd.attendedYearMonth());
+            }
+            saved.add(SeminarDetail.create(inv, ad, cmd.seminarName(), cat, date, cmd.remarks()));
+        }
         seminarDetailRepository.saveAll(saved);
         return seminarDetailRepository.findByInventoryId(inventoryId);
     }
@@ -236,35 +275,43 @@ public class InventoryService {
 
         List<ItSkillDetail> currentDetails = itSkillDetailRepository.findByInventoryId(inventoryId);
 
-        List<Inventory> allInventories = inventoryRepository.findByUserIdWithFiscalYear(inv.getUser().getId());
-        Inventory prevInv = allInventories.stream()
-                .filter(i -> !i.getId().equals(inventoryId))
-                .filter(i -> i.getFiscalYear().getEndDate().isBefore(inv.getFiscalYear().getStartDate()))
-                .findFirst().orElse(null);
+        Inventory prevInv = findPrevInventory(inv, inventoryId);
 
         if (prevInv == null) {
             return new ComparisonQueryResult(inventoryId, currentFy, null, false, List.of());
         }
 
         List<ItSkillDetail> prevDetails = itSkillDetailRepository.findByInventoryId(prevInv.getId());
-        Map<Integer, ItSkillDetail> prevBySkillId = prevDetails.stream()
-                .filter(d -> d.getItSkill() != null)
-                .collect(Collectors.toMap(d -> d.getItSkill().getId(), d -> d));
+        Map<Integer, ItSkillDetail> prevBySkillId = new HashMap<>();
+        for (ItSkillDetail d : prevDetails) {
+            if (d.getItSkill() != null) {
+                prevBySkillId.put(d.getItSkill().getId(), d);
+            }
+        }
 
-        List<ComparisonItem> items = currentDetails.stream()
-                .map(d -> {
-                    if (d.getItSkill() == null) {
-                        return new ComparisonItem(null, d.getCustomSkillName(), d.getId(), null, d.getRemarks(), null, null);
-                    }
-                    ItSkillDetail prev = prevBySkillId.get(d.getItSkill().getId());
-                    Short currentLv = d.getSkillLevel().getLevelValue();
-                    Short prevLv = prev != null ? prev.getSkillLevel().getLevelValue() : null;
-                    Integer diff = (prevLv != null) ? (int) currentLv - (int) prevLv : null;
-                    return new ComparisonItem(
-                            d.getItSkill().getId(), d.getItSkill().getName(),
-                            d.getId(), (int) currentLv, d.getRemarks(),
-                            prevLv != null ? (int) prevLv : null, diff);
-                }).toList();
+        List<ComparisonItem> items = new ArrayList<>();
+        for (ItSkillDetail d : currentDetails) {
+            if (d.getItSkill() == null) {
+                items.add(new ComparisonItem(null, d.getCustomSkillName(), d.getId(), null, d.getRemarks(), null, null));
+                continue;
+            }
+            ItSkillDetail prev = prevBySkillId.get(d.getItSkill().getId());
+            Short currentLv = d.getSkillLevel().getLevelValue();
+            Short prevLv = null;
+            if (prev != null) {
+                prevLv = prev.getSkillLevel().getLevelValue();
+            }
+            Integer diff = null;
+            Integer prevLvInt = null;
+            if (prevLv != null) {
+                diff = (int) currentLv - (int) prevLv;
+                prevLvInt = (int) prevLv;
+            }
+            items.add(new ComparisonItem(
+                    d.getItSkill().getId(), d.getItSkill().getName(),
+                    d.getId(), (int) currentLv, d.getRemarks(),
+                    prevLvInt, diff));
+        }
 
         return new ComparisonQueryResult(inventoryId, currentFy, prevInv.getFiscalYear().getName(), true, items);
     }
@@ -279,26 +326,26 @@ public class InventoryService {
     public GoalReviewQueryResult getGoalReview(int inventoryId, User user) {
         Inventory inv = findById(inventoryId, user);
 
-        List<Inventory> allInventories = inventoryRepository.findByUserIdWithFiscalYear(inv.getUser().getId());
-        Inventory prevInv = allInventories.stream()
-                .filter(i -> !i.getId().equals(inventoryId))
-                .filter(i -> i.getFiscalYear().getEndDate().isBefore(inv.getFiscalYear().getStartDate()))
-                .findFirst().orElse(null);
+        Inventory prevInv = findPrevInventory(inv, inventoryId);
 
         if (prevInv == null) {
             return new GoalReviewQueryResult(null, false, List.of());
         }
 
         List<InventoryGoal> prevGoals = inventoryGoalRepository.findByInventoryId(prevInv.getId());
-        List<GoalReviewItem> items = prevGoals.stream()
-                .map(g -> {
-                    String name = resolveGoalName(g);
-                    return new GoalReviewItem(
-                            g.getId(), g.getGoalCategory().name(), name,
-                            g.getTargetPeriod().toString(), g.getReason(),
-                            g.getAchievementStatus() != null ? g.getAchievementStatus().name() : null,
-                            g.getReviewNote());
-                }).toList();
+        List<GoalReviewItem> items = new ArrayList<>();
+        for (InventoryGoal g : prevGoals) {
+            String name = resolveGoalName(g);
+            String achievementStatus = null;
+            if (g.getAchievementStatus() != null) {
+                achievementStatus = g.getAchievementStatus().name();
+            }
+            items.add(new GoalReviewItem(
+                    g.getId(), g.getGoalCategory().name(), name,
+                    g.getTargetPeriod().toString(), g.getReason(),
+                    achievementStatus,
+                    g.getReviewNote()));
+        }
 
         return new GoalReviewQueryResult(prevInv.getFiscalYear().getName(), !items.isEmpty(), items);
     }
@@ -308,14 +355,19 @@ public class InventoryService {
     public GoalReviewQueryResult saveGoalReview(int inventoryId, User user,
                                                 List<GoalReviewUpdateCommand> commands) {
         findById(inventoryId, user);
-        commands.forEach(cmd -> {
-            InventoryGoal goal = inventoryGoalRepository.findById(cmd.prevGoalId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "GOAL_NOT_FOUND"));
-            AchievementStatus status = cmd.achievementStatus() != null
-                    ? AchievementStatus.valueOf(cmd.achievementStatus()) : null;
+        for (GoalReviewUpdateCommand cmd : commands) {
+            Optional<InventoryGoal> goalOptional = inventoryGoalRepository.findById(cmd.prevGoalId());
+            if (goalOptional.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "GOAL_NOT_FOUND");
+            }
+            InventoryGoal goal = goalOptional.get();
+            AchievementStatus status = null;
+            if (cmd.achievementStatus() != null) {
+                status = AchievementStatus.valueOf(cmd.achievementStatus());
+            }
             goal.updateReview(status, cmd.reviewNote());
             inventoryGoalRepository.save(goal);
-        });
+        }
         return getGoalReview(inventoryId, user);
     }
 
@@ -341,17 +393,33 @@ public class InventoryService {
     public List<InventoryGoal> saveGoals(int inventoryId, User user, List<GoalCommand> commands) {
         Inventory inv = findById(inventoryId, user);
         inventoryGoalRepository.deleteByInventoryId(inventoryId);
-        List<InventoryGoal> saved = commands.stream().map(cmd -> {
-            ItSkill skill = cmd.itSkillId() != null
-                    ? itSkillRepository.findById(cmd.itSkillId()).orElse(null) : null;
-            Qualification qual = cmd.qualificationId() != null
-                    ? qualificationRepository.findById(cmd.qualificationId()).orElse(null) : null;
-            AdSeminar ad = cmd.adSeminarId() != null
-                    ? adSeminarRepository.findById(cmd.adSeminarId()).orElse(null) : null;
+        List<InventoryGoal> saved = new ArrayList<>();
+        for (GoalCommand cmd : commands) {
+            ItSkill skill = null;
+            if (cmd.itSkillId() != null) {
+                Optional<ItSkill> skillOptional = itSkillRepository.findById(cmd.itSkillId());
+                if (skillOptional.isPresent()) {
+                    skill = skillOptional.get();
+                }
+            }
+            Qualification qual = null;
+            if (cmd.qualificationId() != null) {
+                Optional<Qualification> qualOptional = qualificationRepository.findById(cmd.qualificationId());
+                if (qualOptional.isPresent()) {
+                    qual = qualOptional.get();
+                }
+            }
+            AdSeminar ad = null;
+            if (cmd.adSeminarId() != null) {
+                Optional<AdSeminar> adOptional = adSeminarRepository.findById(cmd.adSeminarId());
+                if (adOptional.isPresent()) {
+                    ad = adOptional.get();
+                }
+            }
             LocalDate period = LocalDate.parse(cmd.targetPeriod());
-            return InventoryGoal.create(inv, GoalCategory.valueOf(cmd.goalCategory()),
-                    skill, qual, ad, cmd.customName(), period, cmd.reason());
-        }).toList();
+            saved.add(InventoryGoal.create(inv, GoalCategory.valueOf(cmd.goalCategory()),
+                    skill, qual, ad, cmd.customName(), period, cmd.reason()));
+        }
         inventoryGoalRepository.saveAll(saved);
         return inventoryGoalRepository.findByInventoryId(inventoryId);
     }
@@ -367,14 +435,19 @@ public class InventoryService {
         Inventory inv = findById(inventoryId, user);
         List<InventoryGoal> goals = inventoryGoalRepository.findByInventoryId(inventoryId);
 
-        long itOrQual = goals.stream()
-                .filter(g -> g.getGoalCategory() == GoalCategory.IT_SKILL
-                        || g.getGoalCategory() == GoalCategory.QUALIFICATION)
-                .count();
-        long ad = goals.stream().filter(g -> g.getGoalCategory() == GoalCategory.AD).count();
+        long itOrQual = 0;
+        long ad = 0;
+        for (InventoryGoal g : goals) {
+            if (g.getGoalCategory() == GoalCategory.IT_SKILL || g.getGoalCategory() == GoalCategory.QUALIFICATION) {
+                itOrQual++;
+            }
+            if (g.getGoalCategory() == GoalCategory.AD) {
+                ad++;
+            }
+        }
 
         if (itOrQual < 1 || ad < 2) {
-            List<GoalIncompleteException.GoalValidationError> errors = new java.util.ArrayList<>();
+            List<GoalIncompleteException.GoalValidationError> errors = new ArrayList<>();
             if (itOrQual < 1) errors.add(new GoalIncompleteException.GoalValidationError(
                     "itSkillOrQualification", "ITスキル・資格の目標を 1 件以上入力してください"));
             if (ad < 2) errors.add(new GoalIncompleteException.GoalValidationError(
@@ -400,6 +473,23 @@ public class InventoryService {
                 throw new AuthException("FORBIDDEN", "");
             }
         }
+    }
+
+    /**
+     * 指定棚卸の前年度棚卸を検索する。
+     * 対象ユーザーの全棚卸から、指定棚卸自身を除き、年度終了日が指定棚卸の年度開始日より前のものを検索する。
+     */
+    private Inventory findPrevInventory(Inventory inv, int inventoryId) {
+        List<Inventory> allInventories = inventoryRepository.findByUserIdWithFiscalYear(inv.getUser().getId());
+        for (Inventory i : allInventories) {
+            if (i.getId().equals(inventoryId)) {
+                continue;
+            }
+            if (i.getFiscalYear().getEndDate().isBefore(inv.getFiscalYear().getStartDate())) {
+                return i;
+            }
+        }
+        return null;
     }
 
     /** 目標名称を参照先の優先順位（ITスキル → 資格 → ADセミナー → カスタム名）で解決して返す。 */

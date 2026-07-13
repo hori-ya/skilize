@@ -21,6 +21,7 @@ import com.skilize.master.infrastructure.persistence.mapper.ItSkillCategoryPersi
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +35,11 @@ public class ItSkillCategoryRepositoryImpl implements ItSkillCategoryRepository 
 
     @Override
     public Optional<ItSkillCategory> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<ItSkillCategoryEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -43,8 +48,11 @@ public class ItSkillCategoryRepositoryImpl implements ItSkillCategoryRepository 
         if (category.getId() == null) {
             entity = ItSkillCategoryEntity.create(category.getParentId(), category.getLevel(), category.getName(), category.getSortOrder());
         } else {
-            entity = jpaRepository.findById(category.getId())
-                    .orElseThrow(() -> new IllegalStateException("ItSkillCategory not found: id=" + category.getId()));
+            Optional<ItSkillCategoryEntity> entityOptional = jpaRepository.findById(category.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("ItSkillCategory not found: id=" + category.getId());
+            }
+            entity = entityOptional.get();
             entity.update(category.getName(), category.getSortOrder(), category.isActive());
         }
         return mapper.toDomain(jpaRepository.save(entity));
@@ -52,31 +60,55 @@ public class ItSkillCategoryRepositoryImpl implements ItSkillCategoryRepository 
 
     @Override
     public List<ItSkillCategory> findAll() {
-        return jpaRepository.findAll().stream().map(mapper::toDomain).toList();
+        List<ItSkillCategory> categories = new ArrayList<>();
+        for (ItSkillCategoryEntity entity : jpaRepository.findAll()) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 
     @Override
     public List<ItSkillCategory> findByActiveTrueOrderBySortOrderAsc() {
-        return jpaRepository.findByActiveTrueOrderBySortOrderAsc().stream().map(mapper::toDomain).toList();
+        List<ItSkillCategory> categories = new ArrayList<>();
+        for (ItSkillCategoryEntity entity : jpaRepository.findByActiveTrueOrderBySortOrderAsc()) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 
     @Override
     public List<ItSkillCategory> findByLevelAndActiveTrueOrderBySortOrderAsc(short level) {
-        return jpaRepository.findByLevelAndActiveTrueOrderBySortOrderAsc(level).stream().map(mapper::toDomain).toList();
+        List<ItSkillCategory> categories = new ArrayList<>();
+        for (ItSkillCategoryEntity entity : jpaRepository.findByLevelAndActiveTrueOrderBySortOrderAsc(level)) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 
     @Override
     public List<ItSkillCategory> findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc() {
-        return jpaRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc().stream().map(mapper::toDomain).toList();
+        List<ItSkillCategory> categories = new ArrayList<>();
+        for (ItSkillCategoryEntity entity : jpaRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc()) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 
     @Override
     public List<ItSkillCategory> findAllByOrderByLevelAscSortOrderAsc() {
-        return jpaRepository.findAllByOrderByLevelAscSortOrderAsc().stream().map(mapper::toDomain).toList();
+        List<ItSkillCategory> categories = new ArrayList<>();
+        for (ItSkillCategoryEntity entity : jpaRepository.findAllByOrderByLevelAscSortOrderAsc()) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 
     @Override
     public List<ItSkillCategory> findAllByOrderByLevelAscParentIdAscSortOrderAsc() {
-        return jpaRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc().stream().map(mapper::toDomain).toList();
+        List<ItSkillCategory> categories = new ArrayList<>();
+        for (ItSkillCategoryEntity entity : jpaRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc()) {
+            categories.add(mapper.toDomain(entity));
+        }
+        return categories;
     }
 }

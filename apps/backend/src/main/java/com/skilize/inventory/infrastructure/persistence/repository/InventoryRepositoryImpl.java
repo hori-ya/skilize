@@ -23,6 +23,7 @@ import com.skilize.user.infrastructure.persistence.repository.UserJpaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,7 +39,11 @@ public class InventoryRepositoryImpl implements InventoryRepository {
 
     @Override
     public Optional<Inventory> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<InventoryEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -48,8 +53,11 @@ public class InventoryRepositoryImpl implements InventoryRepository {
             entity = InventoryEntity.create(userJpaRepository.getReferenceById(inventory.getUser().getId()),
                     fiscalYearJpaRepository.getReferenceById(inventory.getFiscalYear().getId()));
         } else {
-            entity = jpaRepository.findById(inventory.getId())
-                    .orElseThrow(() -> new IllegalStateException("Inventory not found: id=" + inventory.getId()));
+            Optional<InventoryEntity> entityOptional = jpaRepository.findById(inventory.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("Inventory not found: id=" + inventory.getId());
+            }
+            entity = entityOptional.get();
         }
         // ステータス・タイムスタンプはドメインメソッド（submit/completeGoalReview/completeGoal）側で計算済みの値をそのまま反映する
         entity.applyState(inventory.getStatus(), inventory.getSubmittedAt(),
@@ -59,16 +67,28 @@ public class InventoryRepositoryImpl implements InventoryRepository {
 
     @Override
     public Optional<Inventory> findByIdWithAssociations(int id) {
-        return jpaRepository.findByIdWithAssociations(id).map(mapper::toDomain);
+        Optional<InventoryEntity> entityOptional = jpaRepository.findByIdWithAssociations(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public List<Inventory> findByUserIdWithFiscalYear(int userId) {
-        return jpaRepository.findByUserIdWithFiscalYear(userId).stream().map(mapper::toDomain).toList();
+        List<Inventory> inventories = new ArrayList<>();
+        for (InventoryEntity entity : jpaRepository.findByUserIdWithFiscalYear(userId)) {
+            inventories.add(mapper.toDomain(entity));
+        }
+        return inventories;
     }
 
     @Override
     public Optional<Inventory> findByUserIdAndFiscalYearId(int userId, int fiscalYearId) {
-        return jpaRepository.findByUserIdAndFiscalYearId(userId, fiscalYearId).map(mapper::toDomain);
+        Optional<InventoryEntity> entityOptional = jpaRepository.findByUserIdAndFiscalYearId(userId, fiscalYearId);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 }

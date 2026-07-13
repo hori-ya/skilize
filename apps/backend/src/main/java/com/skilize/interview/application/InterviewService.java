@@ -28,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -64,23 +65,31 @@ public class InterviewService {
                                     List<DetailNoteCommand> detailNotes) {
         requireTlOrAdmin(requester);
 
-        Inventory inventory = inventoryRepository.findById(inventoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません"));
+        Optional<Inventory> inventoryOptional = inventoryRepository.findById(inventoryId);
+        if (inventoryOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません");
+        }
+        Inventory inventory = inventoryOptional.get();
 
         // upsert パターン: 既存レコードがあれば取得、なければ新規作成する
-        // orElseGet(): 値が存在しない場合のみラムダを実行する（存在する場合はDBアクセスしない）
-        InventoryInterview interview = inventoryInterviewRepository
-                .findByInventoryIdAndInterviewerId(inventoryId, requester.getId())
-                .orElseGet(() -> InventoryInterview.create(inventory.getId(), requester, generalNote));
+        Optional<InventoryInterview> interviewOptional = inventoryInterviewRepository
+                .findByInventoryIdAndInterviewerId(inventoryId, requester.getId());
+        InventoryInterview interview;
+        if (interviewOptional.isPresent()) {
+            interview = interviewOptional.get();
+        } else {
+            interview = InventoryInterview.create(inventory.getId(), requester, generalNote);
+        }
 
         interview.update(generalNote);
         InventoryInterview saved = inventoryInterviewRepository.save(interview);
 
         // 明細ノートは全件洗い替え（全削除 → 再 INSERT）
         interviewDetailNoteRepository.deleteByInterviewId(saved.getId());
-        List<InterviewDetailNote> notes = detailNotes.stream()
-                .map(cmd -> InterviewDetailNote.create(saved, cmd.detailType(), cmd.detailId(), cmd.note()))
-                .toList();
+        List<InterviewDetailNote> notes = new ArrayList<>();
+        for (DetailNoteCommand cmd : detailNotes) {
+            notes.add(InterviewDetailNote.create(saved, cmd.detailType(), cmd.detailId(), cmd.note()));
+        }
         interviewDetailNoteRepository.saveAll(notes);
 
         return saved;
@@ -94,20 +103,28 @@ public class InterviewService {
     public Optional<InventoryInterview> findPrevYear(int inventoryId, User requester) {
         requireTlOrAdmin(requester);
 
-        Inventory current = inventoryRepository.findByIdWithAssociations(inventoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません"));
+        Optional<Inventory> currentOptional = inventoryRepository.findByIdWithAssociations(inventoryId);
+        if (currentOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "棚卸が見つかりません");
+        }
+        Inventory current = currentOptional.get();
 
         List<Inventory> all = inventoryRepository.findByUserIdWithFiscalYear(current.getUser().getId());
 
         // findByUserIdWithFiscalYear は startDate DESC 順。current の年度開始日より前のものを前年度とする
-        Optional<Inventory> prevInventory = all.stream()
-                .filter(inv -> inv.getFiscalYear().getStartDate()
-                        .isBefore(current.getFiscalYear().getStartDate()))
-                .findFirst();
+        Inventory prevInventory = null;
+        for (Inventory inv : all) {
+            if (inv.getFiscalYear().getStartDate().isBefore(current.getFiscalYear().getStartDate())) {
+                prevInventory = inv;
+                break;
+            }
+        }
 
-        // flatMap: prevInventory が存在する場合のみ面談メモを検索し、どちらか一方でも空なら Optional.empty() を返す
-        return prevInventory.flatMap(prev ->
-                inventoryInterviewRepository.findByInventoryIdAndInterviewerId(prev.getId(), requester.getId()));
+        // prevInventory が存在する場合のみ面談メモを検索し、どちらか一方でも空なら Optional.empty() を返す
+        if (prevInventory == null) {
+            return Optional.empty();
+        }
+        return inventoryInterviewRepository.findByInventoryIdAndInterviewerId(prevInventory.getId(), requester.getId());
     }
 
     /** 指定面談メモ（interview_id）に紐づく明細ノートを全件取得する。 */

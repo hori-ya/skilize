@@ -54,10 +54,16 @@ public class DashboardController {
             return new DashboardResponse(userInfo, null, null);
         }
 
+        String inputStartDate = null;
+        if (currentFy.getInputStartDate() != null) {
+            inputStartDate = currentFy.getInputStartDate().toString();
+        }
+        String inputEndDate = null;
+        if (currentFy.getInputEndDate() != null) {
+            inputEndDate = currentFy.getInputEndDate().toString();
+        }
         DashboardResponse.FiscalYearRef fyRef = new DashboardResponse.FiscalYearRef(
-                currentFy.getId(), currentFy.getName(),
-                currentFy.getInputStartDate() != null ? currentFy.getInputStartDate().toString() : null,
-                currentFy.getInputEndDate()   != null ? currentFy.getInputEndDate().toString()   : null);
+                currentFy.getId(), currentFy.getName(), inputStartDate, inputEndDate);
 
         Inventory currentInv = result.inventory();
         if (currentInv == null) {
@@ -65,12 +71,22 @@ public class DashboardController {
             return new DashboardResponse(userInfo, fyRef, null);
         }
 
+        String submittedAt = null;
+        if (currentInv.getSubmittedAt() != null) {
+            submittedAt = currentInv.getSubmittedAt().toString();
+        }
+        String goalReviewCompletedAt = null;
+        if (currentInv.getGoalReviewCompletedAt() != null) {
+            goalReviewCompletedAt = currentInv.getGoalReviewCompletedAt().toString();
+        }
+        String goalCompletedAt = null;
+        if (currentInv.getGoalCompletedAt() != null) {
+            goalCompletedAt = currentInv.getGoalCompletedAt().toString();
+        }
         DashboardResponse.CurrentInventoryInfo invInfo = new DashboardResponse.CurrentInventoryInfo(
                 currentInv.getId(), currentInv.getStatus().name(),
                 result.itSkillCount(), result.qualificationCount(), result.seminarCount(),
-                currentInv.getSubmittedAt() != null ? currentInv.getSubmittedAt().toString() : null,
-                currentInv.getGoalReviewCompletedAt() != null ? currentInv.getGoalReviewCompletedAt().toString() : null,
-                currentInv.getGoalCompletedAt() != null ? currentInv.getGoalCompletedAt().toString() : null);
+                submittedAt, goalReviewCompletedAt, goalCompletedAt);
 
         return new DashboardResponse(userInfo, fyRef, invInfo);
     }

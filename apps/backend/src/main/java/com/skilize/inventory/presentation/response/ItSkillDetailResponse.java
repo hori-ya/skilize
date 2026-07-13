@@ -38,9 +38,14 @@ public record ItSkillDetailResponse(int id, Integer itSkillId, String itSkillNam
      * @return ITスキル明細レスポンス
      */
     public static ItSkillDetailResponse from(ItSkillDetail d) {
+        Integer itSkillId = null;
+        String itSkillName = null;
+        if (d.getItSkill() != null) {
+            itSkillId = d.getItSkill().getId();
+            itSkillName = d.getItSkill().getName();
+        }
         return new ItSkillDetailResponse(d.getId(),
-                d.getItSkill() != null ? d.getItSkill().getId() : null,
-                d.getItSkill() != null ? d.getItSkill().getName() : null,
+                itSkillId, itSkillName,
                 d.getCustomSkillName(),
                 d.getSkillLevel().getId(), d.getSkillLevel().getLevelValue(), d.getRemarks());
     }

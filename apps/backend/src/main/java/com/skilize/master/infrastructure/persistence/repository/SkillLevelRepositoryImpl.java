@@ -21,6 +21,7 @@ import com.skilize.master.infrastructure.persistence.mapper.SkillLevelPersistenc
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,7 +35,11 @@ public class SkillLevelRepositoryImpl implements SkillLevelRepository {
 
     @Override
     public Optional<SkillLevel> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<SkillLevelEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -43,8 +48,11 @@ public class SkillLevelRepositoryImpl implements SkillLevelRepository {
         if (skillLevel.getId() == null) {
             entity = SkillLevelEntity.create(skillLevel.getLevelValue(), skillLevel.getDescription(), skillLevel.getScoreWeight());
         } else {
-            entity = jpaRepository.findById(skillLevel.getId())
-                    .orElseThrow(() -> new IllegalStateException("SkillLevel not found: id=" + skillLevel.getId()));
+            Optional<SkillLevelEntity> entityOptional = jpaRepository.findById(skillLevel.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("SkillLevel not found: id=" + skillLevel.getId());
+            }
+            entity = entityOptional.get();
             entity.update(skillLevel.getLevelValue(), skillLevel.getDescription(), skillLevel.isActive(), skillLevel.getScoreWeight());
         }
         return mapper.toDomain(jpaRepository.save(entity));
@@ -52,11 +60,19 @@ public class SkillLevelRepositoryImpl implements SkillLevelRepository {
 
     @Override
     public List<SkillLevel> findAllByOrderByLevelValueAsc() {
-        return jpaRepository.findAllByOrderByLevelValueAsc().stream().map(mapper::toDomain).toList();
+        List<SkillLevel> levels = new ArrayList<>();
+        for (SkillLevelEntity entity : jpaRepository.findAllByOrderByLevelValueAsc()) {
+            levels.add(mapper.toDomain(entity));
+        }
+        return levels;
     }
 
     @Override
     public List<SkillLevel> findByActiveOrderByLevelValueAsc(boolean active) {
-        return jpaRepository.findByActiveOrderByLevelValueAsc(active).stream().map(mapper::toDomain).toList();
+        List<SkillLevel> levels = new ArrayList<>();
+        for (SkillLevelEntity entity : jpaRepository.findByActiveOrderByLevelValueAsc(active)) {
+            levels.add(mapper.toDomain(entity));
+        }
+        return levels;
     }
 }

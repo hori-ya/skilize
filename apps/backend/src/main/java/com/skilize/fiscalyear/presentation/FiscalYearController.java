@@ -30,7 +30,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 年度・年度設定の REST API コントローラー。
@@ -46,33 +48,44 @@ public class FiscalYearController {
     /** 全年度を開始日降順（新しい順）で返す。ロール制限なし。 */
     @GetMapping("/fiscal-years")
     public List<FiscalYearResponse> list() {
-        return fiscalYearService.findAllOrderByStartDateDesc().stream()
-                .map(FiscalYearResponse::from)
-                .toList();
+        List<FiscalYearResponse> responses = new ArrayList<>();
+        for (FiscalYear fiscalYear : fiscalYearService.findAllOrderByStartDateDesc()) {
+            responses.add(FiscalYearResponse.from(fiscalYear));
+        }
+        return responses;
     }
 
     /** 今日の日付を基準に現在有効な年度を返す。存在しない場合は 404 を返す。 */
     @GetMapping("/fiscal-years/current")
     public ResponseEntity<FiscalYearResponse> current() {
         // findCurrent() は today が startDate〜endDate に含まれる年度を返す
-        return fiscalYearService.findCurrent(LocalDate.now())
-                .map(FiscalYearResponse::from)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        Optional<FiscalYear> fiscalYearOptional = fiscalYearService.findCurrent(LocalDate.now());
+        if (fiscalYearOptional.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(FiscalYearResponse.from(fiscalYearOptional.get()));
     }
 
     /** 年度を新規作成する（ADMIN のみ）。日付文字列は ISO-8601 形式（"yyyy-MM-dd"）で受け取り LocalDate に変換する。 */
     @PostMapping("/fiscal-years")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<FiscalYearResponse> create(@Valid @RequestBody FiscalYearRequest req) {
+        // 入力期間は省略可能（null の場合は制限なし扱い）
+        LocalDate inputStartDate = null;
+        if (req.inputStartDate() != null) {
+            inputStartDate = LocalDate.parse(req.inputStartDate());
+        }
+        LocalDate inputEndDate = null;
+        if (req.inputEndDate() != null) {
+            inputEndDate = LocalDate.parse(req.inputEndDate());
+        }
         FiscalYear saved = fiscalYearService.createFiscalYear(
                 req.name(),
                 // LocalDate.parse() は ISO-8601 形式の文字列を LocalDate に変換する
                 LocalDate.parse(req.startDate()),
                 LocalDate.parse(req.endDate()),
-                // 入力期間は省略可能（null の場合は制限なし扱い）
-                req.inputStartDate() != null ? LocalDate.parse(req.inputStartDate()) : null,
-                req.inputEndDate() != null ? LocalDate.parse(req.inputEndDate()) : null
+                inputStartDate,
+                inputEndDate
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(FiscalYearResponse.from(saved));
     }
@@ -84,13 +97,21 @@ public class FiscalYearController {
     @PutMapping("/fiscal-years/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public FiscalYearResponse update(@PathVariable int id, @Valid @RequestBody FiscalYearRequest req) {
+        LocalDate inputStartDate = null;
+        if (req.inputStartDate() != null) {
+            inputStartDate = LocalDate.parse(req.inputStartDate());
+        }
+        LocalDate inputEndDate = null;
+        if (req.inputEndDate() != null) {
+            inputEndDate = LocalDate.parse(req.inputEndDate());
+        }
         FiscalYear updated = fiscalYearService.updateFiscalYear(
                 id,
                 req.name(),
                 LocalDate.parse(req.startDate()),
                 LocalDate.parse(req.endDate()),
-                req.inputStartDate() != null ? LocalDate.parse(req.inputStartDate()) : null,
-                req.inputEndDate() != null ? LocalDate.parse(req.inputEndDate()) : null,
+                inputStartDate,
+                inputEndDate,
                 req.active()
         );
         return FiscalYearResponse.from(updated);

@@ -139,3 +139,48 @@ infrastructure/persistence/
 
 - 標準出力への直接書き込み（`print` 等）は禁止し、構造化ロギングフレームワークを使用する
 - パスワード・トークン・個人情報はログに出力しない（詳細は [security.md](../security.md) を参照）
+
+---
+
+# 短縮記法の制限
+
+誰が読んでも処理の流れを追いやすいことを優先し、処理を過度に短縮・凝縮する記法を禁止する。手続き的で読み下しやすいコードを優先する。
+
+## 禁止
+
+| 記法 | 禁止例 |
+|---|---|
+| ラムダ式 | `list.stream().filter(x -> x.isActive())`, `list.sort((a, b) -> a.getName().compareTo(b.getName()))` |
+| メソッド参照（`::`） | `list.stream().map(this::toResponse)`, `list.stream().map(User::getId)` |
+| Stream API | `.stream()`, `.map(`, `.filter(`, `.collect(`, `.forEach(`, `.reduce(`, `Collectors.` |
+| Optional のメソッドチェーン | `opt.map(x -> ...).orElseThrow(() -> ...)`, `repo.findById(id).orElseThrow()` |
+| 三項演算子（`? :`） | `String s = cond ? "a" : "b";`（特にネストした三項演算子は可読性が著しく低いため厳禁） |
+| 拡張switch（アロー構文 / `yield`） | `switch (x) { case A -> ...; }` |
+
+## 代替手段
+
+| 用途 | 禁止（短縮記法） | 代替 |
+|---|---|---|
+| コレクションの絞り込み・変換 | `list.stream().filter(x -> ...).map(x -> ...).toList()` | 拡張for文 + if文で明示的なループを書き、結果を通常の `List`/`ArrayList` に詰める |
+| ソート | `list.sort((a, b) -> ...)` | `Comparator` を実装したクラス（無名クラス可）を渡す。または通常のfor文で比較ロジックを明示する |
+| コールバック・イベントハンドラ | `xxx.addListener(e -> ...)` | 無名クラス、または通常のメソッドを定義したクラスのインスタンスを渡す |
+| Optional の分岐 | `opt.map(x -> ...).orElseThrow(() -> ...)` | `if (opt.isPresent()) { ... } else { throw ... }` のように `isPresent()` / `get()` で明示的に分岐する |
+| 条件による値の切り替え | `String s = cond ? "a" : "b";` | 通常の `if`/`else` 文で変数へ代入する |
+| 多分岐の切り替え | `switch (x) { case A -> ...; case B -> ...; }` | 従来型の `switch` 文（`case A: ...; break;`）、または `if`/`else if` 連鎖 |
+
+## 例外（禁止対象外）
+
+以下は短縮記法だが、可読性への影響が小さいため許可する。
+
+- `var` による型推論
+- 複数catch（`catch (A | B e)`）
+- Text blocks（`"""..."""`）
+- 匿名クラス（ラムダ・メソッド参照の代替手段としてむしろ推奨する）
+- ダイヤモンド演算子（`new ArrayList<>()` 等）
+
+## 理由
+
+- ラムダ式・メソッド参照・Stream API は関数型インターフェース・型推論の理解を前提とするため、読み手を選び可読性を下げやすい
+- 省略された型・匿名の引数名により、レビュー時に処理内容を追いにくい
+- スタックトレースにラムダ・Stream由来の合成メソッド名が出るため、デバッグ時の可読性も下がる
+- 三項演算子・拡張switchのアロー構文は1行に条件分岐を凝縮するため、慣れていないと見落としやすい

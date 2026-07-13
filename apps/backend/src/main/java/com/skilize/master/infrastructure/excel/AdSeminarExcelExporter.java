@@ -74,7 +74,11 @@ public class AdSeminarExcelExporter {
             Row row = sheet.createRow(rowIdx++);
             setInt(row, 0, cat.getId(), normalStyle);
             setString(row, 1, cat.getName(), normalStyle);
-            setString(row, 2, cat.isActive() ? "有効" : "無効", normalStyle);
+            String activeLabel = "無効";
+            if (cat.isActive()) {
+                activeLabel = "有効";
+            }
+            setString(row, 2, activeLabel, normalStyle);
         }
     }
 
@@ -100,12 +104,26 @@ public class AdSeminarExcelExporter {
         int rowIdx = 1;
         for (AdSeminar s : seminars) {
             Row row = sheet.createRow(rowIdx++);
-            setIntOrBlank(row, 0, s.getCategory() != null ? s.getCategory().getId() : null, normalStyle);
-            setString(row, 1, s.getCategory() != null ? s.getCategory().getName() : "", refStyle);
+            Integer categoryId = null;
+            String categoryName = "";
+            if (s.getCategory() != null) {
+                categoryId = s.getCategory().getId();
+                categoryName = s.getCategory().getName();
+            }
+            setIntOrBlank(row, 0, categoryId, normalStyle);
+            setString(row, 1, categoryName, refStyle);
             setInt(row, 2, s.getId(), normalStyle);
             setString(row, 3, s.getName(), normalStyle);
-            setString(row, 4, s.getDescription() != null ? s.getDescription() : "", normalStyle);
-            setString(row, 5, s.isActive() ? "有効" : "無効", normalStyle);
+            String description = "";
+            if (s.getDescription() != null) {
+                description = s.getDescription();
+            }
+            setString(row, 4, description, normalStyle);
+            String activeLabel = "無効";
+            if (s.isActive()) {
+                activeLabel = "有効";
+            }
+            setString(row, 5, activeLabel, normalStyle);
         }
     }
 }

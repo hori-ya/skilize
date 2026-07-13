@@ -77,7 +77,7 @@ public class ItSkillExcelImporter {
             // C列(2) は参考列(階層レベル)なので読み飛ばす
             String name = getString(row, 3);
             Boolean active = getActive(row, 4);
-            int order = siblingCounters.merge(parentId, 1, Integer::sum);
+            int order = nextSiblingOrder(siblingCounters, parentId);
             rows.add(new CategoryRow(id, parentId, name, active, i + 1, order));
         }
         return rows;
@@ -96,10 +96,27 @@ public class ItSkillExcelImporter {
             String name = getString(row, 5);
             String description = getString(row, 6);
             Boolean active = getActive(row, 7);
-            int order = siblingCounters.merge(categoryId, 1, Integer::sum);
-            rows.add(new SkillRow(id, categoryId, name, description.isEmpty() ? null : description,
+            int order = nextSiblingOrder(siblingCounters, categoryId);
+            String resolvedDescription = description;
+            if (description.isEmpty()) {
+                resolvedDescription = null;
+            }
+            rows.add(new SkillRow(id, categoryId, name, resolvedDescription,
                     active, i + 1, order));
         }
         return rows;
+    }
+
+    /** カテゴリ内での兄弟順序を1始まりで採番する（Map.mergeの明示版）。 */
+    private int nextSiblingOrder(Map<Integer, Integer> siblingCounters, Integer key) {
+        Integer count = siblingCounters.get(key);
+        int order;
+        if (count == null) {
+            order = 1;
+        } else {
+            order = count + 1;
+        }
+        siblingCounters.put(key, order);
+        return order;
     }
 }

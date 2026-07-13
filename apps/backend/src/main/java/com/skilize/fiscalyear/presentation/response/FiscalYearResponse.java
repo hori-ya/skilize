@@ -38,12 +38,20 @@ public record FiscalYearResponse(int id, String name, String startDate, String e
      * @return 年度レスポンス
      */
     public static FiscalYearResponse from(FiscalYear f) {
+        String inputStartDate = null;
+        if (f.getInputStartDate() != null) {
+            inputStartDate = f.getInputStartDate().toString();
+        }
+        String inputEndDate = null;
+        if (f.getInputEndDate() != null) {
+            inputEndDate = f.getInputEndDate().toString();
+        }
         return new FiscalYearResponse(
                 f.getId(), f.getName(),
                 f.getStartDate().toString(),
                 f.getEndDate().toString(),
-                f.getInputStartDate() != null ? f.getInputStartDate().toString() : null,
-                f.getInputEndDate() != null ? f.getInputEndDate().toString() : null,
+                inputStartDate,
+                inputEndDate,
                 f.isActive());
     }
 }

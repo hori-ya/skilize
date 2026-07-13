@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,12 +37,20 @@ public class FiscalYearRepositoryImpl implements FiscalYearRepository {
 
     @Override
     public List<FiscalYear> findAll() {
-        return jpaRepository.findAll().stream().map(mapper::toDomain).toList();
+        List<FiscalYear> fiscalYears = new ArrayList<>();
+        for (FiscalYearEntity entity : jpaRepository.findAll()) {
+            fiscalYears.add(mapper.toDomain(entity));
+        }
+        return fiscalYears;
     }
 
     @Override
     public Optional<FiscalYear> findById(Integer id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<FiscalYearEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -51,8 +60,11 @@ public class FiscalYearRepositoryImpl implements FiscalYearRepository {
             entity = FiscalYearEntity.create(fiscalYear.getName(), fiscalYear.getStartDate(), fiscalYear.getEndDate(),
                     fiscalYear.getInputStartDate(), fiscalYear.getInputEndDate());
         } else {
-            entity = jpaRepository.findById(fiscalYear.getId())
-                    .orElseThrow(() -> new IllegalStateException("FiscalYear not found: id=" + fiscalYear.getId()));
+            Optional<FiscalYearEntity> entityOptional = jpaRepository.findById(fiscalYear.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("FiscalYear not found: id=" + fiscalYear.getId());
+            }
+            entity = entityOptional.get();
             entity.update(fiscalYear.getName(), fiscalYear.getStartDate(), fiscalYear.getEndDate(),
                     fiscalYear.getInputStartDate(), fiscalYear.getInputEndDate(), fiscalYear.isActive());
         }
@@ -61,6 +73,10 @@ public class FiscalYearRepositoryImpl implements FiscalYearRepository {
 
     @Override
     public Optional<FiscalYear> findCurrent(LocalDate today) {
-        return jpaRepository.findCurrent(today).map(mapper::toDomain);
+        Optional<FiscalYearEntity> entityOptional = jpaRepository.findCurrent(today);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 }

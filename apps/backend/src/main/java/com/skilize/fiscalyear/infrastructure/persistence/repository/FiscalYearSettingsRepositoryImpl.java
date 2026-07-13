@@ -33,13 +33,20 @@ public class FiscalYearSettingsRepositoryImpl implements FiscalYearSettingsRepos
 
     @Override
     public Optional<FiscalYearSettings> findById(Short id) {
-        return jpaRepository.findById(id).map(mapper::toDomain);
+        Optional<FiscalYearSettingsEntity> entityOptional = jpaRepository.findById(id);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public FiscalYearSettings save(FiscalYearSettings settings) {
-        FiscalYearSettingsEntity entity = jpaRepository.findById(settings.getId())
-                .orElseThrow(() -> new IllegalStateException("FiscalYearSettings not found: id=" + settings.getId()));
+        Optional<FiscalYearSettingsEntity> entityOptional = jpaRepository.findById(settings.getId());
+        if (entityOptional.isEmpty()) {
+            throw new IllegalStateException("FiscalYearSettings not found: id=" + settings.getId());
+        }
+        FiscalYearSettingsEntity entity = entityOptional.get();
         entity.setFiscalYearStartMonth(settings.getFiscalYearStartMonth());
         return mapper.toDomain(jpaRepository.save(entity));
     }

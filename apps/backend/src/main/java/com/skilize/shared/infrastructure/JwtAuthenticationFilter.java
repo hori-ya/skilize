@@ -15,6 +15,7 @@
  **************************************************************************************************************/
 package com.skilize.shared.infrastructure;
 
+import com.skilize.user.domain.model.User;
 import com.skilize.user.domain.repository.UserRepository;
 import com.skilize.user.infrastructure.security.UserPrincipal;
 import jakarta.servlet.FilterChain;
@@ -31,6 +32,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Optional;
 
 /**
  * リクエストごとに JWT を検証して SecurityContext に認証情報をセットするフィルター。
@@ -65,7 +67,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             // SecurityContext に認証済みオブジェクトがない場合のみ処理する
             // （同一リクエスト内で複数のフィルターが走っても二重セットを防ぐ）
             if (userIdStr != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-                userRepository.findById(Integer.valueOf(userIdStr)).ifPresent(user -> {
+                Optional<User> userOptional = userRepository.findById(Integer.valueOf(userIdStr));
+                if (userOptional.isPresent()) {
+                    User user = userOptional.get();
                     // is_active=false のユーザーは JWT が有効でもブロックする（アカウント無効化の即時反映）
                     if (user.isActive() && jwtUtil.isTokenValid(token)) {
                         // credentials（第2引数）は JWT 検証済みのため null。第3引数に権限リストを渡す。
@@ -80,7 +84,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         // 認証成功後に MDC の userId を更新する（LoggingFilter が "-" でセット済み）
                         MDC.put(LoggingFilter.MDC_USER_ID, String.valueOf(user.getId()));
                     }
-                });
+                }
             }
         } catch (Exception e) {
             // トークンの解析・検証で例外が起きた場合は認証なしとして扱い、次フィルターへ委譲する

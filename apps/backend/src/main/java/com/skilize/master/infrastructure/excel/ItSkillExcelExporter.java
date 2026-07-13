@@ -81,7 +81,11 @@ public class ItSkillExcelExporter {
             setIntOrBlank(row, 1, cat.getParentId(), normalStyle);
             setInt(row, 2, (int) cat.getLevel(), refStyle);
             setString(row, 3, cat.getName(), normalStyle);
-            setString(row, 4, cat.isActive() ? "有効" : "無効", normalStyle);
+            String activeLabel = "無効";
+            if (cat.isActive()) {
+                activeLabel = "有効";
+            }
+            setString(row, 4, activeLabel, normalStyle);
         }
     }
 
@@ -117,35 +121,60 @@ public class ItSkillExcelExporter {
             setString(row, 3, resolveCategory3Name(skill), refStyle);
             setIntOrBlank(row, 4, skill.getId(), normalStyle);
             setString(row, 5, skill.getName(), normalStyle);
-            setString(row, 6, skill.getDescription() != null ? skill.getDescription() : "", normalStyle);
-            setString(row, 7, skill.isActive() ? "有効" : "無効", normalStyle);
+            String description = "";
+            if (skill.getDescription() != null) {
+                description = skill.getDescription();
+            }
+            setString(row, 6, description, normalStyle);
+            String activeLabel = "無効";
+            if (skill.isActive()) {
+                activeLabel = "有効";
+            }
+            setString(row, 7, activeLabel, normalStyle);
         }
     }
 
     private String resolveCategory1Name(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
-        return switch (cat.getLevel()) {
-            case 1 -> cat.getName();
-            case 2 -> cat.getParent() != null ? cat.getParent().getName() : "";
-            case 3 -> {
+        switch (cat.getLevel()) {
+            case 1:
+                return cat.getName();
+            case 2:
+                if (cat.getParent() != null) {
+                    return cat.getParent().getName();
+                }
+                return "";
+            case 3:
                 ItSkillCategory p = cat.getParent();
-                yield (p != null && p.getParent() != null) ? p.getParent().getName() : "";
-            }
-            default -> "";
-        };
+                if (p != null && p.getParent() != null) {
+                    return p.getParent().getName();
+                }
+                return "";
+            default:
+                return "";
+        }
     }
 
     private String resolveCategory2Name(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
-        return switch (cat.getLevel()) {
-            case 2 -> cat.getName();
-            case 3 -> cat.getParent() != null ? cat.getParent().getName() : "";
-            default -> "";
-        };
+        switch (cat.getLevel()) {
+            case 2:
+                return cat.getName();
+            case 3:
+                if (cat.getParent() != null) {
+                    return cat.getParent().getName();
+                }
+                return "";
+            default:
+                return "";
+        }
     }
 
     private String resolveCategory3Name(ItSkill skill) {
         ItSkillCategory cat = skill.getCategory();
-        return cat.getLevel() == 3 ? cat.getName() : "";
+        if (cat.getLevel() == 3) {
+            return cat.getName();
+        }
+        return "";
     }
 }

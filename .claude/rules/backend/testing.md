@@ -54,3 +54,15 @@ paths:
 
 - カバレッジ率そのものを目的にしない。分岐・異常系・境界値を優先してテストする
 - 正常系1つに対し、異常系・境界値のケースを最低1つは用意する
+
+---
+
+# 短縮記法の制限（テストコードにも適用）
+
+[code-style.md](code-style.md) の「短縮記法の制限」はテストコードにも適用する（ラムダ式・メソッド参照・Stream API・Optionalのメソッドチェーン・三項演算子・拡張switchを使用しない）。特にテストで書きがちな以下のパターンに注意する。
+
+| 用途 | 禁止 | 代替 |
+|---|---|---|
+| 例外検証 | `assertThrows(XxxException.class, () -> service.method(...));` | try-catch文で呼び出し、catchブロック内で例外の内容を検証する（catchに到達しなかった場合は `fail(...)` を呼ぶ） |
+| Mockitoのスタブ動作定義 | `when(mock.method()).thenAnswer(invocation -> ...);` | `Answer` インターフェースを実装したクラス（無名クラス可）を渡す。単純な戻り値指定（`thenReturn(...)`）はラムダを伴わないため対象外 |
+| Stream を使った検証 | `assertTrue(list.stream().anyMatch(x -> x.isActive()));` | 拡張for文でループし、フラグ変数で判定してから `assertTrue`/`assertFalse` する |

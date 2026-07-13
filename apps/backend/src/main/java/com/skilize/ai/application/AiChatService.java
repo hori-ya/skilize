@@ -30,6 +30,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -104,9 +105,10 @@ public class AiChatService {
     }
 
     private String buildRequestBody(AiChatCommand command) throws Exception {
-        List<Map<String, String>> historyJson = command.history().stream()
-                .map(item -> Map.of("role", item.role(), "content", item.content()))
-                .toList();
+        List<Map<String, String>> historyJson = new ArrayList<>();
+        for (AiChatCommand.ChatHistoryItem item : command.history()) {
+            historyJson.add(Map.of("role", item.role(), "content", item.content()));
+        }
         Map<String, Object> body = Map.of(
                 "message", command.message(),
                 "mode", command.mode(),

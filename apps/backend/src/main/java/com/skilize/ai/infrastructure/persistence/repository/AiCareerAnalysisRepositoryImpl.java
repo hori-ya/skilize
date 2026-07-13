@@ -22,6 +22,7 @@ import com.skilize.ai.infrastructure.persistence.mapper.AiCareerAnalysisPersiste
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,12 +36,20 @@ public class AiCareerAnalysisRepositoryImpl implements AiCareerAnalysisRepositor
 
     @Override
     public List<AiCareerAnalysis> findByUserIdOrderByFiscalYearIdDesc(int userId) {
-        return jpaRepository.findByUserIdOrderByFiscalYearIdDesc(userId).stream().map(mapper::toDomain).toList();
+        List<AiCareerAnalysis> analyses = new ArrayList<>();
+        for (AiCareerAnalysisEntity entity : jpaRepository.findByUserIdOrderByFiscalYearIdDesc(userId)) {
+            analyses.add(mapper.toDomain(entity));
+        }
+        return analyses;
     }
 
     @Override
     public Optional<AiCareerAnalysis> findByUserIdAndFiscalYearId(int userId, int fiscalYearId) {
-        return jpaRepository.findByUserIdAndFiscalYearId(userId, fiscalYearId).map(mapper::toDomain);
+        Optional<AiCareerAnalysisEntity> entityOptional = jpaRepository.findByUserIdAndFiscalYearId(userId, fiscalYearId);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
@@ -49,8 +58,11 @@ public class AiCareerAnalysisRepositoryImpl implements AiCareerAnalysisRepositor
         if (analysis.getId() == null) {
             entity = AiCareerAnalysisEntity.createPending(analysis.getUserId(), analysis.getFiscalYearId());
         } else {
-            entity = jpaRepository.findById(analysis.getId())
-                    .orElseThrow(() -> new IllegalStateException("AiCareerAnalysis not found: id=" + analysis.getId()));
+            Optional<AiCareerAnalysisEntity> entityOptional = jpaRepository.findById(analysis.getId());
+            if (entityOptional.isEmpty()) {
+                throw new IllegalStateException("AiCareerAnalysis not found: id=" + analysis.getId());
+            }
+            entity = entityOptional.get();
             // resetToPending() のみが既存レコードを変更するドメインメソッドのため、その状態のみを反映する
             if (analysis.getStatus() == AiAnalysisStatus.PENDING) {
                 entity.resetToPending();

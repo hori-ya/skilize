@@ -54,9 +54,10 @@ public class MasterService {
     /** スキルレベル一覧を levelValue 昇順で返す。isActive で有効/無効を絞り込み可（null は全件）。 */
     @Transactional(readOnly = true)
     public List<SkillLevel> getSkillLevels(Boolean isActive) {
-        return isActive != null
-                ? skillLevelRepository.findByActiveOrderByLevelValueAsc(isActive)
-                : skillLevelRepository.findAllByOrderByLevelValueAsc();
+        if (isActive != null) {
+            return skillLevelRepository.findByActiveOrderByLevelValueAsc(isActive);
+        }
+        return skillLevelRepository.findAllByOrderByLevelValueAsc();
     }
 
     /**
@@ -65,9 +66,13 @@ public class MasterService {
      */
     @Transactional(readOnly = true)
     public List<ItSkill> getItSkills(Boolean isActive) {
-        return isActive == null ? itSkillRepository.findAllOrderByHierarchy()
-                : isActive ? itSkillRepository.findAllActiveWithCategory()
-                           : itSkillRepository.findByActiveFalseOrderByHierarchy();
+        if (isActive == null) {
+            return itSkillRepository.findAllOrderByHierarchy();
+        }
+        if (isActive) {
+            return itSkillRepository.findAllActiveWithCategory();
+        }
+        return itSkillRepository.findByActiveFalseOrderByHierarchy();
     }
 
     /** ITスキル分類をIDで取得する（表示用の上位分類解決に使用）。 */
@@ -79,25 +84,34 @@ public class MasterService {
     /** 資格一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。 */
     @Transactional(readOnly = true)
     public List<Qualification> getQualifications(Boolean isActive) {
-        return isActive == null ? qualificationRepository.findAllWithCategory()
-                : isActive ? qualificationRepository.findAllActiveWithCategory()
-                           : qualificationRepository.findAllWithCategoryByActive(false);
+        if (isActive == null) {
+            return qualificationRepository.findAllWithCategory();
+        }
+        if (isActive) {
+            return qualificationRepository.findAllActiveWithCategory();
+        }
+        return qualificationRepository.findAllWithCategoryByActive(false);
     }
 
     /** 資格分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可（null は全件）。 */
     @Transactional(readOnly = true)
     public List<QualificationCategory> getQualificationCategories(Boolean isActive) {
-        return isActive == null
-                ? qualificationCategoryRepository.findAllByOrderBySortOrderAsc()
-                : qualificationCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+        if (isActive != null) {
+            return qualificationCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+        }
+        return qualificationCategoryRepository.findAllByOrderBySortOrderAsc();
     }
 
     /** ADセミナー一覧を返す。isActive=null で全件、true で有効のみ、false で無効のみ。 */
     @Transactional(readOnly = true)
     public List<AdSeminar> getAdSeminars(Boolean isActive) {
-        return isActive == null ? adSeminarRepository.findAllWithCategory()
-                : isActive ? adSeminarRepository.findAllActiveWithCategory()
-                           : adSeminarRepository.findAllWithCategoryByActive(false);
+        if (isActive == null) {
+            return adSeminarRepository.findAllWithCategory();
+        }
+        if (isActive) {
+            return adSeminarRepository.findAllActiveWithCategory();
+        }
+        return adSeminarRepository.findAllWithCategoryByActive(false);
     }
 
     /** 有効なセミナー分類一覧を sortOrder 昇順で返す（常に有効のみ）。 */
@@ -112,18 +126,22 @@ public class MasterService {
      */
     @Transactional(readOnly = true)
     public List<ItSkillCategory> getItSkillCategories(Boolean isActive) {
-        return isActive == null
-                ? itSkillCategoryRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc()
-                : isActive ? itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc()
-                           : itSkillCategoryRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc();
+        if (isActive == null) {
+            return itSkillCategoryRepository.findAllByOrderByLevelAscParentIdAscSortOrderAsc();
+        }
+        if (isActive) {
+            return itSkillCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+        }
+        return itSkillCategoryRepository.findByActiveFalseOrderByLevelAscParentIdAscSortOrderAsc();
     }
 
     /** ADセミナー分類一覧を sortOrder 昇順で返す。isActive で有効/無効を絞り込み可（null は全件）。 */
     @Transactional(readOnly = true)
     public List<AdSeminarCategory> getAdSeminarCategories(Boolean isActive) {
-        return isActive == null
-                ? adSeminarCategoryRepository.findAllByOrderBySortOrderAsc()
-                : adSeminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+        if (isActive != null) {
+            return adSeminarCategoryRepository.findByActiveTrueOrderBySortOrderAsc();
+        }
+        return adSeminarCategoryRepository.findAllByOrderBySortOrderAsc();
     }
 
     /** スキルレベルを新規作成する。 */
@@ -140,10 +158,13 @@ public class MasterService {
      */
     @Transactional
     public SkillLevel updateSkillLevel(int id, Short levelValue, String description, Boolean active, int scoreWeight) {
-        SkillLevel level = skillLevelRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        Optional<SkillLevel> levelOptional = skillLevelRepository.findById(id);
+        if (levelOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        SkillLevel level = levelOptional.get();
         // active が null = フロントエンドから未送信 → 既存の値をそのまま使う
-        level.update(levelValue, description, active != null ? active : level.isActive(), scoreWeight);
+        level.update(levelValue, description, resolveOrDefault(active, level.isActive()), scoreWeight);
         SkillLevel saved = skillLevelRepository.save(level);
         log.info("SkillLevel updated: id={}", id);
         return saved;
@@ -152,9 +173,8 @@ public class MasterService {
     /** ITスキルを新規作成する。sortOrder が未指定の場合は 0 として登録する。 */
     @Transactional
     public ItSkill createItSkill(int categoryId, String name, String description, Integer sortOrder) {
-        ItSkillCategory category = itSkillCategoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "分類が見つかりません"));
-        ItSkill saved = itSkillRepository.save(ItSkill.create(category, name, description, sortOrder != null ? sortOrder : 0));
+        ItSkillCategory category = resolveItSkillCategory(categoryId);
+        ItSkill saved = itSkillRepository.save(ItSkill.create(category, name, description, resolveSortOrder(sortOrder)));
         log.info("ItSkill created: id={}", saved.getId());
         return saved;
     }
@@ -166,13 +186,15 @@ public class MasterService {
     @Transactional
     public ItSkill updateItSkill(int id, int categoryId, String name, String description,
                                   Integer sortOrder, Boolean active) {
-        ItSkill skill = itSkillRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        ItSkillCategory category = itSkillCategoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "分類が見つかりません"));
+        Optional<ItSkill> skillOptional = itSkillRepository.findById(id);
+        if (skillOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        ItSkill skill = skillOptional.get();
+        ItSkillCategory category = resolveItSkillCategory(categoryId);
         skill.update(category, name, description,
-                sortOrder != null ? sortOrder : skill.getSortOrder(),
-                active != null ? active : skill.isActive());
+                resolveOrDefault(sortOrder, skill.getSortOrder()),
+                resolveOrDefault(active, skill.isActive()));
         ItSkill saved = itSkillRepository.save(skill);
         log.info("ItSkill updated: id={}", id);
         return saved;
@@ -190,8 +212,11 @@ public class MasterService {
             // 親なし = ルートカテゴリ（レベル1 = 大分類）
             level = 1;
         } else {
-            ItSkillCategory parent = itSkillCategoryRepository.findById(parentId)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "PARENT_CATEGORY_NOT_FOUND"));
+            Optional<ItSkillCategory> parentOptional = itSkillCategoryRepository.findById(parentId);
+            if (parentOptional.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "PARENT_CATEGORY_NOT_FOUND");
+            }
+            ItSkillCategory parent = parentOptional.get();
             // 子のレベルは親のレベル + 1。最大3階層まで許可する。
             level = (short) (parent.getLevel() + 1);
             if (level > 3) {
@@ -199,7 +224,7 @@ public class MasterService {
             }
         }
         ItSkillCategory saved = itSkillCategoryRepository.save(
-                ItSkillCategory.create(parentId, level, name, sortOrder != null ? sortOrder : 0));
+                ItSkillCategory.create(parentId, level, name, resolveSortOrder(sortOrder)));
         log.info("ItSkillCategory created: id={} level={}", saved.getId(), level);
         return saved;
     }
@@ -207,9 +232,12 @@ public class MasterService {
     /** ITスキル分類を更新する。sortOrder・active が null の場合は現在の値を維持する。 */
     @Transactional
     public ItSkillCategory updateItSkillCategory(int id, String name, Integer sortOrder, Boolean active) {
-        ItSkillCategory cat = itSkillCategoryRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        cat.update(name, sortOrder != null ? sortOrder : cat.getSortOrder(), active != null ? active : cat.isActive());
+        Optional<ItSkillCategory> catOptional = itSkillCategoryRepository.findById(id);
+        if (catOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        ItSkillCategory cat = catOptional.get();
+        cat.update(name, resolveOrDefault(sortOrder, cat.getSortOrder()), resolveOrDefault(active, cat.isActive()));
         ItSkillCategory saved = itSkillCategoryRepository.save(cat);
         log.info("ItSkillCategory updated: id={}", id);
         return saved;
@@ -222,11 +250,8 @@ public class MasterService {
     @Transactional
     public Qualification createQualification(Integer categoryId, String name, String description, Integer sortOrder) {
         // categoryId が null の場合は分類なしで登録する
-        QualificationCategory cat = categoryId != null
-                ? qualificationCategoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません"))
-                : null;
-        Qualification saved = qualificationRepository.save(Qualification.create(cat, name, description, sortOrder != null ? sortOrder : 0));
+        QualificationCategory cat = resolveQualificationCategory(categoryId);
+        Qualification saved = qualificationRepository.save(Qualification.create(cat, name, description, resolveSortOrder(sortOrder)));
         log.info("Qualification created: id={}", saved.getId());
         return saved;
     }
@@ -235,15 +260,15 @@ public class MasterService {
     @Transactional
     public Qualification updateQualification(int id, Integer categoryId, String name,
                                               String description, Integer sortOrder, Boolean active) {
-        Qualification q = qualificationRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        QualificationCategory cat = categoryId != null
-                ? qualificationCategoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません"))
-                : null;
+        Optional<Qualification> qOptional = qualificationRepository.findById(id);
+        if (qOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        Qualification q = qOptional.get();
+        QualificationCategory cat = resolveQualificationCategory(categoryId);
         q.update(cat, name, description,
-                sortOrder != null ? sortOrder : q.getSortOrder(),
-                active != null ? active : q.isActive());
+                resolveOrDefault(sortOrder, q.getSortOrder()),
+                resolveOrDefault(active, q.isActive()));
         Qualification saved = qualificationRepository.save(q);
         log.info("Qualification updated: id={}", id);
         return saved;
@@ -253,7 +278,7 @@ public class MasterService {
     @Transactional
     public QualificationCategory createQualificationCategory(String name, Integer sortOrder) {
         QualificationCategory saved = qualificationCategoryRepository.save(
-                QualificationCategory.create(name, sortOrder != null ? sortOrder : 0));
+                QualificationCategory.create(name, resolveSortOrder(sortOrder)));
         log.info("QualificationCategory created: id={}", saved.getId());
         return saved;
     }
@@ -261,9 +286,12 @@ public class MasterService {
     /** 資格分類を更新する。sortOrder・active が null の場合は現在の値を維持する。 */
     @Transactional
     public QualificationCategory updateQualificationCategory(int id, String name, Integer sortOrder, Boolean active) {
-        QualificationCategory c = qualificationCategoryRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        c.update(name, sortOrder != null ? sortOrder : c.getSortOrder(), active != null ? active : c.isActive());
+        Optional<QualificationCategory> cOptional = qualificationCategoryRepository.findById(id);
+        if (cOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        QualificationCategory c = cOptional.get();
+        c.update(name, resolveOrDefault(sortOrder, c.getSortOrder()), resolveOrDefault(active, c.isActive()));
         QualificationCategory saved = qualificationCategoryRepository.save(c);
         log.info("QualificationCategory updated: id={}", id);
         return saved;
@@ -275,11 +303,8 @@ public class MasterService {
      */
     @Transactional
     public AdSeminar createAdSeminar(Integer categoryId, String name, String description, Integer sortOrder) {
-        AdSeminarCategory cat = categoryId != null
-                ? adSeminarCategoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません"))
-                : null;
-        AdSeminar saved = adSeminarRepository.save(AdSeminar.create(cat, name, description, sortOrder != null ? sortOrder : 0));
+        AdSeminarCategory cat = resolveAdSeminarCategory(categoryId);
+        AdSeminar saved = adSeminarRepository.save(AdSeminar.create(cat, name, description, resolveSortOrder(sortOrder)));
         log.info("AdSeminar created: id={}", saved.getId());
         return saved;
     }
@@ -288,15 +313,15 @@ public class MasterService {
     @Transactional
     public AdSeminar updateAdSeminar(int id, Integer categoryId, String name,
                                       String description, Integer sortOrder, Boolean active) {
-        AdSeminar a = adSeminarRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        AdSeminarCategory cat = categoryId != null
-                ? adSeminarCategoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません"))
-                : null;
+        Optional<AdSeminar> aOptional = adSeminarRepository.findById(id);
+        if (aOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        AdSeminar a = aOptional.get();
+        AdSeminarCategory cat = resolveAdSeminarCategory(categoryId);
         a.update(cat, name, description,
-                sortOrder != null ? sortOrder : a.getSortOrder(),
-                active != null ? active : a.isActive());
+                resolveOrDefault(sortOrder, a.getSortOrder()),
+                resolveOrDefault(active, a.isActive()));
         AdSeminar saved = adSeminarRepository.save(a);
         log.info("AdSeminar updated: id={}", id);
         return saved;
@@ -306,7 +331,7 @@ public class MasterService {
     @Transactional
     public AdSeminarCategory createAdSeminarCategory(String name, Integer sortOrder) {
         AdSeminarCategory saved = adSeminarCategoryRepository.save(
-                AdSeminarCategory.create(name, sortOrder != null ? sortOrder : 0));
+                AdSeminarCategory.create(name, resolveSortOrder(sortOrder)));
         log.info("AdSeminarCategory created: id={}", saved.getId());
         return saved;
     }
@@ -314,9 +339,12 @@ public class MasterService {
     /** ADセミナー分類を更新する。sortOrder・active が null の場合は現在の値を維持する。 */
     @Transactional
     public AdSeminarCategory updateAdSeminarCategory(int id, String name, Integer sortOrder, Boolean active) {
-        AdSeminarCategory c = adSeminarCategoryRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        c.update(name, sortOrder != null ? sortOrder : c.getSortOrder(), active != null ? active : c.isActive());
+        Optional<AdSeminarCategory> cOptional = adSeminarCategoryRepository.findById(id);
+        if (cOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        }
+        AdSeminarCategory c = cOptional.get();
+        c.update(name, resolveOrDefault(sortOrder, c.getSortOrder()), resolveOrDefault(active, c.isActive()));
         AdSeminarCategory saved = adSeminarCategoryRepository.save(c);
         log.info("AdSeminarCategory updated: id={}", id);
         return saved;
@@ -333,10 +361,9 @@ public class MasterService {
      */
     @Transactional
     public ItSkill promoteItSkill(String customName, int categoryId, String name, String description, Integer sortOrder) {
-        ItSkillCategory category = itSkillCategoryRepository.findById(categoryId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "分類が見つかりません"));
+        ItSkillCategory category = resolveItSkillCategory(categoryId);
         ItSkill skill = itSkillRepository.save(
-                ItSkill.create(category, name, description, sortOrder != null ? sortOrder : 0));
+                ItSkill.create(category, name, description, resolveSortOrder(sortOrder)));
         itSkillDetailRepository.linkToMasterSkill(customName, skill);
         log.info("ItSkill promoted: customName={} newId={}", customName, skill.getId());
         return skill;
@@ -353,14 +380,65 @@ public class MasterService {
      */
     @Transactional
     public Qualification promoteQualification(String customName, Integer categoryId, String name, String description, Integer sortOrder) {
-        QualificationCategory cat = categoryId != null
-                ? qualificationCategoryRepository.findById(categoryId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません"))
-                : null;
+        QualificationCategory cat = resolveQualificationCategory(categoryId);
         Qualification q = qualificationRepository.save(
-                Qualification.create(cat, name, description, sortOrder != null ? sortOrder : 0));
+                Qualification.create(cat, name, description, resolveSortOrder(sortOrder)));
         qualificationDetailRepository.linkToMasterQualification(customName, q);
         log.info("Qualification promoted: customName={} newId={}", customName, q.getId());
         return q;
+    }
+
+    /** ITスキル分類をIDで解決する。存在しない場合は 400 をスローする。 */
+    private ItSkillCategory resolveItSkillCategory(int categoryId) {
+        Optional<ItSkillCategory> categoryOptional = itSkillCategoryRepository.findById(categoryId);
+        if (categoryOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "分類が見つかりません");
+        }
+        return categoryOptional.get();
+    }
+
+    /** 資格分類をIDで解決する。categoryId が null の場合は分類なし（null）を返す。存在しない場合は 400 をスローする。 */
+    private QualificationCategory resolveQualificationCategory(Integer categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        Optional<QualificationCategory> categoryOptional = qualificationCategoryRepository.findById(categoryId);
+        if (categoryOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません");
+        }
+        return categoryOptional.get();
+    }
+
+    /** ADセミナー分類をIDで解決する。categoryId が null の場合は分類なし（null）を返す。存在しない場合は 400 をスローする。 */
+    private AdSeminarCategory resolveAdSeminarCategory(Integer categoryId) {
+        if (categoryId == null) {
+            return null;
+        }
+        Optional<AdSeminarCategory> categoryOptional = adSeminarCategoryRepository.findById(categoryId);
+        if (categoryOptional.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "カテゴリが見つかりません");
+        }
+        return categoryOptional.get();
+    }
+
+    /** sortOrder が未指定（null）の場合は 0 を返す。 */
+    private int resolveSortOrder(Integer sortOrder) {
+        return resolveOrDefault(sortOrder, 0);
+    }
+
+    /** 値が null でなければその値を、null なら defaultValue を返す（部分更新パターンの共通処理）。 */
+    private int resolveOrDefault(Integer value, int defaultValue) {
+        if (value != null) {
+            return value;
+        }
+        return defaultValue;
+    }
+
+    /** 値が null でなければその値を、null なら defaultValue を返す（部分更新パターンの共通処理）。 */
+    private boolean resolveOrDefault(Boolean value, boolean defaultValue) {
+        if (value != null) {
+            return value;
+        }
+        return defaultValue;
     }
 }

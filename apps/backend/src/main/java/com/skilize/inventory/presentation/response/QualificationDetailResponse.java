@@ -39,13 +39,25 @@ public record QualificationDetailResponse(int id, Integer qualificationId, Strin
      * @return 資格明細レスポンス
      */
     public static QualificationDetailResponse from(QualificationDetail d) {
+        Integer qualificationId = null;
+        String qualificationName = null;
+        String qualificationCategoryName = null;
+        if (d.getQualification() != null) {
+            qualificationId = d.getQualification().getId();
+            qualificationName = d.getQualification().getName();
+            if (d.getQualification().getCategory() != null) {
+                qualificationCategoryName = d.getQualification().getCategory().getName();
+            }
+        }
+        String acquiredYearMonth = null;
+        if (d.getAcquiredYearMonth() != null) {
+            acquiredYearMonth = d.getAcquiredYearMonth().toString();
+        }
         return new QualificationDetailResponse(d.getId(),
-                d.getQualification() != null ? d.getQualification().getId() : null,
-                d.getQualification() != null ? d.getQualification().getName() : null,
-                d.getQualification() != null && d.getQualification().getCategory() != null
-                        ? d.getQualification().getCategory().getName() : null,
+                qualificationId, qualificationName,
+                qualificationCategoryName,
                 d.getCustomQualificationName(),
-                d.getAcquiredYearMonth() != null ? d.getAcquiredYearMonth().toString() : null,
+                acquiredYearMonth,
                 d.getRemarks());
     }
 }

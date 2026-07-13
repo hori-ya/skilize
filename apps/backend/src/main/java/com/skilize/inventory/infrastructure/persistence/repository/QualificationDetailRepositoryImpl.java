@@ -24,6 +24,7 @@ import com.skilize.master.infrastructure.persistence.repository.QualificationJpa
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /** domain.repository.QualificationDetailRepository の実装。 */
@@ -38,19 +39,30 @@ public class QualificationDetailRepositoryImpl implements QualificationDetailRep
 
     @Override
     public List<QualificationDetail> saveAll(List<QualificationDetail> details) {
-        List<QualificationDetailEntity> entities = details.stream().map(detail -> {
-            QualificationEntity qualificationEntity = detail.getQualification() != null
-                    ? qualificationJpaRepository.getReferenceById(detail.getQualification().getId()) : null;
-            return QualificationDetailEntity.create(inventoryJpaRepository.getReferenceById(detail.getInventoryId()),
+        List<QualificationDetailEntity> entities = new ArrayList<>();
+        for (QualificationDetail detail : details) {
+            QualificationEntity qualificationEntity = null;
+            if (detail.getQualification() != null) {
+                qualificationEntity = qualificationJpaRepository.getReferenceById(detail.getQualification().getId());
+            }
+            entities.add(QualificationDetailEntity.create(inventoryJpaRepository.getReferenceById(detail.getInventoryId()),
                     qualificationEntity, detail.getCustomQualificationName(),
-                    detail.getAcquiredYearMonth(), detail.getRemarks());
-        }).toList();
-        return jpaRepository.saveAll(entities).stream().map(mapper::toDomain).toList();
+                    detail.getAcquiredYearMonth(), detail.getRemarks()));
+        }
+        List<QualificationDetail> saved = new ArrayList<>();
+        for (QualificationDetailEntity entity : jpaRepository.saveAll(entities)) {
+            saved.add(mapper.toDomain(entity));
+        }
+        return saved;
     }
 
     @Override
     public List<QualificationDetail> findByInventoryId(int inventoryId) {
-        return jpaRepository.findByInventoryId(inventoryId).stream().map(mapper::toDomain).toList();
+        List<QualificationDetail> details = new ArrayList<>();
+        for (QualificationDetailEntity entity : jpaRepository.findByInventoryId(inventoryId)) {
+            details.add(mapper.toDomain(entity));
+        }
+        return details;
     }
 
     @Override

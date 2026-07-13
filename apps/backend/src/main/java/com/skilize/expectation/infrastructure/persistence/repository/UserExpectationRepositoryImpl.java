@@ -35,14 +35,22 @@ public class UserExpectationRepositoryImpl implements UserExpectationRepository 
 
     @Override
     public Optional<UserExpectation> findByUserId(Integer userId) {
-        return jpaRepository.findByUserId(userId).map(mapper::toDomain);
+        Optional<UserExpectationEntity> entityOptional = jpaRepository.findByUserId(userId);
+        if (entityOptional.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(mapper.toDomain(entityOptional.get()));
     }
 
     @Override
     public UserExpectation save(UserExpectation expectation) {
-        UserExpectationEntity entity = jpaRepository.findByUserId(expectation.getUser().getId())
-                .orElseGet(() -> UserExpectationEntity.create(
-                        userJpaRepository.getReferenceById(expectation.getUser().getId())));
+        Optional<UserExpectationEntity> entityOptional = jpaRepository.findByUserId(expectation.getUser().getId());
+        UserExpectationEntity entity;
+        if (entityOptional.isPresent()) {
+            entity = entityOptional.get();
+        } else {
+            entity = UserExpectationEntity.create(userJpaRepository.getReferenceById(expectation.getUser().getId()));
+        }
         entity.applyState(expectation.getTlExpectation(), expectation.getCompanyExpectation(),
                 expectation.getTlUpdatedAt(), expectation.getCompanyUpdatedAt());
         return mapper.toDomain(jpaRepository.save(entity));
