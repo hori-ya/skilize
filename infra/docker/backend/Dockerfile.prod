@@ -44,7 +44,9 @@ RUN groupadd -r appgroup && useradd -r -g appgroup appuser
 RUN mkdir -p /var/log/skilize && chown appuser:appgroup /var/log/skilize
 
 COPY --from=builder /app/build/libs/*.jar app.jar
-RUN chown appuser:appgroup app.jar
+# JasperReports が実行時に帳票コンパイルの中間ファイルを CWD（/app）へ書き込むため、
+# ディレクトリ自体の所有権も appuser に変更する（app.jar のみでは書き込み権限が付与されない）
+RUN chown -R appuser:appgroup /app
 
 USER appuser
 EXPOSE 8080
