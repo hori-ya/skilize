@@ -123,12 +123,20 @@ export default function FiscalYearMasterPage() {
   };
 
   const openEdit = (fy: FiscalYear) => {
+    let inputStartDate = '';
+    if (fy.inputStartDate != null) {
+      inputStartDate = fy.inputStartDate;
+    }
+    let inputEndDate = '';
+    if (fy.inputEndDate != null) {
+      inputEndDate = fy.inputEndDate;
+    }
     setForm({
       name: fy.name,
       startDate: fy.startDate,
       endDate: fy.endDate,
-      inputStartDate: fy.inputStartDate ?? '',
-      inputEndDate: fy.inputEndDate ?? '',
+      inputStartDate,
+      inputEndDate,
       active: fy.isActive,
     });
     setFormError('');
@@ -136,6 +144,21 @@ export default function FiscalYearMasterPage() {
     setEditingId(fy.id);
     setModalOpen(true);
   };
+
+  /** 年度一覧を開始日の降順（新しい年度が先頭）に並べ替える。 */
+  function sortByStartDateDesc(list: FiscalYear[]): FiscalYear[] {
+    const result = [...list];
+    for (let i = 0; i < result.length; i++) {
+      for (let j = 0; j < result.length - i - 1; j++) {
+        if (result[j].startDate.localeCompare(result[j + 1].startDate) < 0) {
+          const temp = result[j];
+          result[j] = result[j + 1];
+          result[j + 1] = temp;
+        }
+      }
+    }
+    return result;
+  }
 
   const handleSubmit = async () => {
     if (!form.name || !form.startDate || !form.endDate) {
@@ -161,26 +184,92 @@ export default function FiscalYearMasterPage() {
 
       if (modalMode === 'create') {
         const res = await createFiscalYear(payload);
-        setFiscalYears(prev =>
-          [...prev, res.data].sort((a, b) => b.startDate.localeCompare(a.startDate))
-        );
+        setFiscalYears(prev => sortByStartDateDesc([...prev, res.data]));
       } else {
         const res = await updateFiscalYear(editingId!, payload);
-        setFiscalYears(prev =>
-          prev.map(f => (f.id === editingId ? res.data : f))
-            .sort((a, b) => b.startDate.localeCompare(a.startDate))
-        );
+        setFiscalYears(prev => {
+          const updated: FiscalYear[] = [];
+          for (const f of prev) {
+            if (f.id === editingId) {
+              updated.push(res.data);
+            } else {
+              updated.push(f);
+            }
+          }
+          return sortByStartDateDesc(updated);
+        });
       }
       setModalOpen(false);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setFormError(msg ?? t('common.saveFailed'));
+      const err = e as { response?: { data?: { message?: string } } };
+      let msg: string | undefined;
+      if (err.response != null && err.response.data != null && err.response.data.message != null) {
+        msg = err.response.data.message;
+      }
+      if (msg != null) {
+        setFormError(msg);
+      } else {
+        setFormError(t('common.saveFailed'));
+      }
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
+
+  const monthOptions: React.ReactNode[] = [];
+  for (let m = 1; m <= 12; m++) {
+    monthOptions.push(<option key={m} value={m}>{t('fiscalYear.month', { n: m })}</option>);
+  }
+
+  let fiscalYearRows: React.ReactNode;
+  if (fiscalYears.length === 0) {
+    fiscalYearRows = (
+      <tr>
+        <td colSpan={7} className="master-table__empty">{t('fiscalYear.emptyData')}</td>
+      </tr>
+    );
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const fy of fiscalYears) {
+      const sKey = fiscalYearStatusKey(fy);
+      let inputStartDateLabel = '—';
+      if (fy.inputStartDate != null) {
+        inputStartDateLabel = fy.inputStartDate;
+      }
+      let inputEndDateLabel = '—';
+      if (fy.inputEndDate != null) {
+        inputEndDateLabel = fy.inputEndDate;
+      }
+      rows.push(
+        <tr key={fy.id}>
+          <td>{fy.name}</td>
+          <td>{fy.startDate}</td>
+          <td>{fy.endDate}</td>
+          <td>{inputStartDateLabel}</td>
+          <td>{inputEndDateLabel}</td>
+          <td><span className={STATUS_CLASS[sKey]}>{t(`fiscalYear.status.${sKey}`)}</span></td>
+          <td>
+            <button className="btn btn--secondary btn--sm" onClick={() => openEdit(fy)}>
+              <IconEdit size={12} />{t('common.edit')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    fiscalYearRows = rows;
+  }
+
+  let modalTitle = t('fiscalYear.modalEdit');
+  if (modalMode === 'create') {
+    modalTitle = t('fiscalYear.modalCreate');
+  }
+
+  let saveButtonLabel = t('common.save');
+  if (saving) {
+    saveButtonLabel = t('common.saving');
+  }
 
   return (
     <div className="master-page">
@@ -199,9 +288,7 @@ export default function FiscalYearMasterPage() {
               value={startMonth}
               onChange={e => setStartMonth(Number(e.target.value))}
             >
-              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
-                <option key={m} value={m}>{t('fiscalYear.month', { n: m })}</option>
-              ))}
+              {monthOptions}
             </select>
             <button className="btn btn--primary btn--sm" onClick={handleSaveSettings}>
               <IconCheck size={12} />{t('common.save')}
@@ -238,30 +325,7 @@ export default function FiscalYearMasterPage() {
                 </tr>
               </thead>
               <tbody>
-                {fiscalYears.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="master-table__empty">{t('fiscalYear.emptyData')}</td>
-                  </tr>
-                ) : (
-                  fiscalYears.map(fy => {
-                    const sKey = fiscalYearStatusKey(fy);
-                    return (
-                      <tr key={fy.id}>
-                        <td>{fy.name}</td>
-                        <td>{fy.startDate}</td>
-                        <td>{fy.endDate}</td>
-                        <td>{fy.inputStartDate ?? '—'}</td>
-                        <td>{fy.inputEndDate ?? '—'}</td>
-                        <td><span className={STATUS_CLASS[sKey]}>{t(`fiscalYear.status.${sKey}`)}</span></td>
-                        <td>
-                          <button className="btn btn--secondary btn--sm" onClick={() => openEdit(fy)}>
-                            <IconEdit size={12} />{t('common.edit')}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                {fiscalYearRows}
               </tbody>
             </table>
           </StickyHorizontalScroll>
@@ -273,7 +337,7 @@ export default function FiscalYearMasterPage() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{modalMode === 'create' ? t('fiscalYear.modalCreate') : t('fiscalYear.modalEdit')}</h3>
+              <h3>{modalTitle}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -350,7 +414,7 @@ export default function FiscalYearMasterPage() {
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
+                <IconCheck size={13} />{saveButtonLabel}
               </button>
             </div>
           </div>

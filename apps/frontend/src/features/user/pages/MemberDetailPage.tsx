@@ -14,8 +14,9 @@
  * ---------------------------------------------------------------------------
  * Copyright (C) 2026 Skilize Project. All Rights Reserved.
  *******************************************************************************/
-import { useEffect, useRef, useState, useMemo, Fragment } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import type { AxiosResponse } from 'axios';
 import { getMemberInventories } from '../api/userApi';
 import { getExpectations, saveTlExpectation, saveCompanyExpectation } from '../../expectation/api/expectationApi';
 import { getMemberAiAnalyses } from '../../ai/api/aiAnalysisApi';
@@ -29,7 +30,7 @@ import type { FiscalYear } from '../../../shared/types/master';
 import { getInterview, saveInterview, getPrevYearInterview } from '../../interview/api/interviewApi';
 import type {
   InventorySummary, ItSkillDetailItem, QualificationDetailItem,
-  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem,
+  SeminarDetailItem, GoalItem, ComparisonResponse, GoalReviewItem, GoalReviewResponse,
 } from '../../inventory/types/index';
 import type { AiAnalysis } from '../../ai/types/index';
 import type { ItSkill } from '../../../shared/types/master';
@@ -86,6 +87,104 @@ function buildNoteKey(detailType: DetailType, detailId: number): string {
   return `${detailType}|${detailId}`;
 }
 
+/** 文字列配列を昇順（localeCompare）にソートする（配列の内容は変更しない）。 */
+function sortStringsAsc(values: string[]): string[] {
+  const result = [...values];
+  for (let i = 0; i < result.length; i++) {
+    for (let j = 0; j < result.length - i - 1; j++) {
+      if (result[j].localeCompare(result[j + 1]) > 0) {
+        const temp = result[j];
+        result[j] = result[j + 1];
+        result[j + 1] = temp;
+      }
+    }
+  }
+  return result;
+}
+
+/** 年度IDの文字列表現が一致する年度を検索する。 */
+function findFiscalYearById(fiscalYears: FiscalYear[], idStr: string): FiscalYear | undefined {
+  for (const f of fiscalYears) {
+    if (String(f.id) === idStr) {
+      return f;
+    }
+  }
+  return undefined;
+}
+
+/** 目標リストを検索語・カテゴリで絞り込む（目標一覧・前年度目標一覧の両方で使用）。 */
+function filterGoalsList(goalsList: GoalItem[], searchLower: string, categoryFilter: string): GoalItem[] {
+  const result: GoalItem[] = [];
+  for (const g of goalsList) {
+    if (categoryFilter && g.goalCategory !== categoryFilter) continue;
+    if (searchLower) {
+      let name = '';
+      if (g.itSkillName != null) {
+        name = g.itSkillName;
+      } else if (g.qualificationName != null) {
+        name = g.qualificationName;
+      } else if (g.adSeminarName != null) {
+        name = g.adSeminarName;
+      } else if (g.customName != null) {
+        name = g.customName;
+      }
+      if (!name.toLowerCase().includes(searchLower)) continue;
+    }
+    result.push(g);
+  }
+  return result;
+}
+
+/** ITスキル明細に対応するマスタ情報を解決する（未紐付けの場合は undefined）。 */
+function resolveItSkillMaster(detail: ItSkillDetailItem, skillMap: Map<number, ItSkill>): ItSkill | undefined {
+  let itSkillId = -1;
+  if (detail.itSkillId != null) {
+    itSkillId = detail.itSkillId;
+  }
+  return skillMap.get(itSkillId);
+}
+
+/** ITスキル明細の並び順を比較する（大分類表示順 → 中分類名 → スキル表示順）。 */
+function compareItSkillDetails(a: ItSkillDetailItem, b: ItSkillDetailItem, skillMap: Map<number, ItSkill>): number {
+  const ma = resolveItSkillMaster(a, skillMap);
+  const mb = resolveItSkillMaster(b, skillMap);
+
+  let aSortOrder1 = 0;
+  if (ma != null) {
+    aSortOrder1 = ma.category1SortOrder;
+  }
+  let bSortOrder1 = 0;
+  if (mb != null) {
+    bSortOrder1 = mb.category1SortOrder;
+  }
+  if (aSortOrder1 !== bSortOrder1) {
+    return aSortOrder1 - bSortOrder1;
+  }
+
+  let aCat2 = '';
+  if (ma != null && ma.category2Name != null) {
+    aCat2 = ma.category2Name;
+  }
+  let bCat2 = '';
+  if (mb != null && mb.category2Name != null) {
+    bCat2 = mb.category2Name;
+  }
+  const cat2Compare = aCat2.localeCompare(bCat2);
+  if (cat2Compare !== 0) {
+    return cat2Compare;
+  }
+
+  let aSortOrder = 0;
+  if (ma != null) {
+    aSortOrder = ma.sortOrder;
+  }
+  let bSortOrder = 0;
+  if (mb != null) {
+    bSortOrder = mb.sortOrder;
+  }
+  return aSortOrder - bSortOrder;
+}
+
 /**
  * メンバー詳細ページ。
  *
@@ -100,10 +199,21 @@ export default function MemberDetailPage() {
   const { user } = useAuth();
   const { t } = useTranslation('user');
   const userIdNum = Number(userId);
-  const backPath: string = (location.state as { from?: string } | null)?.from ?? '/team';
-  const backLabel: string = (location.state as { fromLabel?: string } | null)?.fromLabel ?? t('memberDetail.defaultBackLabel');
 
-  const isTlOrAdmin = user?.role === 'TL' || user?.role === 'ADMIN';
+  const locationState = location.state as { from?: string; fromLabel?: string } | null;
+  let backPath = '/team';
+  if (locationState != null && locationState.from != null) {
+    backPath = locationState.from;
+  }
+  let backLabel = t('memberDetail.defaultBackLabel');
+  if (locationState != null && locationState.fromLabel != null) {
+    backLabel = locationState.fromLabel;
+  }
+
+  let isTlOrAdmin = false;
+  if (user != null && (user.role === 'TL' || user.role === 'ADMIN')) {
+    isTlOrAdmin = true;
+  }
 
   const TAB_LABELS: Record<TabKey, string> = {
     'it-skills': t('memberDetail.tab.itSkills'),
@@ -277,16 +387,47 @@ export default function MemberDetailPage() {
     if (!selectedId) return;
     setLoading(true);
 
-    const selectedIndex = inventories.findIndex(inv => inv.id === selectedId);
-    const nextInventoryId = selectedIndex > 0 ? inventories[selectedIndex - 1].id : null;
-    const prevInventoryId = selectedIndex < inventories.length - 1 ? inventories[selectedIndex + 1].id : null;
+    let selectedIndex = -1;
+    for (let i = 0; i < inventories.length; i++) {
+      if (inventories[i].id === selectedId) {
+        selectedIndex = i;
+        break;
+      }
+    }
+    let nextInventoryId: number | null = null;
+    if (selectedIndex > 0) {
+      nextInventoryId = inventories[selectedIndex - 1].id;
+    }
+    let prevInventoryId: number | null = null;
+    if (selectedIndex < inventories.length - 1) {
+      prevInventoryId = inventories[selectedIndex + 1].id;
+    }
 
-    const interviewPromise = isTlOrAdmin
-      ? getInterview(selectedId).catch(() => null)
-      : Promise.resolve(null);
-    const prevYearInterviewPromise = isTlOrAdmin
-      ? getPrevYearInterview(selectedId).catch(() => null)
-      : Promise.resolve(null);
+    let interviewPromise: Promise<AxiosResponse<InterviewMemo> | null>;
+    if (isTlOrAdmin) {
+      interviewPromise = getInterview(selectedId).catch(() => null);
+    } else {
+      interviewPromise = Promise.resolve(null);
+    }
+    let prevYearInterviewPromise: Promise<AxiosResponse<InterviewMemo> | null>;
+    if (isTlOrAdmin) {
+      prevYearInterviewPromise = getPrevYearInterview(selectedId).catch(() => null);
+    } else {
+      prevYearInterviewPromise = Promise.resolve(null);
+    }
+
+    let goalReviewPromise: Promise<AxiosResponse<GoalReviewResponse> | null> = Promise.resolve(null);
+    if (nextInventoryId) {
+      goalReviewPromise = getGoalReview(nextInventoryId).catch(() => null);
+    }
+    let prevGoalsPromise: Promise<AxiosResponse<{ items: GoalItem[] }> | null> = Promise.resolve(null);
+    if (prevInventoryId) {
+      prevGoalsPromise = getGoals(prevInventoryId).catch(() => null);
+    }
+    let prevReviewPromise: Promise<AxiosResponse<GoalReviewResponse> | null> = Promise.resolve(null);
+    if (prevInventoryId) {
+      prevReviewPromise = getGoalReview(selectedId).catch(() => null);
+    }
 
     Promise.all([
       getItSkillDetails(selectedId),
@@ -295,9 +436,9 @@ export default function MemberDetailPage() {
       getSeminarDetails(selectedId),
       getGoals(selectedId),
       getComparison(selectedId).catch(() => null),
-      nextInventoryId ? getGoalReview(nextInventoryId).catch(() => null) : Promise.resolve(null),
-      prevInventoryId ? getGoals(prevInventoryId).catch(() => null) : Promise.resolve(null),
-      prevInventoryId ? getGoalReview(selectedId).catch(() => null) : Promise.resolve(null),
+      goalReviewPromise,
+      prevGoalsPromise,
+      prevReviewPromise,
       interviewPromise,
       prevYearInterviewPromise,
     ]).then(([itRes, masterRes, qualRes, semRes, goalRes, compRes, reviewRes, prevGoalsRes, prevReviewRes, interviewRes, prevYearRes]) => {
@@ -306,29 +447,44 @@ export default function MemberDetailPage() {
       setQualificationDetails(qualRes.data.items);
       setSeminarDetails(semRes.data.items);
       setGoals(goalRes.data.items);
-      setComparison(compRes?.data ?? null);
+      let comparisonValue: ComparisonResponse | null = null;
+      if (compRes != null) {
+        comparisonValue = compRes.data;
+      }
+      setComparison(comparisonValue);
 
       const reviewMap = new Map<number, GoalReviewItem>();
-      if (reviewRes?.data?.items) {
+      if (reviewRes != null) {
         for (const item of reviewRes.data.items) {
           reviewMap.set(item.prevGoalId, item);
         }
       }
       setGoalReviewMap(reviewMap);
 
-      setPrevGoals(prevGoalsRes?.data?.items ?? []);
+      let prevGoalsValue: GoalItem[] = [];
+      if (prevGoalsRes != null) {
+        prevGoalsValue = prevGoalsRes.data.items;
+      }
+      setPrevGoals(prevGoalsValue);
 
       const prevRevMap = new Map<number, GoalReviewItem>();
-      if (prevReviewRes?.data?.items) {
+      if (prevReviewRes != null) {
         for (const item of prevReviewRes.data.items) {
           prevRevMap.set(item.prevGoalId, item);
         }
       }
       setPrevGoalReviewMap(prevRevMap);
 
-      const memo = interviewRes?.data ?? null;
+      let memo: InterviewMemo | null = null;
+      if (interviewRes != null) {
+        memo = interviewRes.data;
+      }
       setInterview(memo);
-      setGeneralNote(memo?.generalNote ?? '');
+      let generalNoteValue = '';
+      if (memo != null && memo.generalNote != null) {
+        generalNoteValue = memo.generalNote;
+      }
+      setGeneralNote(generalNoteValue);
       const noteMap = new Map<string, string>();
       if (memo) {
         for (const n of memo.detailNotes) {
@@ -338,7 +494,11 @@ export default function MemberDetailPage() {
       setDetailNotes(noteMap);
       setSaveError(null);
 
-      setPrevYearInterview(prevYearRes?.data ?? null);
+      let prevYearMemo: InterviewMemo | null = null;
+      if (prevYearRes != null) {
+        prevYearMemo = prevYearRes.data;
+      }
+      setPrevYearInterview(prevYearMemo);
     }).finally(() => setLoading(false));
   }, [selectedId, inventories, isTlOrAdmin]);
 
@@ -358,8 +518,16 @@ export default function MemberDetailPage() {
     getExpectations(userIdNum)
       .then(res => {
         setExpectation(res.data);
-        setEditTl(res.data.tlExpectation ?? '');
-        setEditCompany(res.data.companyExpectation ?? '');
+        let tlExp = '';
+        if (res.data.tlExpectation != null) {
+          tlExp = res.data.tlExpectation;
+        }
+        setEditTl(tlExp);
+        let companyExp = '';
+        if (res.data.companyExpectation != null) {
+          companyExp = res.data.companyExpectation;
+        }
+        setEditCompany(companyExp);
       })
       .catch(() => {
         setExpectation({ tlExpectation: null, companyExpectation: null });
@@ -419,25 +587,39 @@ export default function MemberDetailPage() {
   }
 
   const itSkillTree = useMemo(() => {
-    const skillMap = new Map(itSkillMaster.map(s => [s.id, s]));
+    const skillMap = new Map<number, ItSkill>();
+    for (const s of itSkillMaster) {
+      skillMap.set(s.id, s);
+    }
     const map = new Map<string, Map<string, ItSkillDetailItem[]>>();
     const customItems: ItSkillDetailItem[] = [];
 
-    const sortedDetails = [...itSkillDetails].sort((a, b) => {
-      const ma = skillMap.get(a.itSkillId ?? -1);
-      const mb = skillMap.get(b.itSkillId ?? -1);
-      return (ma?.category1SortOrder ?? 0) - (mb?.category1SortOrder ?? 0) ||
-        (ma?.category2Name ?? '').localeCompare(mb?.category2Name ?? '') ||
-        (ma?.sortOrder ?? 0) - (mb?.sortOrder ?? 0);
-    });
+    const sortedDetails = [...itSkillDetails];
+    for (let i = 0; i < sortedDetails.length; i++) {
+      for (let j = 0; j < sortedDetails.length - i - 1; j++) {
+        if (compareItSkillDetails(sortedDetails[j], sortedDetails[j + 1], skillMap) > 0) {
+          const temp = sortedDetails[j];
+          sortedDetails[j] = sortedDetails[j + 1];
+          sortedDetails[j + 1] = temp;
+        }
+      }
+    }
 
     for (const detail of sortedDetails) {
       if (detail.itSkillId === null) {
         customItems.push(detail);
       } else {
         const master = skillMap.get(detail.itSkillId);
-        const cat1 = master?.category1Name ?? '未分類';
-        const cat2 = master?.category2Name ?? '';
+        let cat1 = '未分類';
+        let cat2 = '';
+        if (master != null) {
+          if (master.category1Name != null) {
+            cat1 = master.category1Name;
+          }
+          if (master.category2Name != null) {
+            cat2 = master.category2Name;
+          }
+        }
         if (!map.has(cat1)) map.set(cat1, new Map());
         const cat2Map = map.get(cat1)!;
         if (!cat2Map.has(cat2)) cat2Map.set(cat2, []);
@@ -445,17 +627,26 @@ export default function MemberDetailPage() {
       }
     }
 
-    const groups = Array.from(map.entries()).map(([cat1, cat2Map]) => ({
-      cat1,
-      cat2Groups: Array.from(cat2Map.entries()).map(([cat2, items]) => ({ cat2, items })),
-    }));
+    const groups: { cat1: string; cat2Groups: { cat2: string; items: ItSkillDetailItem[] }[] }[] = [];
+    for (const [cat1, cat2Map] of map.entries()) {
+      const cat2Groups: { cat2: string; items: ItSkillDetailItem[] }[] = [];
+      for (const [cat2, items] of cat2Map.entries()) {
+        cat2Groups.push({ cat2, items });
+      }
+      groups.push({ cat1, cat2Groups });
+    }
 
     return { groups, customItems };
   }, [itSkillDetails, itSkillMaster]);
 
   const comparisonMap = useMemo(() => {
-    if (!comparison) return new Map<number, { prevLevelValue: number | null; diff: number | null }>();
-    return new Map(comparison.items.map(item => [item.currentDetailId, item]));
+    const map = new Map<number, { prevLevelValue: number | null; diff: number | null }>();
+    if (comparison != null) {
+      for (const item of comparison.items) {
+        map.set(item.currentDetailId, item);
+      }
+    }
+    return map;
   }, [comparison]);
 
   const prevYearNoteMap = useMemo(() => {
@@ -468,13 +659,28 @@ export default function MemberDetailPage() {
     return m;
   }, [prevYearInterview]);
 
-  const hasPrevYear = comparison?.hasPrevYear ?? false;
-  const itSkillColCount = 3 + (hasPrevYear ? 2 : 0) + (isTlOrAdmin ? 1 : 0);
+  let hasPrevYear = false;
+  if (comparison != null) {
+    hasPrevYear = comparison.hasPrevYear;
+  }
+  let itSkillColCount = 3;
+  if (hasPrevYear) {
+    itSkillColCount += 2;
+  }
+  if (isTlOrAdmin) {
+    itSkillColCount += 1;
+  }
 
   const itSkillCat2Options = useMemo(() => {
-    const sourceGroups = itSkillCategory1Filter
-      ? itSkillTree.groups.filter(g => g.cat1 === itSkillCategory1Filter)
-      : itSkillTree.groups;
+    let sourceGroups = itSkillTree.groups;
+    if (itSkillCategory1Filter) {
+      sourceGroups = [];
+      for (const g of itSkillTree.groups) {
+        if (g.cat1 === itSkillCategory1Filter) {
+          sourceGroups.push(g);
+        }
+      }
+    }
     const seen = new Set<string>();
     for (const g of sourceGroups) {
       for (const cg of g.cat2Groups) {
@@ -486,36 +692,61 @@ export default function MemberDetailPage() {
 
   const filteredItSkillTree = useMemo(() => {
     const searchLower = itSkillSearch.toLowerCase();
-    const filteredGroups = itSkillTree.groups
-      .filter(g => !itSkillCategory1Filter || g.cat1 === itSkillCategory1Filter)
-      .map(g => ({
-        cat1: g.cat1,
-        cat2Groups: g.cat2Groups
-          .filter(cg => !itSkillCategory2Filter || cg.cat2 === itSkillCategory2Filter)
-          .map(cg => ({
-            cat2: cg.cat2,
-            items: cg.items.filter(item => {
-              if (searchLower && !item.itSkillName?.toLowerCase().includes(searchLower)) return false;
-              if (itSkillDiffFilter) {
-                const comp = comparisonMap.get(item.id);
-                if (itSkillDiffFilter === 'new' && comp !== undefined) return false;
-                if (itSkillDiffFilter === 'up' && (comp === undefined || (comp.diff ?? 0) <= 0)) return false;
-                if (itSkillDiffFilter === 'down' && (comp === undefined || (comp.diff ?? 0) >= 0)) return false;
-              }
-              return true;
-            }),
-          })).filter(cg => cg.items.length > 0),
-      }))
-      .filter(g => g.cat2Groups.length > 0);
-    const filteredCustom = itSkillCategory1Filter === '__custom__'
-      ? itSkillTree.customItems.filter(item =>
-          !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
-        )
-      : (itSkillCategory1Filter || itSkillCategory2Filter || itSkillDiffFilter === 'up' || itSkillDiffFilter === 'down')
-        ? []
-        : itSkillTree.customItems.filter(item =>
-            !searchLower || item.customSkillName?.toLowerCase().includes(searchLower)
-          );
+
+    const filteredGroups: { cat1: string; cat2Groups: { cat2: string; items: ItSkillDetailItem[] }[] }[] = [];
+    for (const g of itSkillTree.groups) {
+      if (itSkillCategory1Filter && g.cat1 !== itSkillCategory1Filter) continue;
+
+      const cat2Groups: { cat2: string; items: ItSkillDetailItem[] }[] = [];
+      for (const cg of g.cat2Groups) {
+        if (itSkillCategory2Filter && cg.cat2 !== itSkillCategory2Filter) continue;
+
+        const items: ItSkillDetailItem[] = [];
+        for (const item of cg.items) {
+          let itSkillName = '';
+          if (item.itSkillName != null) {
+            itSkillName = item.itSkillName;
+          }
+          if (searchLower && !itSkillName.toLowerCase().includes(searchLower)) continue;
+          if (itSkillDiffFilter) {
+            const comp = comparisonMap.get(item.id);
+            if (itSkillDiffFilter === 'new' && comp !== undefined) continue;
+            let compDiff = 0;
+            if (comp != null && comp.diff != null) {
+              compDiff = comp.diff;
+            }
+            if (itSkillDiffFilter === 'up' && (comp === undefined || compDiff <= 0)) continue;
+            if (itSkillDiffFilter === 'down' && (comp === undefined || compDiff >= 0)) continue;
+          }
+          items.push(item);
+        }
+        if (items.length > 0) {
+          cat2Groups.push({ cat2: cg.cat2, items });
+        }
+      }
+      if (cat2Groups.length > 0) {
+        filteredGroups.push({ cat1: g.cat1, cat2Groups });
+      }
+    }
+
+    let showCustom = itSkillCategory1Filter === '__custom__';
+    if (!showCustom && !itSkillCategory1Filter && !itSkillCategory2Filter
+        && itSkillDiffFilter !== 'up' && itSkillDiffFilter !== 'down') {
+      showCustom = true;
+    }
+    const filteredCustom: ItSkillDetailItem[] = [];
+    if (showCustom) {
+      for (const item of itSkillTree.customItems) {
+        let customSkillName = '';
+        if (item.customSkillName != null) {
+          customSkillName = item.customSkillName;
+        }
+        if (!searchLower || customSkillName.toLowerCase().includes(searchLower)) {
+          filteredCustom.push(item);
+        }
+      }
+    }
+
     return { groups: filteredGroups, customItems: filteredCustom };
   }, [itSkillTree, itSkillSearch, itSkillCategory1Filter, itSkillCategory2Filter, itSkillDiffFilter, comparisonMap]);
 
@@ -527,89 +758,105 @@ export default function MemberDetailPage() {
     return count + filteredItSkillTree.customItems.length;
   }, [filteredItSkillTree]);
 
-  const qualCategories = useMemo(() =>
-    [...new Set(qualificationDetails.map(q => q.qualificationCategoryName).filter((c): c is string => c !== null))].sort(),
-    [qualificationDetails]
-  );
+  const qualCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const q of qualificationDetails) {
+      if (q.qualificationCategoryName !== null) {
+        set.add(q.qualificationCategoryName);
+      }
+    }
+    return sortStringsAsc(Array.from(set));
+  }, [qualificationDetails]);
 
-  const seminarAdCategories = useMemo(() =>
-    [...new Set(seminarDetails.filter(s => s.adSeminarId !== null).map(s => s.adSeminarCategoryName).filter((c): c is string => c !== null))].sort(),
-    [seminarDetails]
-  );
+  const seminarAdCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of seminarDetails) {
+      if (s.adSeminarId !== null && s.adSeminarCategoryName !== null) {
+        set.add(s.adSeminarCategoryName);
+      }
+    }
+    return sortStringsAsc(Array.from(set));
+  }, [seminarDetails]);
 
   const filteredQualifications = useMemo(() => {
     const searchLower = qualNameSearch.toLowerCase();
-    return qualificationDetails.filter(q => {
+    const result: QualificationDetailItem[] = [];
+    for (const q of qualificationDetails) {
       if (qualCategoryFilter) {
         if (qualCategoryFilter === '__custom__') {
-          if (q.qualificationId !== null) return false;
+          if (q.qualificationId !== null) continue;
         } else {
-          if (q.qualificationCategoryName !== qualCategoryFilter) return false;
+          if (q.qualificationCategoryName !== qualCategoryFilter) continue;
         }
       }
       if (searchLower) {
-        const name = (q.qualificationName ?? q.customQualificationName ?? '').toLowerCase();
-        if (!name.includes(searchLower)) return false;
+        let name = '';
+        if (q.qualificationName != null) {
+          name = q.qualificationName;
+        } else if (q.customQualificationName != null) {
+          name = q.customQualificationName;
+        }
+        if (!name.toLowerCase().includes(searchLower)) continue;
       }
       if (qualFiscalYearFilter) {
-        const fy = fiscalYears.find(f => String(f.id) === qualFiscalYearFilter);
+        const fy = findFiscalYearById(fiscalYears, qualFiscalYearFilter);
         if (fy) {
-          if (!q.acquiredYearMonth) return false;
+          if (!q.acquiredYearMonth) continue;
           const ym = q.acquiredYearMonth.slice(0, 7);
-          if (ym < fy.startDate.slice(0, 7) || ym > fy.endDate.slice(0, 7)) return false;
+          if (ym < fy.startDate.slice(0, 7) || ym > fy.endDate.slice(0, 7)) continue;
         }
       }
-      return true;
-    });
+      result.push(q);
+    }
+    return result;
   }, [qualificationDetails, qualNameSearch, qualCategoryFilter, qualFiscalYearFilter, fiscalYears]);
 
   const filteredSeminars = useMemo(() => {
     const searchLower = seminarNameSearch.toLowerCase();
-    return seminarDetails.filter(s => {
-      if (seminarTypeFilter === 'AD' && s.adSeminarId === null) return false;
-      if (seminarTypeFilter === 'FREE' && s.adSeminarId !== null) return false;
-      if (seminarCategoryFilter && s.adSeminarCategoryName !== seminarCategoryFilter) return false;
+    const result: SeminarDetailItem[] = [];
+    for (const s of seminarDetails) {
+      if (seminarTypeFilter === 'AD' && s.adSeminarId === null) continue;
+      if (seminarTypeFilter === 'FREE' && s.adSeminarId !== null) continue;
+      if (seminarCategoryFilter && s.adSeminarCategoryName !== seminarCategoryFilter) continue;
       if (searchLower) {
-        const name = (s.adSeminarName ?? s.seminarName ?? '').toLowerCase();
-        if (!name.includes(searchLower)) return false;
+        let name = '';
+        if (s.adSeminarName != null) {
+          name = s.adSeminarName;
+        } else if (s.seminarName != null) {
+          name = s.seminarName;
+        }
+        if (!name.toLowerCase().includes(searchLower)) continue;
       }
       if (seminarFiscalYearFilter) {
-        const fy = fiscalYears.find(f => String(f.id) === seminarFiscalYearFilter);
+        const fy = findFiscalYearById(fiscalYears, seminarFiscalYearFilter);
         if (fy) {
-          if (!s.attendedYearMonth) return false;
+          if (!s.attendedYearMonth) continue;
           const ym = s.attendedYearMonth.slice(0, 7);
-          if (ym < fy.startDate.slice(0, 7) || ym > fy.endDate.slice(0, 7)) return false;
+          if (ym < fy.startDate.slice(0, 7) || ym > fy.endDate.slice(0, 7)) continue;
         }
       }
-      return true;
-    });
+      result.push(s);
+    }
+    return result;
   }, [seminarDetails, seminarNameSearch, seminarTypeFilter, seminarCategoryFilter, seminarFiscalYearFilter, fiscalYears]);
 
-  const filteredGoals = useMemo(() => {
-    const searchLower = goalSearch.toLowerCase();
-    return goals.filter(g => {
-      if (goalCategoryFilter && g.goalCategory !== goalCategoryFilter) return false;
-      if (searchLower) {
-        const name = (g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '').toLowerCase();
-        if (!name.includes(searchLower)) return false;
-      }
-      return true;
-    });
-  }, [goals, goalSearch, goalCategoryFilter]);
+  const filteredGoals = useMemo(
+    () => filterGoalsList(goals, goalSearch.toLowerCase(), goalCategoryFilter),
+    [goals, goalSearch, goalCategoryFilter],
+  );
 
-  const filteredPrevGoals = useMemo(() => {
-    const searchLower = goalSearch.toLowerCase();
-    return prevGoals.filter(g => {
-      if (goalCategoryFilter && g.goalCategory !== goalCategoryFilter) return false;
-      if (searchLower) {
-        const name = (g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '').toLowerCase();
-        if (!name.includes(searchLower)) return false;
-      }
-      return true;
-    });
-  }, [prevGoals, goalSearch, goalCategoryFilter]);
+  const filteredPrevGoals = useMemo(
+    () => filterGoalsList(prevGoals, goalSearch.toLowerCase(), goalCategoryFilter),
+    [prevGoals, goalSearch, goalCategoryFilter],
+  );
 
-  const selectedInventory = inventories.find(i => i.id === selectedId);
+  let selectedInventory: InventorySummary | undefined;
+  for (const inv of inventories) {
+    if (inv.id === selectedId) {
+      selectedInventory = inv;
+      break;
+    }
+  }
 
   function goalDetailId(g: GoalItem): number {
     if (g.goalCategory === 'IT_SKILL' && g.itSkillId != null) return g.itSkillId;
@@ -634,13 +881,13 @@ export default function MemberDetailPage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const notes = Array.from(detailNotes.entries())
-        .map(([key, note]) => {
-          const sep = key.lastIndexOf('|');
-          const type = key.slice(0, sep) as DetailType;
-          const id = Number(key.slice(sep + 1));
-          return { detailType: type, detailId: id, note };
-        });
+      const notes: { detailType: DetailType; detailId: number; note: string }[] = [];
+      for (const [key, note] of detailNotes.entries()) {
+        const sep = key.lastIndexOf('|');
+        const type = key.slice(0, sep) as DetailType;
+        const id = Number(key.slice(sep + 1));
+        notes.push({ detailType: type, detailId: id, note });
+      }
       const res = await saveInterview(selectedId, {
         generalNote: generalNote || null,
         detailNotes: notes,
@@ -655,12 +902,20 @@ export default function MemberDetailPage() {
 
   function renderDetailNoteCell(detailType: DetailType, detailId: number, showPrev = true) {
     const key = buildNoteKey(detailType, detailId);
-    const prevNote = showPrev ? prevYearNoteMap.get(key) : undefined;
+    let prevNote: string | undefined;
+    if (showPrev) {
+      prevNote = prevYearNoteMap.get(key);
+    }
+    let noteValue = '';
+    const existingNote = detailNotes.get(key);
+    if (existingNote != null) {
+      noteValue = existingNote;
+    }
     return (
       <td className="interview-note-cell">
         <textarea
           className="interview-note-textarea"
-          value={detailNotes.get(key) ?? ''}
+          value={noteValue}
           onChange={e => setDetailNote(detailType, detailId, e.target.value)}
           placeholder={t('memberDetail.interview.noteInputPlaceholder')}
           rows={1}
@@ -674,13 +929,762 @@ export default function MemberDetailPage() {
 
   function renderPrevGoalNoteCell(g: GoalItem) {
     const note = prevYearNoteMap.get(buildNoteKey('GOAL', goalDetailId(g)));
+    let content: React.ReactNode;
+    if (note) {
+      content = <div className="interview-note-prev-readonly">{note}</div>;
+    } else {
+      content = <span className="interview-note-empty">—</span>;
+    }
     return (
       <td className="interview-note-cell">
-        {note
-          ? <div className="interview-note-prev-readonly">{note}</div>
-          : <span className="interview-note-empty">—</span>}
+        {content}
       </td>
     );
+  }
+
+  let selectedIdValue: number | string = '';
+  if (selectedId != null) {
+    selectedIdValue = selectedId;
+  }
+
+  const yearOptions: React.ReactNode[] = [];
+  for (const inv of inventories) {
+    let statusLabelKey: string = inv.status;
+    if (STATUS_KEY[inv.status] != null) {
+      statusLabelKey = STATUS_KEY[inv.status];
+    }
+    yearOptions.push(
+      <option key={inv.id} value={inv.id}>
+        {inv.fiscalYear.name}（{t(statusLabelKey)}）
+      </option>,
+    );
+  }
+
+  const tabButtons: React.ReactNode[] = [];
+  for (const tab of Object.keys(TAB_LABELS) as TabKey[]) {
+    const isRestricted = tab === 'expectations' || tab === 'ai-analysis';
+    if (isRestricted && !isTlOrAdmin) continue;
+    let tabClassName = 'tab-btn';
+    if (activeTab === tab) {
+      tabClassName += ' active';
+    }
+    tabButtons.push(
+      <button
+        key={tab}
+        className={tabClassName}
+        onClick={() => setActiveTab(tab)}
+      >
+        {TAB_LABELS[tab]}
+      </button>,
+    );
+  }
+
+  // ── ITスキルタブ ──
+  const cat1FilterOptions: React.ReactNode[] = [];
+  for (const { cat1 } of itSkillTree.groups) {
+    cat1FilterOptions.push(<option key={cat1} value={cat1}>{cat1}</option>);
+  }
+  const cat2FilterOptions: React.ReactNode[] = [];
+  for (const cat2 of itSkillCat2Options) {
+    cat2FilterOptions.push(<option key={cat2} value={cat2}>{cat2}</option>);
+  }
+
+  let itSkillTableBody: React.ReactNode;
+  if (itSkillDetails.length === 0) {
+    itSkillTableBody = (
+      <tr>
+        <td colSpan={itSkillColCount} className="no-data-cell">
+          {t('memberDetail.noDataCell.itSkills')}
+        </td>
+      </tr>
+    );
+  } else if (filteredItSkillCount === 0) {
+    itSkillTableBody = (
+      <tr>
+        <td colSpan={itSkillColCount} className="no-data-cell">
+          {t('memberDetail.noDataCell.noMatchSkills')}
+        </td>
+      </tr>
+    );
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const { cat1, cat2Groups } of filteredItSkillTree.groups) {
+      rows.push(
+        <tr key={cat1} className="scoring-cat1-row">
+          <td colSpan={itSkillColCount}>{cat1}</td>
+        </tr>,
+      );
+      for (const { cat2, items } of cat2Groups) {
+        if (cat2) {
+          rows.push(
+            <tr key={`${cat1}-${cat2}-header`} className="scoring-cat2-row">
+              <td colSpan={itSkillColCount}>{cat2}</td>
+            </tr>,
+          );
+        }
+        for (const detail of items) {
+          const comp = comparisonMap.get(detail.id);
+          let prevLevelLabel: React.ReactNode = '—';
+          if (comp != null && comp.prevLevelValue != null) {
+            prevLevelLabel = comp.prevLevelValue;
+          }
+          let diffValue: number | null | undefined;
+          if (comp != null) {
+            diffValue = comp.diff;
+          }
+          let noteDetailId = detail.id;
+          if (detail.itSkillId != null) {
+            noteDetailId = detail.itSkillId;
+          }
+          let remarksLabel = '—';
+          if (detail.remarks) {
+            remarksLabel = detail.remarks;
+          }
+          rows.push(
+            <tr key={detail.id}>
+              <td>{detail.itSkillName}</td>
+              {hasPrevYear && <td>{prevLevelLabel}</td>}
+              <td>{detail.levelValue}</td>
+              {hasPrevYear && (
+                <td className="diff-cell">
+                  <DiffCell diff={diffValue} hasPrevYear={hasPrevYear} />
+                </td>
+              )}
+              <td>{remarksLabel}</td>
+              {isTlOrAdmin && renderDetailNoteCell('IT_SKILL', noteDetailId)}
+            </tr>,
+          );
+        }
+      }
+    }
+    if (filteredItSkillTree.customItems.length > 0) {
+      rows.push(
+        <tr key="__custom__" className="scoring-cat1-row">
+          <td colSpan={itSkillColCount}>{t('customSkillLabel')}</td>
+        </tr>,
+      );
+      for (const detail of filteredItSkillTree.customItems) {
+        let remarksLabel = '—';
+        if (detail.remarks) {
+          remarksLabel = detail.remarks;
+        }
+        rows.push(
+          <tr key={detail.id}>
+            <td>{detail.customSkillName} ※</td>
+            {hasPrevYear && <td>—</td>}
+            <td>—</td>
+            {hasPrevYear && (
+              <td className="diff-cell">
+                <DiffCell diff={null} hasPrevYear={hasPrevYear} />
+              </td>
+            )}
+            <td>{remarksLabel}</td>
+            {isTlOrAdmin && renderDetailNoteCell('IT_SKILL', detail.id)}
+          </tr>,
+        );
+      }
+    }
+    itSkillTableBody = rows;
+  }
+
+  // ── 資格タブ ──
+  let qualificationsTabContent: React.ReactNode;
+  if (qualificationDetails.length === 0) {
+    qualificationsTabContent = <p className="no-data">{t('memberDetail.noDataCell.qualifications')}</p>;
+  } else {
+    const qualCategoryOptions: React.ReactNode[] = [];
+    for (const cat of qualCategories) {
+      qualCategoryOptions.push(<option key={cat} value={cat}>{cat}</option>);
+    }
+    let hasCustomQualification = false;
+    for (const q of qualificationDetails) {
+      if (q.qualificationId === null) {
+        hasCustomQualification = true;
+        break;
+      }
+    }
+    const qualFiscalYearOptions: React.ReactNode[] = [];
+    for (const fy of fiscalYears) {
+      qualFiscalYearOptions.push(<option key={fy.id} value={String(fy.id)}>{fy.name}</option>);
+    }
+
+    let qualColSpan = 4;
+    if (isTlOrAdmin) {
+      qualColSpan = 5;
+    }
+
+    let tableBody: React.ReactNode;
+    if (filteredQualifications.length === 0) {
+      tableBody = <tr><td colSpan={qualColSpan} className="no-data-cell">{t('memberDetail.noDataCell.noMatchQuals')}</td></tr>;
+    } else {
+      const rows: React.ReactNode[] = [];
+      for (const q of filteredQualifications) {
+        let categoryLabel = '—';
+        if (q.qualificationCategoryName != null) {
+          categoryLabel = q.qualificationCategoryName;
+        }
+        let nameLabel = '—';
+        if (q.qualificationName != null) {
+          nameLabel = q.qualificationName;
+        } else if (q.customQualificationName != null) {
+          nameLabel = q.customQualificationName;
+        }
+        let acquiredLabel = '—';
+        if (q.acquiredYearMonth != null) {
+          acquiredLabel = q.acquiredYearMonth.slice(0, 7);
+        }
+        let remarksLabel = '—';
+        if (q.remarks) {
+          remarksLabel = q.remarks;
+        }
+        let noteDetailId = q.id;
+        if (q.qualificationId != null) {
+          noteDetailId = q.qualificationId;
+        }
+        rows.push(
+          <tr key={q.id}>
+            <td>{categoryLabel}</td>
+            <td>
+              {nameLabel}
+              {q.qualificationId === null && ' ※'}
+            </td>
+            <td>{acquiredLabel}</td>
+            <td>{remarksLabel}</td>
+            {isTlOrAdmin && renderDetailNoteCell('QUALIFICATION', noteDetailId)}
+          </tr>,
+        );
+      }
+      tableBody = rows;
+    }
+
+    qualificationsTabContent = (
+      <>
+        <div className="history-filter-bar">
+          <input
+            className="history-filter-bar__input"
+            placeholder={t('memberDetail.filter.qualNameSearch')}
+            value={qualNameSearch}
+            onChange={e => setQualNameSearch(e.target.value)}
+          />
+          <select
+            className="history-filter-bar__select"
+            value={qualCategoryFilter}
+            onChange={e => setQualCategoryFilter(e.target.value)}
+          >
+            <option value="">{t('memberDetail.filter.qualCategoryAll')}</option>
+            {qualCategoryOptions}
+            {hasCustomQualification && (
+              <option value="__custom__">{t('memberDetail.filter.custom')}</option>
+            )}
+          </select>
+          <select
+            className="history-filter-bar__select"
+            value={qualFiscalYearFilter}
+            onChange={e => setQualFiscalYearFilter(e.target.value)}
+          >
+            <option value="">{t('memberDetail.filter.qualFiscalYearAll')}</option>
+            {qualFiscalYearOptions}
+          </select>
+          <span className="history-result-count">{filteredQualifications.length}件</span>
+        </div>
+        <StickyHorizontalScroll className="master-table-wrap">
+          <table className="master-table">
+            <thead>
+              <tr>
+                <th>{t('memberDetail.table.category')}</th>
+                <th>{t('memberDetail.table.qualName')}</th>
+                <th>{t('memberDetail.table.acquiredYearMonth')}</th>
+                <th>{t('memberDetail.table.remarks')}</th>
+                {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {tableBody}
+            </tbody>
+          </table>
+        </StickyHorizontalScroll>
+      </>
+    );
+  }
+
+  // ── セミナータブ ──
+  let seminarsTabContent: React.ReactNode;
+  if (seminarDetails.length === 0) {
+    seminarsTabContent = <p className="no-data">{t('memberDetail.noDataCell.seminars')}</p>;
+  } else {
+    const seminarCategoryOptions: React.ReactNode[] = [];
+    for (const cat of seminarAdCategories) {
+      seminarCategoryOptions.push(<option key={cat} value={cat}>{cat}</option>);
+    }
+    const seminarFiscalYearOptions: React.ReactNode[] = [];
+    for (const fy of fiscalYears) {
+      seminarFiscalYearOptions.push(<option key={fy.id} value={String(fy.id)}>{fy.name}</option>);
+    }
+
+    let seminarColSpan = 5;
+    if (isTlOrAdmin) {
+      seminarColSpan = 6;
+    }
+
+    let tableBody: React.ReactNode;
+    if (filteredSeminars.length === 0) {
+      tableBody = <tr><td colSpan={seminarColSpan} className="no-data-cell">{t('memberDetail.noDataCell.noMatchSeminars')}</td></tr>;
+    } else {
+      const rows: React.ReactNode[] = [];
+      for (const s of filteredSeminars) {
+        let typeLabel: string = t('memberDetail.filter.seminarTypeFree');
+        if (s.adSeminarId !== null) {
+          typeLabel = 'AD';
+        }
+        let categoryLabel = '—';
+        if (s.adSeminarId !== null && s.adSeminarCategoryName != null) {
+          categoryLabel = s.adSeminarCategoryName;
+        }
+        let nameLabel = '—';
+        if (s.adSeminarName != null) {
+          nameLabel = s.adSeminarName;
+        } else if (s.seminarName != null) {
+          nameLabel = s.seminarName;
+        }
+        let attendedLabel = '—';
+        if (s.attendedYearMonth != null) {
+          attendedLabel = s.attendedYearMonth.slice(0, 7);
+        }
+        let remarksLabel = '—';
+        if (s.remarks) {
+          remarksLabel = s.remarks;
+        }
+        rows.push(
+          <tr key={s.id}>
+            <td>{typeLabel}</td>
+            <td>{categoryLabel}</td>
+            <td>{nameLabel}</td>
+            <td>{attendedLabel}</td>
+            <td>{remarksLabel}</td>
+            {isTlOrAdmin && renderDetailNoteCell('SEMINAR', s.id)}
+          </tr>,
+        );
+      }
+      tableBody = rows;
+    }
+
+    seminarsTabContent = (
+      <>
+        <div className="history-filter-bar">
+          <input
+            className="history-filter-bar__input"
+            placeholder={t('memberDetail.filter.seminarNameSearch')}
+            value={seminarNameSearch}
+            onChange={e => setSeminarNameSearch(e.target.value)}
+          />
+          <select
+            className="history-filter-bar__select"
+            value={seminarTypeFilter}
+            onChange={e => { setSeminarTypeFilter(e.target.value as '' | 'AD' | 'FREE'); setSeminarCategoryFilter(''); }}
+          >
+            <option value="">{t('memberDetail.filter.seminarTypeAll')}</option>
+            <option value="AD">AD</option>
+            <option value="FREE">{t('memberDetail.filter.seminarTypeFree')}</option>
+          </select>
+          {seminarTypeFilter !== 'FREE' && seminarAdCategories.length > 0 && (
+            <select
+              className="history-filter-bar__select"
+              value={seminarCategoryFilter}
+              onChange={e => setSeminarCategoryFilter(e.target.value)}
+            >
+              <option value="">{t('memberDetail.filter.seminarCategoryAll')}</option>
+              {seminarCategoryOptions}
+            </select>
+          )}
+          <select
+            className="history-filter-bar__select"
+            value={seminarFiscalYearFilter}
+            onChange={e => setSeminarFiscalYearFilter(e.target.value)}
+          >
+            <option value="">{t('memberDetail.filter.seminarFiscalYearAll')}</option>
+            {seminarFiscalYearOptions}
+          </select>
+          <span className="history-result-count">{filteredSeminars.length}件</span>
+        </div>
+        <StickyHorizontalScroll className="master-table-wrap">
+          <table className="master-table">
+            <thead>
+              <tr>
+                <th>{t('memberDetail.table.seminarType')}</th>
+                <th>{t('memberDetail.table.category')}</th>
+                <th>{t('memberDetail.table.seminarName')}</th>
+                <th>{t('memberDetail.table.attendedYearMonth')}</th>
+                <th>{t('memberDetail.table.remarks')}</th>
+                {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {tableBody}
+            </tbody>
+          </table>
+        </StickyHorizontalScroll>
+      </>
+    );
+  }
+
+  // ── 目標タブ ──
+  let goalsTabContent: React.ReactNode;
+  if (prevGoals.length === 0 && goals.length === 0) {
+    goalsTabContent = <p className="no-data">{t('memberDetail.noDataCell.goals')}</p>;
+  } else {
+    let prevGoalsSection: React.ReactNode = null;
+    if (prevGoals.length > 0) {
+      let prevGoalsBody: React.ReactNode;
+      if (filteredPrevGoals.length === 0) {
+        prevGoalsBody = <p className="no-data">{t('memberDetail.noDataCell.noMatchGoals')}</p>;
+      } else {
+        const rows: React.ReactNode[] = [];
+        for (const g of filteredPrevGoals) {
+          const review = prevGoalReviewMap.get(g.id);
+          let categoryLabelKey: string = g.goalCategory;
+          if (GOAL_CATEGORY_KEY[g.goalCategory] != null) {
+            categoryLabelKey = GOAL_CATEGORY_KEY[g.goalCategory];
+          }
+          let nameLabel = '—';
+          if (g.itSkillName != null) {
+            nameLabel = g.itSkillName;
+          } else if (g.qualificationName != null) {
+            nameLabel = g.qualificationName;
+          } else if (g.adSeminarName != null) {
+            nameLabel = g.adSeminarName;
+          } else if (g.customName != null) {
+            nameLabel = g.customName;
+          }
+          let targetPeriodLabel = '—';
+          if (g.targetPeriod != null) {
+            targetPeriodLabel = g.targetPeriod.slice(0, 7);
+          }
+          let reasonLabel = '—';
+          if (g.reason) {
+            reasonLabel = g.reason;
+          }
+          let achievementLabel = '—';
+          if (review != null && review.achievementStatus) {
+            let achievementKey: string = review.achievementStatus;
+            if (ACHIEVEMENT_KEY[review.achievementStatus] != null) {
+              achievementKey = ACHIEVEMENT_KEY[review.achievementStatus];
+            }
+            achievementLabel = t(achievementKey);
+          }
+          let reviewNoteLabel = '—';
+          if (review != null && review.reviewNote) {
+            reviewNoteLabel = review.reviewNote;
+          }
+          rows.push(
+            <tr key={g.id}>
+              <td><span className="goal-category-badge">{t(categoryLabelKey)}</span></td>
+              <td>{nameLabel}</td>
+              <td>{targetPeriodLabel}</td>
+              <td>{reasonLabel}</td>
+              <td>{achievementLabel}</td>
+              <td>{reviewNoteLabel}</td>
+              {isTlOrAdmin && renderPrevGoalNoteCell(g)}
+            </tr>,
+          );
+        }
+        prevGoalsBody = (
+          <StickyHorizontalScroll className="master-table-wrap">
+            <table className="master-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 80 }}>{t('memberDetail.table.goalCategory')}</th>
+                  <th>{t('memberDetail.table.goalName')}</th>
+                  <th style={{ width: 120 }}>{t('memberDetail.table.targetPeriod')}</th>
+                  <th>{t('memberDetail.table.reasonPlan')}</th>
+                  <th style={{ width: 90 }}>{t('memberDetail.table.achievementStatus')}</th>
+                  <th>{t('memberDetail.table.reviewNote')}</th>
+                  {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.prevYearInterviewNote')}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows}
+              </tbody>
+            </table>
+          </StickyHorizontalScroll>
+        );
+      }
+      prevGoalsSection = (
+        <div className="history-goal-section">
+          <h3 className="history-goal-title">{t('memberDetail.goalSection.prevYear')}</h3>
+          {prevGoalsBody}
+        </div>
+      );
+    }
+
+    let currentGoalsSection: React.ReactNode = null;
+    if (goals.length > 0) {
+      let currentGoalsBody: React.ReactNode;
+      if (filteredGoals.length === 0) {
+        currentGoalsBody = <p className="no-data">{t('memberDetail.noDataCell.noMatchGoals')}</p>;
+      } else {
+        const rows: React.ReactNode[] = [];
+        for (const g of filteredGoals) {
+          const review = goalReviewMap.get(g.id);
+          let categoryLabelKey: string = g.goalCategory;
+          if (GOAL_CATEGORY_KEY[g.goalCategory] != null) {
+            categoryLabelKey = GOAL_CATEGORY_KEY[g.goalCategory];
+          }
+          let nameLabel = '—';
+          if (g.itSkillName != null) {
+            nameLabel = g.itSkillName;
+          } else if (g.qualificationName != null) {
+            nameLabel = g.qualificationName;
+          } else if (g.adSeminarName != null) {
+            nameLabel = g.adSeminarName;
+          } else if (g.customName != null) {
+            nameLabel = g.customName;
+          }
+          let targetPeriodLabel = '—';
+          if (g.targetPeriod != null) {
+            targetPeriodLabel = g.targetPeriod.slice(0, 7);
+          }
+          let reasonLabel = '—';
+          if (g.reason) {
+            reasonLabel = g.reason;
+          }
+          let achievementLabel = '—';
+          if (review != null && review.achievementStatus) {
+            let achievementKey: string = review.achievementStatus;
+            if (ACHIEVEMENT_KEY[review.achievementStatus] != null) {
+              achievementKey = ACHIEVEMENT_KEY[review.achievementStatus];
+            }
+            achievementLabel = t(achievementKey);
+          }
+          let reviewNoteLabel = '—';
+          if (review != null && review.reviewNote) {
+            reviewNoteLabel = review.reviewNote;
+          }
+          rows.push(
+            <tr key={g.id}>
+              <td><span className="goal-category-badge">{t(categoryLabelKey)}</span></td>
+              <td>{nameLabel}</td>
+              <td>{targetPeriodLabel}</td>
+              <td>{reasonLabel}</td>
+              <td>{achievementLabel}</td>
+              <td>{reviewNoteLabel}</td>
+              {isTlOrAdmin && renderDetailNoteCell('GOAL', goalDetailId(g), false)}
+            </tr>,
+          );
+        }
+        currentGoalsBody = (
+          <StickyHorizontalScroll className="master-table-wrap">
+            <table className="master-table">
+              <thead>
+                <tr>
+                  <th style={{ width: 80 }}>{t('memberDetail.table.goalCategory')}</th>
+                  <th>{t('memberDetail.table.goalName')}</th>
+                  <th style={{ width: 120 }}>{t('memberDetail.table.targetPeriod')}</th>
+                  <th>{t('memberDetail.table.reasonPlan')}</th>
+                  <th style={{ width: 90 }}>{t('memberDetail.table.achievementStatus')}</th>
+                  <th>{t('memberDetail.table.reviewNote')}</th>
+                  {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
+                </tr>
+              </thead>
+              <tbody>
+                {rows}
+              </tbody>
+            </table>
+          </StickyHorizontalScroll>
+        );
+      }
+      currentGoalsSection = (
+        <div className="history-goal-section">
+          <h3 className="history-goal-title">{t('memberDetail.goalSection.currentYear')}</h3>
+          {currentGoalsBody}
+        </div>
+      );
+    }
+
+    goalsTabContent = (
+      <>
+        <div className="history-filter-bar">
+          <input
+            className="history-filter-bar__input"
+            placeholder={t('memberDetail.filter.goalSearch')}
+            value={goalSearch}
+            onChange={e => setGoalSearch(e.target.value)}
+          />
+          <select
+            className="history-filter-bar__select"
+            value={goalCategoryFilter}
+            onChange={e => setGoalCategoryFilter(e.target.value as '' | 'IT_SKILL' | 'QUALIFICATION' | 'AD')}
+          >
+            <option value="">{t('memberDetail.filter.goalCategoryAll')}</option>
+            <option value="IT_SKILL">{t('goalCategory.itSkill')}</option>
+            <option value="QUALIFICATION">{t('goalCategory.qualification')}</option>
+            <option value="AD">AD</option>
+          </select>
+          <span className="history-result-count">
+            {filteredPrevGoals.length + filteredGoals.length}件
+          </span>
+        </div>
+        {prevGoalsSection}
+        {currentGoalsSection}
+      </>
+    );
+  }
+
+  // ── AI分析タブ ──
+  let aiAnalysisTabContent: React.ReactNode;
+  if (!aiAnalysisLoaded) {
+    aiAnalysisTabContent = <div className="loading">{t('loading')}</div>;
+  } else {
+    let matchedInventory: InventorySummary | undefined;
+    for (const inv of inventories) {
+      if (inv.id === selectedId) {
+        matchedInventory = inv;
+        break;
+      }
+    }
+    let analysis: AiAnalysis | undefined;
+    if (matchedInventory != null) {
+      for (const a of memberAiAnalyses) {
+        if (a.fiscalYearId === matchedInventory.fiscalYear.id) {
+          analysis = a;
+          break;
+        }
+      }
+    }
+    if (analysis == null) {
+      aiAnalysisTabContent = <p className="no-data">{t('memberDetail.noDataCell.aiAnalysis')}</p>;
+    } else {
+      aiAnalysisTabContent = <AiAnalysisCard analysis={analysis} />;
+    }
+  }
+
+  // ── 期待タブ ──
+  let expectationsTabContent: React.ReactNode;
+  if (expLoading) {
+    expectationsTabContent = <div className="loading">{t('loading')}</div>;
+  } else {
+    let tlSaveButtonLabel = t('memberDetail.expectation.saveButton');
+    if (tlSaving) {
+      tlSaveButtonLabel = t('memberDetail.expectation.savingButton');
+    }
+    let companySaveButtonLabel = t('memberDetail.expectation.saveButton');
+    if (companySaving) {
+      companySaveButtonLabel = t('memberDetail.expectation.savingButton');
+    }
+
+    let tlSection: React.ReactNode;
+    if (user != null && user.role === 'TL') {
+      tlSection = (
+        <>
+          <textarea
+            className="expectation-detail-textarea"
+            value={editTl}
+            onChange={e => { setEditTl(e.target.value); setTlSaved(false); }}
+            placeholder={t('memberDetail.expectation.tlPlaceholder')}
+            rows={6}
+          />
+          <div className="expectation-detail-save-row">
+            {tlSaved && !tlSaveError && (
+              <span className="expectation-saved-label">{t('memberDetail.expectation.savedLabel')}</span>
+            )}
+            {tlSaveError && <span className="error-text">{tlSaveError}</span>}
+            <button
+              className="btn btn-submit expectation-save-btn"
+              onClick={handleSaveTl}
+              disabled={tlSaving}
+            >
+              {tlSaveButtonLabel}
+            </button>
+          </div>
+        </>
+      );
+    } else {
+      let tlReadonlyText = t('memberDetail.expectation.noInput');
+      if (expectation != null && expectation.tlExpectation) {
+        tlReadonlyText = expectation.tlExpectation;
+      }
+      tlSection = (
+        <div className="expectation-detail-readonly">
+          {tlReadonlyText}
+        </div>
+      );
+    }
+
+    let companySection: React.ReactNode;
+    if (user != null && user.role === 'ADMIN') {
+      companySection = (
+        <>
+          <textarea
+            className="expectation-detail-textarea"
+            value={editCompany}
+            onChange={e => { setEditCompany(e.target.value); setCompanySaved(false); }}
+            placeholder={t('memberDetail.expectation.companyPlaceholder')}
+            rows={6}
+          />
+          <div className="expectation-detail-save-row">
+            {companySaved && !companySaveError && (
+              <span className="expectation-saved-label">{t('memberDetail.expectation.savedLabel')}</span>
+            )}
+            {companySaveError && <span className="error-text">{companySaveError}</span>}
+            <button
+              className="btn btn-submit expectation-save-btn"
+              onClick={handleSaveCompany}
+              disabled={companySaving}
+            >
+              {companySaveButtonLabel}
+            </button>
+          </div>
+        </>
+      );
+    } else {
+      let companyReadonlyText = t('memberDetail.expectation.noInput');
+      if (expectation != null && expectation.companyExpectation) {
+        companyReadonlyText = expectation.companyExpectation;
+      }
+      companySection = (
+        <div className="expectation-detail-readonly">
+          {companyReadonlyText}
+        </div>
+      );
+    }
+
+    expectationsTabContent = (
+      <div className="expectation-detail-panel">
+        <div className="expectation-detail-section">
+          <h3 className="expectation-detail-title">{t('memberDetail.expectation.tlTitle')}</h3>
+          {tlSection}
+        </div>
+        <div className="expectation-detail-section">
+          <h3 className="expectation-detail-title">{t('memberDetail.expectation.companyTitle')}</h3>
+          {companySection}
+        </div>
+      </div>
+    );
+  }
+
+  let downloadButtonLabel = t('memberDetail.report.button');
+  if (downloading) {
+    downloadButtonLabel = t('memberDetail.report.downloading');
+  }
+
+  const resizeHandles: React.ReactNode[] = [];
+  for (const dir of ['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'] as const) {
+    resizeHandles.push(
+      <div key={dir} className={`ifp-resize ifp-resize--${dir}`} onMouseDown={e => startResize(e, dir)} />,
+    );
+  }
+
+  let interviewSaveButtonLabel = t('memberDetail.interview.saveButton');
+  if (saving) {
+    interviewSaveButtonLabel = t('memberDetail.interview.savingButton');
+  }
+
+  let panelToggleClassName = 'interview-float-btn';
+  if (panelOpen) {
+    panelToggleClassName += ' interview-float-btn--open';
+  }
+  let panelToggleLabel = t('memberDetail.interview.openButton');
+  if (panelOpen) {
+    panelToggleLabel = t('memberDetail.interview.closeButton');
   }
 
   return (
@@ -701,14 +1705,10 @@ export default function MemberDetailPage() {
               <label className="form-label">{t('memberDetail.yearLabel')}</label>
               <select
                 className="select history-year-select"
-                value={selectedId ?? ''}
+                value={selectedIdValue}
                 onChange={e => setSelectedId(Number(e.target.value))}
               >
-                {inventories.map(inv => (
-                  <option key={inv.id} value={inv.id}>
-                    {inv.fiscalYear.name}（{t(STATUS_KEY[inv.status] ?? inv.status)}）
-                  </option>
-                ))}
+                {yearOptions}
               </select>
             </div>
 
@@ -717,17 +1717,7 @@ export default function MemberDetailPage() {
             ) : (
               <>
                 <div className="tab-bar">
-                  {(Object.keys(TAB_LABELS) as TabKey[])
-                    .filter(tab => (tab !== 'expectations' && tab !== 'ai-analysis') || isTlOrAdmin)
-                    .map(tab => (
-                      <button
-                        key={tab}
-                        className={`tab-btn${activeTab === tab ? ' active' : ''}`}
-                        onClick={() => setActiveTab(tab)}
-                      >
-                        {TAB_LABELS[tab]}
-                      </button>
-                    ))}
+                  {tabButtons}
                 </div>
 
                 {/* ── ITスキルタブ ── */}
@@ -747,9 +1737,7 @@ export default function MemberDetailPage() {
                           onChange={e => { setItSkillCategory1Filter(e.target.value); setItSkillCategory2Filter(''); }}
                         >
                           <option value="">{t('memberDetail.filter.category1All')}</option>
-                          {itSkillTree.groups.map(({ cat1 }) => (
-                            <option key={cat1} value={cat1}>{cat1}</option>
-                          ))}
+                          {cat1FilterOptions}
                           {itSkillTree.customItems.length > 0 && (
                             <option value="__custom__">{t('memberDetail.filter.custom')}</option>
                           )}
@@ -761,9 +1749,7 @@ export default function MemberDetailPage() {
                             onChange={e => setItSkillCategory2Filter(e.target.value)}
                           >
                             <option value="">{t('memberDetail.filter.category2All')}</option>
-                            {itSkillCat2Options.map(cat2 => (
-                              <option key={cat2} value={cat2}>{cat2}</option>
-                            ))}
+                            {cat2FilterOptions}
                           </select>
                         )}
                         {hasPrevYear && (
@@ -794,76 +1780,7 @@ export default function MemberDetailPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {itSkillDetails.length === 0 ? (
-                            <tr>
-                              <td colSpan={itSkillColCount} className="no-data-cell">
-                                {t('memberDetail.noDataCell.itSkills')}
-                              </td>
-                            </tr>
-                          ) : filteredItSkillCount === 0 ? (
-                            <tr>
-                              <td colSpan={itSkillColCount} className="no-data-cell">
-                                {t('memberDetail.noDataCell.noMatchSkills')}
-                              </td>
-                            </tr>
-                          ) : (
-                            <>
-                              {filteredItSkillTree.groups.map(({ cat1, cat2Groups }) => (
-                                <Fragment key={cat1}>
-                                  <tr className="scoring-cat1-row">
-                                    <td colSpan={itSkillColCount}>{cat1}</td>
-                                  </tr>
-                                  {cat2Groups.map(({ cat2, items }) => (
-                                    <Fragment key={`${cat1}-${cat2}`}>
-                                      {cat2 && (
-                                        <tr className="scoring-cat2-row">
-                                          <td colSpan={itSkillColCount}>{cat2}</td>
-                                        </tr>
-                                      )}
-                                      {items.map(detail => {
-                                        const comp = comparisonMap.get(detail.id);
-                                        return (
-                                          <tr key={detail.id}>
-                                            <td>{detail.itSkillName}</td>
-                                            {hasPrevYear && <td>{comp?.prevLevelValue ?? '—'}</td>}
-                                            <td>{detail.levelValue}</td>
-                                            {hasPrevYear && (
-                                              <td className="diff-cell">
-                                                <DiffCell diff={comp?.diff} hasPrevYear={hasPrevYear} />
-                                              </td>
-                                            )}
-                                            <td>{detail.remarks || '—'}</td>
-                                            {isTlOrAdmin && renderDetailNoteCell('IT_SKILL', detail.itSkillId ?? detail.id)}
-                                          </tr>
-                                        );
-                                      })}
-                                    </Fragment>
-                                  ))}
-                                </Fragment>
-                              ))}
-                              {filteredItSkillTree.customItems.length > 0 && (
-                                <Fragment key="__custom__">
-                                  <tr className="scoring-cat1-row">
-                                    <td colSpan={itSkillColCount}>{t('customSkillLabel')}</td>
-                                  </tr>
-                                  {filteredItSkillTree.customItems.map(detail => (
-                                    <tr key={detail.id}>
-                                      <td>{detail.customSkillName} ※</td>
-                                      {hasPrevYear && <td>—</td>}
-                                      <td>—</td>
-                                      {hasPrevYear && (
-                                        <td className="diff-cell">
-                                          <DiffCell diff={null} hasPrevYear={hasPrevYear} />
-                                        </td>
-                                      )}
-                                      <td>{detail.remarks || '—'}</td>
-                                      {isTlOrAdmin && renderDetailNoteCell('IT_SKILL', detail.id)}
-                                    </tr>
-                                  ))}
-                                </Fragment>
-                              )}
-                            </>
-                          )}
+                          {itSkillTableBody}
                         </tbody>
                       </table>
                     </StickyHorizontalScroll>
@@ -873,361 +1790,35 @@ export default function MemberDetailPage() {
                 {/* ── 資格タブ ── */}
                 {activeTab === 'qualifications' && (
                   <div className="history-tab-content">
-                    {qualificationDetails.length === 0 ? (
-                      <p className="no-data">{t('memberDetail.noDataCell.qualifications')}</p>
-                    ) : (
-                      <>
-                        <div className="history-filter-bar">
-                          <input
-                            className="history-filter-bar__input"
-                            placeholder={t('memberDetail.filter.qualNameSearch')}
-                            value={qualNameSearch}
-                            onChange={e => setQualNameSearch(e.target.value)}
-                          />
-                          <select
-                            className="history-filter-bar__select"
-                            value={qualCategoryFilter}
-                            onChange={e => setQualCategoryFilter(e.target.value)}
-                          >
-                            <option value="">{t('memberDetail.filter.qualCategoryAll')}</option>
-                            {qualCategories.map(cat => (
-                              <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                            {qualificationDetails.some(q => q.qualificationId === null) && (
-                              <option value="__custom__">{t('memberDetail.filter.custom')}</option>
-                            )}
-                          </select>
-                          <select
-                            className="history-filter-bar__select"
-                            value={qualFiscalYearFilter}
-                            onChange={e => setQualFiscalYearFilter(e.target.value)}
-                          >
-                            <option value="">{t('memberDetail.filter.qualFiscalYearAll')}</option>
-                            {fiscalYears.map(fy => (
-                              <option key={fy.id} value={String(fy.id)}>{fy.name}</option>
-                            ))}
-                          </select>
-                          <span className="history-result-count">{filteredQualifications.length}件</span>
-                        </div>
-                        <StickyHorizontalScroll className="master-table-wrap">
-                          <table className="master-table">
-                            <thead>
-                              <tr>
-                                <th>{t('memberDetail.table.category')}</th>
-                                <th>{t('memberDetail.table.qualName')}</th>
-                                <th>{t('memberDetail.table.acquiredYearMonth')}</th>
-                                <th>{t('memberDetail.table.remarks')}</th>
-                                {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredQualifications.length === 0 ? (
-                                <tr><td colSpan={isTlOrAdmin ? 5 : 4} className="no-data-cell">{t('memberDetail.noDataCell.noMatchQuals')}</td></tr>
-                              ) : (
-                                filteredQualifications.map(q => (
-                                  <tr key={q.id}>
-                                    <td>{q.qualificationCategoryName ?? '—'}</td>
-                                    <td>
-                                      {q.qualificationName ?? q.customQualificationName ?? '—'}
-                                      {q.qualificationId === null && ' ※'}
-                                    </td>
-                                    <td>{q.acquiredYearMonth?.slice(0, 7) ?? '—'}</td>
-                                    <td>{q.remarks || '—'}</td>
-                                    {isTlOrAdmin && renderDetailNoteCell('QUALIFICATION', q.qualificationId ?? q.id)}
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </StickyHorizontalScroll>
-                      </>
-                    )}
+                    {qualificationsTabContent}
                   </div>
                 )}
 
                 {/* ── セミナータブ ── */}
                 {activeTab === 'seminars' && (
                   <div className="history-tab-content">
-                    {seminarDetails.length === 0 ? (
-                      <p className="no-data">{t('memberDetail.noDataCell.seminars')}</p>
-                    ) : (
-                      <>
-                        <div className="history-filter-bar">
-                          <input
-                            className="history-filter-bar__input"
-                            placeholder={t('memberDetail.filter.seminarNameSearch')}
-                            value={seminarNameSearch}
-                            onChange={e => setSeminarNameSearch(e.target.value)}
-                          />
-                          <select
-                            className="history-filter-bar__select"
-                            value={seminarTypeFilter}
-                            onChange={e => { setSeminarTypeFilter(e.target.value as '' | 'AD' | 'FREE'); setSeminarCategoryFilter(''); }}
-                          >
-                            <option value="">{t('memberDetail.filter.seminarTypeAll')}</option>
-                            <option value="AD">AD</option>
-                            <option value="FREE">{t('memberDetail.filter.seminarTypeFree')}</option>
-                          </select>
-                          {seminarTypeFilter !== 'FREE' && seminarAdCategories.length > 0 && (
-                            <select
-                              className="history-filter-bar__select"
-                              value={seminarCategoryFilter}
-                              onChange={e => setSeminarCategoryFilter(e.target.value)}
-                            >
-                              <option value="">{t('memberDetail.filter.seminarCategoryAll')}</option>
-                              {seminarAdCategories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                              ))}
-                            </select>
-                          )}
-                          <select
-                            className="history-filter-bar__select"
-                            value={seminarFiscalYearFilter}
-                            onChange={e => setSeminarFiscalYearFilter(e.target.value)}
-                          >
-                            <option value="">{t('memberDetail.filter.seminarFiscalYearAll')}</option>
-                            {fiscalYears.map(fy => (
-                              <option key={fy.id} value={String(fy.id)}>{fy.name}</option>
-                            ))}
-                          </select>
-                          <span className="history-result-count">{filteredSeminars.length}件</span>
-                        </div>
-                        <StickyHorizontalScroll className="master-table-wrap">
-                          <table className="master-table">
-                            <thead>
-                              <tr>
-                                <th>{t('memberDetail.table.seminarType')}</th>
-                                <th>{t('memberDetail.table.category')}</th>
-                                <th>{t('memberDetail.table.seminarName')}</th>
-                                <th>{t('memberDetail.table.attendedYearMonth')}</th>
-                                <th>{t('memberDetail.table.remarks')}</th>
-                                {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredSeminars.length === 0 ? (
-                                <tr><td colSpan={isTlOrAdmin ? 6 : 5} className="no-data-cell">{t('memberDetail.noDataCell.noMatchSeminars')}</td></tr>
-                              ) : (
-                                filteredSeminars.map(s => (
-                                  <tr key={s.id}>
-                                    <td>{s.adSeminarId !== null ? 'AD' : t('memberDetail.filter.seminarTypeFree')}</td>
-                                    <td>{s.adSeminarId !== null ? (s.adSeminarCategoryName ?? '—') : '—'}</td>
-                                    <td>{s.adSeminarName ?? s.seminarName ?? '—'}</td>
-                                    <td>{s.attendedYearMonth?.slice(0, 7) ?? '—'}</td>
-                                    <td>{s.remarks || '—'}</td>
-                                    {isTlOrAdmin && renderDetailNoteCell('SEMINAR', s.id)}
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </StickyHorizontalScroll>
-                      </>
-                    )}
+                    {seminarsTabContent}
                   </div>
                 )}
 
                 {/* ── 目標タブ ── */}
                 {activeTab === 'goals' && (
                   <div className="history-tab-content">
-                    {prevGoals.length === 0 && goals.length === 0 ? (
-                      <p className="no-data">{t('memberDetail.noDataCell.goals')}</p>
-                    ) : (
-                      <>
-                        <div className="history-filter-bar">
-                          <input
-                            className="history-filter-bar__input"
-                            placeholder={t('memberDetail.filter.goalSearch')}
-                            value={goalSearch}
-                            onChange={e => setGoalSearch(e.target.value)}
-                          />
-                          <select
-                            className="history-filter-bar__select"
-                            value={goalCategoryFilter}
-                            onChange={e => setGoalCategoryFilter(e.target.value as '' | 'IT_SKILL' | 'QUALIFICATION' | 'AD')}
-                          >
-                            <option value="">{t('memberDetail.filter.goalCategoryAll')}</option>
-                            <option value="IT_SKILL">{t('goalCategory.itSkill')}</option>
-                            <option value="QUALIFICATION">{t('goalCategory.qualification')}</option>
-                            <option value="AD">AD</option>
-                          </select>
-                          <span className="history-result-count">
-                            {filteredPrevGoals.length + filteredGoals.length}件
-                          </span>
-                        </div>
-                        {prevGoals.length > 0 && (
-                          <div className="history-goal-section">
-                            <h3 className="history-goal-title">{t('memberDetail.goalSection.prevYear')}</h3>
-                            {filteredPrevGoals.length === 0 ? (
-                              <p className="no-data">{t('memberDetail.noDataCell.noMatchGoals')}</p>
-                            ) : (
-                              <StickyHorizontalScroll className="master-table-wrap">
-                                <table className="master-table">
-                                  <thead>
-                                    <tr>
-                                      <th style={{ width: 80 }}>{t('memberDetail.table.goalCategory')}</th>
-                                      <th>{t('memberDetail.table.goalName')}</th>
-                                      <th style={{ width: 120 }}>{t('memberDetail.table.targetPeriod')}</th>
-                                      <th>{t('memberDetail.table.reasonPlan')}</th>
-                                      <th style={{ width: 90 }}>{t('memberDetail.table.achievementStatus')}</th>
-                                      <th>{t('memberDetail.table.reviewNote')}</th>
-                                      {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.prevYearInterviewNote')}</th>}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {filteredPrevGoals.map(g => {
-                                      const review = prevGoalReviewMap.get(g.id);
-                                      return (
-                                        <tr key={g.id}>
-                                          <td><span className="goal-category-badge">{t(GOAL_CATEGORY_KEY[g.goalCategory] ?? g.goalCategory)}</span></td>
-                                          <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
-                                          <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
-                                          <td>{g.reason || '—'}</td>
-                                          <td>{review?.achievementStatus ? t(ACHIEVEMENT_KEY[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
-                                          <td>{review?.reviewNote || '—'}</td>
-                                          {isTlOrAdmin && renderPrevGoalNoteCell(g)}
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </StickyHorizontalScroll>
-                            )}
-                          </div>
-                        )}
-                        {goals.length > 0 && (
-                          <div className="history-goal-section">
-                            <h3 className="history-goal-title">{t('memberDetail.goalSection.currentYear')}</h3>
-                            {filteredGoals.length === 0 ? (
-                              <p className="no-data">{t('memberDetail.noDataCell.noMatchGoals')}</p>
-                            ) : (
-                              <StickyHorizontalScroll className="master-table-wrap">
-                                <table className="master-table">
-                                  <thead>
-                                    <tr>
-                                      <th style={{ width: 80 }}>{t('memberDetail.table.goalCategory')}</th>
-                                      <th>{t('memberDetail.table.goalName')}</th>
-                                      <th style={{ width: 120 }}>{t('memberDetail.table.targetPeriod')}</th>
-                                      <th>{t('memberDetail.table.reasonPlan')}</th>
-                                      <th style={{ width: 90 }}>{t('memberDetail.table.achievementStatus')}</th>
-                                      <th>{t('memberDetail.table.reviewNote')}</th>
-                                      {isTlOrAdmin && <th className="interview-note-th">{t('memberDetail.table.interviewNote')}</th>}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {filteredGoals.map(g => {
-                                      const review = goalReviewMap.get(g.id);
-                                      return (
-                                        <tr key={g.id}>
-                                          <td><span className="goal-category-badge">{t(GOAL_CATEGORY_KEY[g.goalCategory] ?? g.goalCategory)}</span></td>
-                                          <td>{g.itSkillName ?? g.qualificationName ?? g.adSeminarName ?? g.customName ?? '—'}</td>
-                                          <td>{g.targetPeriod?.slice(0, 7) ?? '—'}</td>
-                                          <td>{g.reason || '—'}</td>
-                                          <td>{review?.achievementStatus ? t(ACHIEVEMENT_KEY[review.achievementStatus] ?? review.achievementStatus) : '—'}</td>
-                                          <td>{review?.reviewNote || '—'}</td>
-                                          {isTlOrAdmin && renderDetailNoteCell('GOAL', goalDetailId(g), false)}
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </StickyHorizontalScroll>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
+                    {goalsTabContent}
                   </div>
                 )}
 
                 {/* ── AI分析タブ ── */}
                 {activeTab === 'ai-analysis' && isTlOrAdmin && (
                   <div className="history-tab-content">
-                    {!aiAnalysisLoaded ? (
-                      <div className="loading">{t('loading')}</div>
-                    ) : (() => {
-                      const analysis = memberAiAnalyses.find(a => {
-                        const inv = inventories.find(i => i.id === selectedId);
-                        return inv && a.fiscalYearId === inv.fiscalYear.id;
-                      });
-                      if (!analysis) return <p className="no-data">{t('memberDetail.noDataCell.aiAnalysis')}</p>;
-                      return <AiAnalysisCard analysis={analysis} />;
-                    })()}
+                    {aiAnalysisTabContent}
                   </div>
                 )}
 
                 {/* ── 期待タブ ── */}
                 {activeTab === 'expectations' && isTlOrAdmin && (
                   <div className="history-tab-content">
-                    {expLoading ? (
-                      <div className="loading">{t('loading')}</div>
-                    ) : (
-                      <div className="expectation-detail-panel">
-                        <div className="expectation-detail-section">
-                          <h3 className="expectation-detail-title">{t('memberDetail.expectation.tlTitle')}</h3>
-                          {user?.role === 'TL' ? (
-                            <>
-                              <textarea
-                                className="expectation-detail-textarea"
-                                value={editTl}
-                                onChange={e => { setEditTl(e.target.value); setTlSaved(false); }}
-                                placeholder={t('memberDetail.expectation.tlPlaceholder')}
-                                rows={6}
-                              />
-                              <div className="expectation-detail-save-row">
-                                {tlSaved && !tlSaveError && (
-                                  <span className="expectation-saved-label">{t('memberDetail.expectation.savedLabel')}</span>
-                                )}
-                                {tlSaveError && <span className="error-text">{tlSaveError}</span>}
-                                <button
-                                  className="btn btn-submit expectation-save-btn"
-                                  onClick={handleSaveTl}
-                                  disabled={tlSaving}
-                                >
-                                  {tlSaving ? t('memberDetail.expectation.savingButton') : t('memberDetail.expectation.saveButton')}
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="expectation-detail-readonly">
-                              {expectation?.tlExpectation || t('memberDetail.expectation.noInput')}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="expectation-detail-section">
-                          <h3 className="expectation-detail-title">{t('memberDetail.expectation.companyTitle')}</h3>
-                          {user?.role === 'ADMIN' ? (
-                            <>
-                              <textarea
-                                className="expectation-detail-textarea"
-                                value={editCompany}
-                                onChange={e => { setEditCompany(e.target.value); setCompanySaved(false); }}
-                                placeholder={t('memberDetail.expectation.companyPlaceholder')}
-                                rows={6}
-                              />
-                              <div className="expectation-detail-save-row">
-                                {companySaved && !companySaveError && (
-                                  <span className="expectation-saved-label">{t('memberDetail.expectation.savedLabel')}</span>
-                                )}
-                                {companySaveError && <span className="error-text">{companySaveError}</span>}
-                                <button
-                                  className="btn btn-submit expectation-save-btn"
-                                  onClick={handleSaveCompany}
-                                  disabled={companySaving}
-                                >
-                                  {companySaving ? t('memberDetail.expectation.savingButton') : t('memberDetail.expectation.saveButton')}
-                                </button>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="expectation-detail-readonly">
-                              {expectation?.companyExpectation || t('memberDetail.expectation.noInput')}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
+                    {expectationsTabContent}
                   </div>
                 )}
 
@@ -1244,7 +1835,7 @@ export default function MemberDetailPage() {
           onClick={handleDownloadReport}
           disabled={downloading}
         >
-          {downloading ? t('memberDetail.report.downloading') : t('memberDetail.report.button')}
+          {downloadButtonLabel}
         </button>
       )}
 
@@ -1256,9 +1847,7 @@ export default function MemberDetailPage() {
               className="interview-float-panel"
               style={{ left: panelRect.left, top: panelRect.top, width: panelRect.width, height: panelRect.height }}
             >
-              {(['n','s','e','w','nw','ne','sw','se'] as const).map(dir => (
-                <div key={dir} className={`ifp-resize ifp-resize--${dir}`} onMouseDown={e => startResize(e, dir)} />
-              ))}
+              {resizeHandles}
               <div className="interview-float-panel__header" onMouseDown={startMove}>
                 <span className="interview-float-panel__title">{t('memberDetail.interview.panelTitle')}</span>
                 <button
@@ -1293,17 +1882,17 @@ export default function MemberDetailPage() {
                     onClick={handleSave}
                     disabled={saving}
                   >
-                    {saving ? t('memberDetail.interview.savingButton') : t('memberDetail.interview.saveButton')}
+                    {interviewSaveButtonLabel}
                   </button>
                 </div>
               </div>
             </div>
           )}
           <button
-            className={`interview-float-btn${panelOpen ? ' interview-float-btn--open' : ''}`}
+            className={panelToggleClassName}
             onClick={() => setPanelOpen(v => !v)}
           >
-            {panelOpen ? t('memberDetail.interview.closeButton') : t('memberDetail.interview.openButton')}
+            {panelToggleLabel}
           </button>
         </>
       )}

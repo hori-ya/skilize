@@ -32,6 +32,21 @@ interface FormState {
 
 const emptyForm = (): FormState => ({ levelValue: '', description: '', scoreWeight: '0', active: true });
 
+/** スキルレベル一覧を levelValue の昇順に並び替える（配列の内容は変更しない）。 */
+function sortByLevelValueAsc(levels: SkillLevel[]): SkillLevel[] {
+  const result = [...levels];
+  for (let i = 0; i < result.length; i++) {
+    for (let j = 0; j < result.length - i - 1; j++) {
+      if (result[j].levelValue > result[j + 1].levelValue) {
+        const temp = result[j];
+        result[j] = result[j + 1];
+        result[j + 1] = temp;
+      }
+    }
+  }
+  return result;
+}
+
 /**
  * スキルレベルマスタ管理ページ。
  *
@@ -102,7 +117,7 @@ export default function SkillLevelMasterPage() {
     try {
       if (modalMode === 'create') {
         const res = await createSkillLevel({ levelValue: lv, description: form.description, scoreWeight: sw });
-        setLevels(prev => [...prev, res.data].sort((a, b) => a.levelValue - b.levelValue));
+        setLevels(prev => sortByLevelValueAsc([...prev, res.data]));
       } else {
         const res = await updateSkillLevel(editingId!, {
           levelValue: lv,
@@ -110,21 +125,79 @@ export default function SkillLevelMasterPage() {
           active: form.active,
           scoreWeight: sw,
         });
-        setLevels(prev =>
-          prev.map(l => (l.id === editingId ? res.data : l))
-            .sort((a, b) => a.levelValue - b.levelValue)
-        );
+        setLevels(prev => {
+          const updated: SkillLevel[] = [];
+          for (const l of prev) {
+            if (l.id === editingId) {
+              updated.push(res.data);
+            } else {
+              updated.push(l);
+            }
+          }
+          return sortByLevelValueAsc(updated);
+        });
       }
       setModalOpen(false);
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setFormError(msg ?? t('common.saveFailed'));
+      const err = e as { response?: { data?: { message?: string } } };
+      let msg = t('common.saveFailed');
+      if (err.response != null && err.response.data != null && err.response.data.message != null) {
+        msg = err.response.data.message;
+      }
+      setFormError(msg);
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
+
+  let tableBody: React.ReactNode;
+  if (levels.length === 0) {
+    tableBody = (
+      <tr>
+        <td colSpan={5} className="master-table__empty">{t('common.noData')}</td>
+      </tr>
+    );
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const level of levels) {
+      let statusClassName = 'fy-status fy-status--inactive';
+      let statusLabel = t('common.inactiveLabel');
+      if (level.isActive) {
+        statusClassName = 'fy-status fy-status--active';
+        statusLabel = t('common.activeLabel');
+      }
+      rows.push(
+        <tr key={level.id}>
+          <td style={{ textAlign: 'center', fontWeight: 600 }}>{level.levelValue}</td>
+          <td>{level.description}</td>
+          <td style={{ textAlign: 'center' }}>{level.scoreWeight}</td>
+          <td>
+            <span className={statusClassName}>
+              {statusLabel}
+            </span>
+          </td>
+          <td>
+            <button className="btn btn--secondary btn--sm" onClick={() => openEdit(level)}>
+              <IconEdit size={12} />{t('common.edit')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    tableBody = rows;
+  }
+
+  let modalTitle = t('skillLevel.modalCreate');
+  if (modalMode === 'edit') {
+    modalTitle = t('skillLevel.modalEdit');
+  }
+
+  let saveButtonLabel = t('common.save');
+  if (saving) {
+    saveButtonLabel = t('common.saving');
+  }
 
   return (
     <div className="master-page">
@@ -153,29 +226,7 @@ export default function SkillLevelMasterPage() {
                 </tr>
               </thead>
               <tbody>
-                {levels.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="master-table__empty">{t('common.noData')}</td>
-                  </tr>
-                ) : (
-                  levels.map(level => (
-                    <tr key={level.id}>
-                      <td style={{ textAlign: 'center', fontWeight: 600 }}>{level.levelValue}</td>
-                      <td>{level.description}</td>
-                      <td style={{ textAlign: 'center' }}>{level.scoreWeight}</td>
-                      <td>
-                        <span className={level.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                          {level.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
-                        </span>
-                      </td>
-                      <td>
-                        <button className="btn btn--secondary btn--sm" onClick={() => openEdit(level)}>
-                          <IconEdit size={12} />{t('common.edit')}
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                {tableBody}
               </tbody>
             </table>
           </StickyHorizontalScroll>
@@ -186,7 +237,7 @@ export default function SkillLevelMasterPage() {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{modalMode === 'create' ? t('skillLevel.modalCreate') : t('skillLevel.modalEdit')}</h3>
+              <h3>{modalTitle}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -247,7 +298,7 @@ export default function SkillLevelMasterPage() {
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
+                <IconCheck size={13} />{saveButtonLabel}
               </button>
             </div>
           </div>

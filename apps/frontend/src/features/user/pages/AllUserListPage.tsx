@@ -65,32 +65,47 @@ export default function AllUserListPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // Build TL list for dropdown
+  // Build TL list for dropdown（名前の昇順でソート）
   const tlOptions = useMemo(() => {
     const tlMap = new Map<number, string>();
-    members.forEach(m => {
+    for (const m of members) {
       if (m.tlUserId !== null && m.tlName !== null) {
         tlMap.set(m.tlUserId, m.tlName);
       }
-    });
-    return Array.from(tlMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    }
+    const entries = Array.from(tlMap.entries());
+    for (let i = 0; i < entries.length; i++) {
+      for (let j = 0; j < entries.length - i - 1; j++) {
+        if (entries[j][1].localeCompare(entries[j + 1][1]) > 0) {
+          const temp = entries[j];
+          entries[j] = entries[j + 1];
+          entries[j + 1] = temp;
+        }
+      }
+    }
+    return entries;
   }, [members]);
 
   const filtered = useMemo(() => {
-    return members.filter(m => {
-      if (filterName && !m.name.includes(filterName)) return false;
-      if (filterTlId !== '' && m.tlUserId !== filterTlId) return false;
-      if (filterRole && m.role !== filterRole) return false;
+    const result: TeamMember[] = [];
+    for (const m of members) {
+      if (filterName && !m.name.includes(filterName)) continue;
+      if (filterTlId !== '' && m.tlUserId !== filterTlId) continue;
+      if (filterRole && m.role !== filterRole) continue;
       if (filterStatus) {
-        const status = m.currentInventory?.status ?? '';
+        let status = '';
+        if (m.currentInventory != null) {
+          status = m.currentInventory.status;
+        }
         if (filterStatus === 'NONE') {
-          if (m.currentInventory !== null) return false;
+          if (m.currentInventory !== null) continue;
         } else if (status !== filterStatus) {
-          return false;
+          continue;
         }
       }
-      return true;
-    });
+      result.push(m);
+    }
+    return result;
   }, [members, filterName, filterTlId, filterRole, filterStatus]);
 
   const handleClear = () => {
@@ -105,6 +120,96 @@ export default function AllUserListPage() {
       state: { from: '/admin/users-inquiry', fromLabel: t('allUserList.title') },
     });
   };
+
+  const tlOptionElements: React.ReactNode[] = [];
+  for (const [id, name] of tlOptions) {
+    tlOptionElements.push(<option key={id} value={id}>{name}{t('allUserList.filter.teamSuffix')}</option>);
+  }
+
+  let content: React.ReactNode;
+  if (loading) {
+    content = <div className="loading">{t('loading')}</div>;
+  } else {
+    let tableSection: React.ReactNode;
+    if (filtered.length === 0) {
+      tableSection = <p className="no-data">{t('allUserList.noUsers')}</p>;
+    } else {
+      const rows: React.ReactNode[] = [];
+      for (const member of filtered) {
+        let roleLabelKey = member.role;
+        if (ROLE_KEY[member.role] != null) {
+          roleLabelKey = ROLE_KEY[member.role];
+        }
+        let tlNameLabel = '—';
+        if (member.tlName != null) {
+          tlNameLabel = member.tlName;
+        }
+        let statusCell: React.ReactNode;
+        if (member.currentInventory != null) {
+          const inv = member.currentInventory;
+          let statusLabelKey = inv.status;
+          if (STATUS_KEY[inv.status] != null) {
+            statusLabelKey = STATUS_KEY[inv.status];
+          }
+          statusCell = (
+            <span className={`team-status team-status--${inv.status.toLowerCase()}`}>
+              {STATUS_ICON[inv.status]}{' '}
+              {t(statusLabelKey)}
+            </span>
+          );
+        } else {
+          statusCell = <span className="team-status team-status--none">{t('allUserList.noInventory')}</span>;
+        }
+        let fiscalYearName = '—';
+        if (member.currentInventory != null) {
+          fiscalYearName = member.currentInventory.fiscalYear.name;
+        }
+        rows.push(
+          <tr key={member.id}>
+            <td>{member.name}</td>
+            <td>{t(roleLabelKey)}</td>
+            <td>{tlNameLabel}</td>
+            <td>{statusCell}</td>
+            <td>{fiscalYearName}</td>
+            <td>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={() => handleDetail(member)}
+              >
+                <IconArrowRight size={12} />
+                {t('allUserList.table.detailButton')}
+              </button>
+            </td>
+          </tr>,
+        );
+      }
+      tableSection = (
+        <StickyHorizontalScroll className="master-table-wrap">
+          <table className="master-table">
+            <thead>
+              <tr>
+                <th>{t('allUserList.table.name')}</th>
+                <th>{t('allUserList.table.role')}</th>
+                <th>{t('allUserList.table.team')}</th>
+                <th>{t('allUserList.table.currentStatus')}</th>
+                <th>{t('allUserList.table.fiscalYear')}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows}
+            </tbody>
+          </table>
+        </StickyHorizontalScroll>
+      );
+    }
+    content = (
+      <>
+        <p className="all-user-count">{filtered.length}{t('allUserList.countSuffix')}</p>
+        {tableSection}
+      </>
+    );
+  }
 
   return (
     <div className="team-page">
@@ -124,13 +229,17 @@ export default function AllUserListPage() {
           <select
             className="select all-user-filter-select"
             value={filterTlId}
-            onChange={e => setFilterTlId(e.target.value === '' ? '' : Number(e.target.value))}
+            onChange={e => {
+              if (e.target.value === '') {
+                setFilterTlId('');
+              } else {
+                setFilterTlId(Number(e.target.value));
+              }
+            }}
           >
             <option value="">{t('allUserList.filter.teamAll')}</option>
             <option value={-1}>{t('allUserList.filter.teamNone')}</option>
-            {tlOptions.map(([id, name]) => (
-              <option key={id} value={id}>{name}{t('allUserList.filter.teamSuffix')}</option>
-            ))}
+            {tlOptionElements}
           </select>
           <select
             className="select all-user-filter-select"
@@ -156,60 +265,7 @@ export default function AllUserListPage() {
           <button className="btn btn-secondary" onClick={handleClear}><IconX size={13} />{t('allUserList.filter.clearButton')}</button>
         </div>
 
-        {loading ? (
-          <div className="loading">{t('loading')}</div>
-        ) : (
-          <>
-            <p className="all-user-count">{filtered.length}{t('allUserList.countSuffix')}</p>
-            {filtered.length === 0 ? (
-              <p className="no-data">{t('allUserList.noUsers')}</p>
-            ) : (
-              <StickyHorizontalScroll className="master-table-wrap">
-                <table className="master-table">
-                  <thead>
-                    <tr>
-                      <th>{t('allUserList.table.name')}</th>
-                      <th>{t('allUserList.table.role')}</th>
-                      <th>{t('allUserList.table.team')}</th>
-                      <th>{t('allUserList.table.currentStatus')}</th>
-                      <th>{t('allUserList.table.fiscalYear')}</th>
-                      <th></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map(member => (
-                      <tr key={member.id}>
-                        <td>{member.name}</td>
-                        <td>{t(ROLE_KEY[member.role] ?? member.role)}</td>
-                        <td>{member.tlName ?? '—'}</td>
-                        <td>
-                          {member.currentInventory ? (
-                            <span className={`team-status team-status--${member.currentInventory.status.toLowerCase()}`}>
-                              {STATUS_ICON[member.currentInventory.status]}{' '}
-                              {t(STATUS_KEY[member.currentInventory.status] ?? member.currentInventory.status)}
-                            </span>
-                          ) : (
-                            <span className="team-status team-status--none">{t('allUserList.noInventory')}</span>
-                          )}
-                        </td>
-                        <td>{member.currentInventory?.fiscalYear.name ?? '—'}</td>
-                        <td>
-                          <button
-                            className="btn btn-sm btn-secondary"
-                            onClick={() => handleDetail(member)}
-                          >
-                            <IconArrowRight size={12} />
-                            {t('allUserList.table.detailButton')}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </StickyHorizontalScroll>
-            )}
-          </>
-        )}
+        {content}
       </main>
     </div>
   );

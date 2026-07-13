@@ -53,7 +53,10 @@ export default function LoginPage() {
       }
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const code = err.response?.data?.code;
+        let code: string | undefined;
+        if (err.response != null && err.response.data != null) {
+          code = err.response.data.code;
+        }
         if (code === 'ACCOUNT_DISABLED') {
           setError(t('error.accountDisabled'));
         } else {
@@ -66,6 +69,11 @@ export default function LoginPage() {
       setIsSubmitting(false);
     }
   };
+
+  let submitButtonLabel = t('loginForm.submitButton');
+  if (isSubmitting) {
+    submitButtonLabel = t('loginForm.submittingButton');
+  }
 
   return (
     <div className="auth-page">
@@ -111,7 +119,7 @@ export default function LoginPage() {
           </div>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
             <IconLogin size={15} />
-            {isSubmitting ? t('loginForm.submittingButton') : t('loginForm.submitButton')}
+            {submitButtonLabel}
           </button>
         </form>
       </div>

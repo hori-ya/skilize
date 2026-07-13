@@ -27,7 +27,10 @@ interface ApiErrorBody {
  */
 export function getApiErrorCode(error: unknown): string {
   const body = extractBody(error);
-  return body?.code ?? 'INTERNAL_ERROR';
+  if (body != null && body.code != null) {
+    return body.code;
+  }
+  return 'INTERNAL_ERROR';
 }
 
 /**
@@ -38,7 +41,10 @@ export function getApiErrorMessage(error: unknown): string {
   const code = getApiErrorCode(error);
   const key = `errors:${code}`;
   const translated = i18n.t(key);
-  return translated !== key ? translated : code;
+  if (translated !== key) {
+    return translated;
+  }
+  return code;
 }
 
 /**
@@ -47,17 +53,26 @@ export function getApiErrorMessage(error: unknown): string {
  */
 export function getValidationErrors(error: unknown): Array<{ field: string; message: string }> {
   const body = extractBody(error);
-  if (!body?.errors) return [];
-  return body.errors.map(e => ({
-    field: e.field,
-    message: i18n.t(`errors:${e.message}`, { defaultValue: e.message }),
-  }));
+  if (body == null || body.errors == null) {
+    return [];
+  }
+  const result: Array<{ field: string; message: string }> = [];
+  for (const e of body.errors) {
+    result.push({
+      field: e.field,
+      message: i18n.t(`errors:${e.message}`, { defaultValue: e.message }),
+    });
+  }
+  return result;
 }
 
 function extractBody(error: unknown): ApiErrorBody | null {
   if (error && typeof error === 'object' && 'response' in error) {
     const res = (error as { response?: { data?: ApiErrorBody } }).response;
-    return res?.data ?? null;
+    if (res != null && res.data != null) {
+      return res.data;
+    }
+    return null;
   }
   return null;
 }

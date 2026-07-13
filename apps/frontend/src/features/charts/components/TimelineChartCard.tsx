@@ -65,8 +65,15 @@ export default function TimelineChartCard({ events }: Props) {
     );
   }
 
-  const achievement = events.filter(e => e.lane === 'ACHIEVEMENT');
-  const activity = events.filter(e => e.lane === 'ACTIVITY');
+  const achievement: TimelineEvent[] = [];
+  const activity: TimelineEvent[] = [];
+  for (const e of events) {
+    if (e.lane === 'ACHIEVEMENT') {
+      achievement.push(e);
+    } else if (e.lane === 'ACTIVITY') {
+      activity.push(e);
+    }
+  }
 
   return (
     <div className="chart-card chart-card--full">
@@ -88,32 +95,46 @@ function TimelineLane({
   events: TimelineEvent[];
   colorClass: string;
 }) {
+  let content: React.ReactNode;
+  if (events.length === 0) {
+    content = <div className="timeline-lane__empty">記録なし</div>;
+  } else {
+    const eventItems: React.ReactNode[] = [];
+    for (let i = 0; i < events.length; i++) {
+      const ev = events[i];
+      let eventClassName = 'timeline-event';
+      if (!ev.isPast) {
+        eventClassName += ' timeline-event--goal';
+      }
+      eventItems.push(
+        <div key={i} className={eventClassName}>
+          <div className="timeline-event__dot" />
+          <div className="timeline-event__body">
+            <span className="timeline-event__icon">{EVENT_ICON[ev.type]}</span>
+            <span className="timeline-event__name">{ev.name}</span>
+            <span className="timeline-event__meta">
+              {formatYearMonth(ev.yearMonth)}
+              {!ev.isPast && <span className="timeline-event__tag">目標</span>}
+            </span>
+            <span className="timeline-event__type">{EVENT_LABEL[ev.type]}</span>
+          </div>
+        </div>,
+      );
+    }
+    content = (
+      <div className="timeline-lane__track">
+        <div className="timeline-lane__line" />
+        <div className="timeline-lane__events">
+          {eventItems}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`timeline-lane ${colorClass}`}>
       <div className="timeline-lane__header">{label}</div>
-      {events.length === 0 ? (
-        <div className="timeline-lane__empty">記録なし</div>
-      ) : (
-        <div className="timeline-lane__track">
-          <div className="timeline-lane__line" />
-          <div className="timeline-lane__events">
-            {events.map((ev, i) => (
-              <div key={i} className={`timeline-event${ev.isPast ? '' : ' timeline-event--goal'}`}>
-                <div className="timeline-event__dot" />
-                <div className="timeline-event__body">
-                  <span className="timeline-event__icon">{EVENT_ICON[ev.type]}</span>
-                  <span className="timeline-event__name">{ev.name}</span>
-                  <span className="timeline-event__meta">
-                    {formatYearMonth(ev.yearMonth)}
-                    {!ev.isPast && <span className="timeline-event__tag">目標</span>}
-                  </span>
-                  <span className="timeline-event__type">{EVENT_LABEL[ev.type]}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {content}
     </div>
   );
 }

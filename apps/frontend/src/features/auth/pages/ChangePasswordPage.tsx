@@ -66,6 +66,19 @@ export default function ChangePasswordPage() {
     }
   };
 
+  let newPasswordInputClassName = 'form-input';
+  if (errors.newPassword) {
+    newPasswordInputClassName += ' form-input-error';
+  }
+  let confirmPasswordInputClassName = 'form-input';
+  if (errors.confirmPassword) {
+    confirmPasswordInputClassName += ' form-input-error';
+  }
+  let submitButtonLabel = t('changePasswordForm.submitButton');
+  if (isSubmitting) {
+    submitButtonLabel = t('changePasswordForm.submittingButton');
+  }
+
   return (
     <div className="auth-page">
       <div className="auth-card">
@@ -89,7 +102,7 @@ export default function ChangePasswordPage() {
             <input
               id="newPassword"
               type="password"
-              className={`form-input ${errors.newPassword ? 'form-input-error' : ''}`}
+              className={newPasswordInputClassName}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               autoComplete="new-password"
@@ -103,7 +116,7 @@ export default function ChangePasswordPage() {
             <input
               id="confirmPassword"
               type="password"
-              className={`form-input ${errors.confirmPassword ? 'form-input-error' : ''}`}
+              className={confirmPasswordInputClassName}
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               autoComplete="new-password"
@@ -114,7 +127,7 @@ export default function ChangePasswordPage() {
           <p className="form-hint">{t('changePasswordForm.minLengthHint')}</p>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
             <IconLock size={15} />
-            {isSubmitting ? t('changePasswordForm.submittingButton') : t('changePasswordForm.submitButton')}
+            {submitButtonLabel}
           </button>
         </form>
       </div>

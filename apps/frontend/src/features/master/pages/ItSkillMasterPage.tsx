@@ -28,6 +28,75 @@ import {
 import { IconPlus, IconEdit, IconX, IconCheck } from '../../../shared/ui/Icons';
 import StickyHorizontalScroll from '../../../shared/ui/StickyHorizontalScroll';
 
+/** 指定した階層のカテゴリのみを抽出する。 */
+function filterByLevel(categories: ItSkillCategory[], level: number): ItSkillCategory[] {
+  const result: ItSkillCategory[] = [];
+  for (const c of categories) {
+    if (c.level === level) {
+      result.push(c);
+    }
+  }
+  return result;
+}
+
+/** 指定した階層・親カテゴリに属するカテゴリのみを抽出する。 */
+function filterByLevelAndParent(categories: ItSkillCategory[], level: number, parentId: number | null): ItSkillCategory[] {
+  const result: ItSkillCategory[] = [];
+  for (const c of categories) {
+    if (c.level === level && c.parentId === parentId) {
+      result.push(c);
+    }
+  }
+  return result;
+}
+
+/** 指定した階層の有効なカテゴリのみを抽出する。 */
+function filterActiveByLevel(categories: ItSkillCategory[], level: number): ItSkillCategory[] {
+  const result: ItSkillCategory[] = [];
+  for (const c of categories) {
+    if (c.level === level && c.isActive) {
+      result.push(c);
+    }
+  }
+  return result;
+}
+
+/** 指定した階層・親カテゴリに属する有効なカテゴリのみを抽出する。 */
+function filterActiveByLevelAndParent(categories: ItSkillCategory[], level: number, parentId: number | null): ItSkillCategory[] {
+  const result: ItSkillCategory[] = [];
+  for (const c of categories) {
+    if (c.level === level && c.parentId === parentId && c.isActive) {
+      result.push(c);
+    }
+  }
+  return result;
+}
+
+/** カテゴリID → カテゴリの Map を構築する。 */
+function buildCategoryMap(categories: ItSkillCategory[]): Map<number, ItSkillCategory> {
+  const map = new Map<number, ItSkillCategory>();
+  for (const c of categories) {
+    map.set(c.id, c);
+  }
+  return map;
+}
+
+/** カテゴリ選択肢の option 要素群を構築する。 */
+function buildCategoryOptions(cats: ItSkillCategory[]): React.ReactNode[] {
+  const options: React.ReactNode[] = [];
+  for (const c of cats) {
+    options.push(<option key={c.id} value={c.id}>{c.name}</option>);
+  }
+  return options;
+}
+
+/** Lv1/Lv2/Lv3 の選択状態から実際に登録対象となるカテゴリIDを解決する（最も深い階層を優先）。 */
+function resolveSelectedCategoryId(form: { lv1Id: number | null; lv2Id: number | null; lv3Id: number | null }): number | null {
+  if (form.lv3Id != null) return form.lv3Id;
+  if (form.lv2Id != null) return form.lv2Id;
+  return form.lv1Id;
+}
+
 // ─── Category tab ────────────────────────────────────────────────────────────
 
 interface CatForm {
@@ -38,6 +107,8 @@ interface CatForm {
 }
 
 type CatModalMode = 'create' | 'edit';
+
+const LEVEL_BADGE_CLASS = ['', 'cat-lv cat-lv--1', 'cat-lv cat-lv--2', 'cat-lv cat-lv--3'];
 
 /**
  * ITスキルカテゴリ管理タブ。
@@ -53,18 +124,22 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const catMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
-  const lv1 = categories.filter(c => c.level === 1);
-  const lv2 = categories.filter(c => c.level === 2);
+  const catMap = useMemo(() => buildCategoryMap(categories), [categories]);
+  const lv1 = filterByLevel(categories, 1);
+  const lv2 = filterByLevel(categories, 2);
 
-  const parentLabel = (c: ItSkillCategory) => {
+  const parentLabel = (c: ItSkillCategory): string => {
     if (c.level === 1) return '—';
     const parent = catMap.get(c.parentId!);
-    return parent ? parent.name : `ID:${c.parentId}`;
+    if (parent != null) return parent.name;
+    return `ID:${c.parentId}`;
   };
 
   const levelBadge = (level: number) => {
-    const cls = ['', 'cat-lv cat-lv--1', 'cat-lv cat-lv--2', 'cat-lv cat-lv--3'][level] ?? '';
+    let cls = '';
+    if (LEVEL_BADGE_CLASS[level] != null) {
+      cls = LEVEL_BADGE_CLASS[level];
+    }
     return <span className={cls}>Lv{level}</span>;
   };
 
@@ -96,10 +171,63 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
       setModalOpen(false);
       onReload();
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setFormError(msg ?? t('common.saveFailed'));
+      const err = e as { response?: { data?: { detail?: string } } };
+      let msg = t('common.saveFailed');
+      if (err.response != null && err.response.data != null && err.response.data.detail != null) {
+        msg = err.response.data.detail;
+      }
+      setFormError(msg);
     } finally { setSaving(false); }
   };
+
+  let tableBody: React.ReactNode;
+  if (categories.length === 0) {
+    tableBody = <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>;
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const c of categories) {
+      let statusClassName = 'fy-status fy-status--inactive';
+      let statusLabel = t('common.inactiveLabel');
+      if (c.isActive) {
+        statusClassName = 'fy-status fy-status--active';
+        statusLabel = t('common.activeLabel');
+      }
+      rows.push(
+        <tr key={c.id}>
+          <td>{levelBadge(c.level)}</td>
+          <td style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>{parentLabel(c)}</td>
+          <td>{c.name}</td>
+          <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
+          <td>
+            <span className={statusClassName}>
+              {statusLabel}
+            </span>
+          </td>
+          <td>
+            <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
+              <IconEdit size={12} />{t('common.edit')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    tableBody = rows;
+  }
+
+  let modalTitle = t('itSkill.modalCategoryCreate');
+  if (mode === 'edit') {
+    modalTitle = t('itSkill.modalCategoryEdit');
+  }
+
+  let parentValue: number | string = '';
+  if (form.parentId != null) {
+    parentValue = form.parentId;
+  }
+
+  let saveButtonLabel = t('common.save');
+  if (saving) {
+    saveButtonLabel = t('common.saving');
+  }
 
   return (
     <>
@@ -123,28 +251,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
             </tr>
           </thead>
           <tbody>
-            {categories.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
-            ) : (
-              categories.map(c => (
-                <tr key={c.id}>
-                  <td>{levelBadge(c.level)}</td>
-                  <td style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>{parentLabel(c)}</td>
-                  <td>{c.name}</td>
-                  <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
-                  <td>
-                    <span className={c.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {c.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
-                      <IconEdit size={12} />{t('common.edit')}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+            {tableBody}
           </tbody>
         </table>
       </StickyHorizontalScroll>
@@ -153,7 +260,7 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? t('itSkill.modalCategoryCreate') : t('itSkill.modalCategoryEdit')}</h3>
+              <h3>{modalTitle}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -164,15 +271,21 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
                   <label className="form-label">{t('itSkill.form.parentCategoryLabel')}</label>
                   <select
                     className="master-select" style={{ width: '100%' }}
-                    value={form.parentId ?? ''}
-                    onChange={e => setForm(f => ({ ...f, parentId: e.target.value === '' ? null : Number(e.target.value) }))}
+                    value={parentValue}
+                    onChange={e => {
+                      if (e.target.value === '') {
+                        setForm(f => ({ ...f, parentId: null }));
+                      } else {
+                        setForm(f => ({ ...f, parentId: Number(e.target.value) }));
+                      }
+                    }}
                   >
                     <option value="">{t('itSkill.category.form.parentNone')}</option>
                     <optgroup label={t('itSkill.category.form.lv1Group')}>
-                      {lv1.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {buildCategoryOptions(lv1)}
                     </optgroup>
                     <optgroup label={t('itSkill.category.form.lv2Group')}>
-                      {lv2.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {buildCategoryOptions(lv2)}
                     </optgroup>
                   </select>
                   <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
@@ -210,12 +323,12 @@ function CategoryTab({ categories, onReload }: { categories: ItSkillCategory[]; 
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
+                <IconCheck size={13} />{saveButtonLabel}
               </button>
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );
@@ -256,32 +369,35 @@ function SkillTab({ skills, categories, onReload }: {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const catMap = useMemo(() => new Map(categories.map(c => [c.id, c])), [categories]);
-  const lv1Cats = categories.filter(c => c.level === 1);
-  const lv2Cats = (parentId: number | null) => categories.filter(c => c.level === 2 && c.parentId === parentId);
-  const lv3Cats = (parentId: number | null) => categories.filter(c => c.level === 3 && c.parentId === parentId);
-
-  const selectedCategoryId = (): number | null => form.lv3Id ?? form.lv2Id ?? form.lv1Id;
+  const catMap = useMemo(() => buildCategoryMap(categories), [categories]);
+  const lv1Cats = filterByLevel(categories, 1);
+  const lv2Cats = (parentId: number | null) => filterByLevelAndParent(categories, 2, parentId);
+  const lv3Cats = (parentId: number | null) => filterByLevelAndParent(categories, 3, parentId);
 
   const skillCategoryPath = (skill: ItSkill): string => {
     const parts: string[] = [];
     if (skill.category1Name) parts.push(skill.category1Name);
     if (skill.category2Name) parts.push(skill.category2Name);
     if (skill.category3Name) parts.push(skill.category3Name);
-    return parts.join(' › ') || `カテゴリID:${skill.categoryId}`;
+    if (parts.length === 0) return `カテゴリID:${skill.categoryId}`;
+    return parts.join(' › ');
   };
 
   const filteredSkills = useMemo(() => {
-    let result = skills;
-    if (filterLv1) result = result.filter(s => s.category1Id === filterLv1);
+    const lv3IdsUnderLv2 = new Set<number>();
     if (filterLv2) {
-      const ids = new Set<number>([
-        filterLv2,
-        ...categories.filter(c => c.level === 3 && c.parentId === filterLv2).map(c => c.id),
-      ]);
-      result = result.filter(s => ids.has(s.categoryId));
+      lv3IdsUnderLv2.add(filterLv2);
+      for (const c of filterByLevelAndParent(categories, 3, filterLv2)) {
+        lv3IdsUnderLv2.add(c.id);
+      }
     }
-    if (filterLv3) result = result.filter(s => s.categoryId === filterLv3);
+    const result: ItSkill[] = [];
+    for (const s of skills) {
+      if (filterLv1 && s.category1Id !== filterLv1) continue;
+      if (filterLv2 && !lv3IdsUnderLv2.has(s.categoryId)) continue;
+      if (filterLv3 && s.categoryId !== filterLv3) continue;
+      result.push(s);
+    }
     return result;
   }, [skills, filterLv1, filterLv2, filterLv3, categories]);
 
@@ -297,15 +413,25 @@ function SkillTab({ skills, categories, onReload }: {
     const cat = catMap.get(s.categoryId);
     let lv1Id: number | null = null, lv2Id: number | null = null, lv3Id: number | null = null;
     if (cat) {
-      if (cat.level === 1) lv1Id = cat.id;
-      else if (cat.level === 2) { lv2Id = cat.id; lv1Id = cat.parentId ?? null; }
-      else if (cat.level === 3) {
+      if (cat.level === 1) {
+        lv1Id = cat.id;
+      } else if (cat.level === 2) {
+        lv2Id = cat.id;
+        lv1Id = cat.parentId;
+      } else if (cat.level === 3) {
         lv3Id = cat.id;
         const lv2 = catMap.get(cat.parentId!);
-        if (lv2) { lv2Id = lv2.id; lv1Id = lv2.parentId ?? null; }
+        if (lv2) {
+          lv2Id = lv2.id;
+          lv1Id = lv2.parentId;
+        }
       }
     }
-    setForm({ lv1Id, lv2Id, lv3Id, name: s.name, description: s.description ?? '', sortOrder: String(s.sortOrder), active: s.isActive });
+    let description = '';
+    if (s.description != null) {
+      description = s.description;
+    }
+    setForm({ lv1Id, lv2Id, lv3Id, name: s.name, description, sortOrder: String(s.sortOrder), active: s.isActive });
     setFormError('');
     setMode('edit');
     setEditingId(s.id);
@@ -313,7 +439,7 @@ function SkillTab({ skills, categories, onReload }: {
   };
 
   const handleSubmit = async () => {
-    const catId = selectedCategoryId();
+    const catId = resolveSelectedCategoryId(form);
     if (!catId) { setFormError(t('itSkill.skill.validation.categoryRequired')); return; }
     if (!form.name.trim()) { setFormError(t('itSkill.skill.validation.nameRequired')); return; }
     setSaving(true); setFormError('');
@@ -332,44 +458,136 @@ function SkillTab({ skills, categories, onReload }: {
       setModalOpen(false);
       onReload();
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setFormError(msg ?? t('common.saveFailed'));
+      const err = e as { response?: { data?: { detail?: string } } };
+      let msg = t('common.saveFailed');
+      if (err.response != null && err.response.data != null && err.response.data.detail != null) {
+        msg = err.response.data.detail;
+      }
+      setFormError(msg);
     } finally { setSaving(false); }
   };
+
+  let filterLv1Value: number | string = '';
+  if (filterLv1 != null) {
+    filterLv1Value = filterLv1;
+  }
+  let filterLv2Value: number | string = '';
+  if (filterLv2 != null) {
+    filterLv2Value = filterLv2;
+  }
+  let filterLv3Value: number | string = '';
+  if (filterLv3 != null) {
+    filterLv3Value = filterLv3;
+  }
+
+  let tableBody: React.ReactNode;
+  if (filteredSkills.length === 0) {
+    tableBody = <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>;
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const s of filteredSkills) {
+      let descriptionLabel = '—';
+      if (s.description != null) {
+        descriptionLabel = s.description;
+      }
+      let statusClassName = 'fy-status fy-status--inactive';
+      let statusLabel = t('common.inactiveLabel');
+      if (s.isActive) {
+        statusClassName = 'fy-status fy-status--active';
+        statusLabel = t('common.activeLabel');
+      }
+      rows.push(
+        <tr key={s.id}>
+          <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{skillCategoryPath(s)}</td>
+          <td>{s.name}</td>
+          <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {descriptionLabel}
+          </td>
+          <td style={{ textAlign: 'center' }}>{s.sortOrder}</td>
+          <td>
+            <span className={statusClassName}>
+              {statusLabel}
+            </span>
+          </td>
+          <td>
+            <button className="btn btn--secondary btn--sm" onClick={() => openEdit(s)}>
+              <IconEdit size={12} />{t('common.edit')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    tableBody = rows;
+  }
+
+  let modalTitle = t('itSkill.modalCreate');
+  if (mode === 'edit') {
+    modalTitle = t('itSkill.modalEdit');
+  }
+
+  let formLv1Value: number | string = '';
+  if (form.lv1Id != null) {
+    formLv1Value = form.lv1Id;
+  }
+  let formLv2Value: number | string = '';
+  if (form.lv2Id != null) {
+    formLv2Value = form.lv2Id;
+  }
+  let formLv3Value: number | string = '';
+  if (form.lv3Id != null) {
+    formLv3Value = form.lv3Id;
+  }
+
+  let saveButtonLabel = t('common.save');
+  if (saving) {
+    saveButtonLabel = t('common.saving');
+  }
 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <label className="master-label" style={{ minWidth: 'auto' }}>{t('itSkill.skill.filterLabel')}</label>
         <select className="master-select"
-          value={filterLv1 ?? ''}
+          value={filterLv1Value}
           onChange={e => {
-            const v = e.target.value === '' ? null : Number(e.target.value);
+            let v: number | null = null;
+            if (e.target.value !== '') {
+              v = Number(e.target.value);
+            }
             setFilterLv1(v);
             setFilterLv2(null);
             setFilterLv3(null);
           }}>
           <option value="">{t('common.allOption')}</option>
-          {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {buildCategoryOptions(lv1Cats)}
         </select>
         {filterLv1 && lv2Cats(filterLv1).length > 0 && (
           <select className="master-select"
-            value={filterLv2 ?? ''}
+            value={filterLv2Value}
             onChange={e => {
-              const v = e.target.value === '' ? null : Number(e.target.value);
+              let v: number | null = null;
+              if (e.target.value !== '') {
+                v = Number(e.target.value);
+              }
               setFilterLv2(v);
               setFilterLv3(null);
             }}>
             <option value="">{t('common.allOption')}</option>
-            {lv2Cats(filterLv1).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {buildCategoryOptions(lv2Cats(filterLv1))}
           </select>
         )}
         {filterLv2 && lv3Cats(filterLv2).length > 0 && (
           <select className="master-select"
-            value={filterLv3 ?? ''}
-            onChange={e => setFilterLv3(e.target.value === '' ? null : Number(e.target.value))}>
+            value={filterLv3Value}
+            onChange={e => {
+              if (e.target.value === '') {
+                setFilterLv3(null);
+              } else {
+                setFilterLv3(Number(e.target.value));
+              }
+            }}>
             <option value="">{t('common.allOption')}</option>
-            {lv3Cats(filterLv2).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            {buildCategoryOptions(lv3Cats(filterLv2))}
           </select>
         )}
         <button className="btn btn--primary btn--sm" onClick={openCreate} style={{ marginLeft: 'auto' }}>
@@ -390,30 +608,7 @@ function SkillTab({ skills, categories, onReload }: {
             </tr>
           </thead>
           <tbody>
-            {filteredSkills.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
-            ) : (
-              filteredSkills.map(s => (
-                <tr key={s.id}>
-                  <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{skillCategoryPath(s)}</td>
-                  <td>{s.name}</td>
-                  <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.description ?? '—'}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>{s.sortOrder}</td>
-                  <td>
-                    <span className={s.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {s.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(s)}>
-                      <IconEdit size={12} />{t('common.edit')}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+            {tableBody}
           </tbody>
         </table>
       </StickyHorizontalScroll>
@@ -422,7 +617,7 @@ function SkillTab({ skills, categories, onReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? t('itSkill.modalCreate') : t('itSkill.modalEdit')}</h3>
+              <h3>{modalTitle}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -432,34 +627,43 @@ function SkillTab({ skills, categories, onReload }: {
                 <label className="form-label">{t('itSkill.form.categoryLabel')} <span className="required">*</span></label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <select className="master-select" style={{ width: '100%' }}
-                    value={form.lv1Id ?? ''}
+                    value={formLv1Value}
                     onChange={e => {
-                      const v = e.target.value === '' ? null : Number(e.target.value);
+                      let v: number | null = null;
+                      if (e.target.value !== '') {
+                        v = Number(e.target.value);
+                      }
                       setForm(f => ({ ...f, lv1Id: v, lv2Id: null, lv3Id: null }));
                     }}>
                     <option value="">{t('itSkill.skill.form.lv1Select')}</option>
-                    {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {buildCategoryOptions(lv1Cats)}
                   </select>
                   {form.lv1Id && lv2Cats(form.lv1Id).length > 0 && (
                     <select className="master-select" style={{ width: '100%' }}
-                      value={form.lv2Id ?? ''}
+                      value={formLv2Value}
                       onChange={e => {
-                        const v = e.target.value === '' ? null : Number(e.target.value);
+                        let v: number | null = null;
+                        if (e.target.value !== '') {
+                          v = Number(e.target.value);
+                        }
                         setForm(f => ({ ...f, lv2Id: v, lv3Id: null }));
                       }}>
                       <option value="">{t('itSkill.skill.form.lv2Select')}</option>
-                      {lv2Cats(form.lv1Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {buildCategoryOptions(lv2Cats(form.lv1Id))}
                     </select>
                   )}
                   {form.lv2Id && lv3Cats(form.lv2Id).length > 0 && (
                     <select className="master-select" style={{ width: '100%' }}
-                      value={form.lv3Id ?? ''}
+                      value={formLv3Value}
                       onChange={e => {
-                        const v = e.target.value === '' ? null : Number(e.target.value);
+                        let v: number | null = null;
+                        if (e.target.value !== '') {
+                          v = Number(e.target.value);
+                        }
                         setForm(f => ({ ...f, lv3Id: v }));
                       }}>
                       <option value="">{t('itSkill.skill.form.lv3Select')}</option>
-                      {lv3Cats(form.lv2Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {buildCategoryOptions(lv3Cats(form.lv2Id))}
                     </select>
                   )}
                 </div>
@@ -501,12 +705,12 @@ function SkillTab({ skills, categories, onReload }: {
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
+                <IconCheck size={13} />{saveButtonLabel}
               </button>
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );
@@ -542,10 +746,9 @@ function PromotionTab({ categories, onSkillsReload }: {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const lv1Cats = categories.filter(c => c.level === 1 && c.isActive);
-  const lv2Cats = (pid: number | null) => categories.filter(c => c.level === 2 && c.parentId === pid && c.isActive);
-  const lv3Cats = (pid: number | null) => categories.filter(c => c.level === 3 && c.parentId === pid && c.isActive);
-  const selectedCategoryId = (): number | null => form.lv3Id ?? form.lv2Id ?? form.lv1Id;
+  const lv1Cats = filterActiveByLevel(categories, 1);
+  const lv2Cats = (pid: number | null) => filterActiveByLevelAndParent(categories, 2, pid);
+  const lv3Cats = (pid: number | null) => filterActiveByLevelAndParent(categories, 3, pid);
 
   const loadItems = () => {
     setTabLoading(true);
@@ -566,7 +769,7 @@ function PromotionTab({ categories, onSkillsReload }: {
   };
 
   const handleSubmit = async () => {
-    const catId = selectedCategoryId();
+    const catId = resolveSelectedCategoryId(form);
     if (!catId) { setFormError(t('itSkill.promotion.validation.categoryRequired')); return; }
     if (!form.name.trim()) { setFormError(t('itSkill.promotion.validation.nameRequired')); return; }
     if (!promoting) return;
@@ -590,6 +793,69 @@ function PromotionTab({ categories, onSkillsReload }: {
   if (tabLoading) return <div className="chart-loading">{t('loading')}</div>;
   if (tabError) return <div className="alert alert--error">{tabError}</div>;
 
+  let listBody: React.ReactNode;
+  if (items.length === 0) {
+    listBody = (
+      <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>
+        {t('itSkill.promotion.emptyMessage')}
+      </div>
+    );
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const item of items) {
+      rows.push(
+        <tr key={item.customName}>
+          <td>{item.customName}</td>
+          <td style={{ textAlign: 'center' }}>{item.usageCount}{t('common.usageCountSuffix')}</td>
+          <td>
+            <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>
+              {t('common.promoteButton')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    listBody = (
+      <StickyHorizontalScroll className="master-table-wrap">
+        <table className="master-table">
+          <thead>
+            <tr>
+              <th>{t('itSkill.promotion.table.customName')}</th>
+              <th style={{ width: 110 }}>{t('itSkill.table.usageCount')}</th>
+              <th style={{ width: 80 }}>{t('common.actions')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows}
+          </tbody>
+        </table>
+      </StickyHorizontalScroll>
+    );
+  }
+
+  let originalNameLabel = '';
+  if (promoting != null) {
+    originalNameLabel = promoting.customName;
+  }
+
+  let formLv1Value: number | string = '';
+  if (form.lv1Id != null) {
+    formLv1Value = form.lv1Id;
+  }
+  let formLv2Value: number | string = '';
+  if (form.lv2Id != null) {
+    formLv2Value = form.lv2Id;
+  }
+  let formLv3Value: number | string = '';
+  if (form.lv3Id != null) {
+    formLv3Value = form.lv3Id;
+  }
+
+  let submitButtonLabel = t('common.registerButton');
+  if (saving) {
+    submitButtonLabel = t('common.registeringButton');
+  }
+
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
@@ -599,36 +865,7 @@ function PromotionTab({ categories, onSkillsReload }: {
         </span>
       </div>
 
-      {items.length === 0 ? (
-        <div style={{ padding: '32px 0', textAlign: 'center', color: 'var(--color-text-muted)', fontSize: 14 }}>
-          {t('itSkill.promotion.emptyMessage')}
-        </div>
-      ) : (
-        <StickyHorizontalScroll className="master-table-wrap">
-          <table className="master-table">
-            <thead>
-              <tr>
-                <th>{t('itSkill.promotion.table.customName')}</th>
-                <th style={{ width: 110 }}>{t('itSkill.table.usageCount')}</th>
-                <th style={{ width: 80 }}>{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map(item => (
-                <tr key={item.customName}>
-                  <td>{item.customName}</td>
-                  <td style={{ textAlign: 'center' }}>{item.usageCount}{t('common.usageCountSuffix')}</td>
-                  <td>
-                    <button className="btn btn--primary btn--sm" onClick={() => openPromote(item)}>
-                      {t('common.promoteButton')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </StickyHorizontalScroll>
-      )}
+      {listBody}
 
       {modalOpen && createPortal(
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
@@ -642,41 +879,50 @@ function PromotionTab({ categories, onSkillsReload }: {
 
               <div className="form-group">
                 <label className="form-label">{t('itSkill.promotion.form.originalNameLabel')}</label>
-                <div style={{ padding: '6px 0', fontWeight: 500 }}>{promoting?.customName}</div>
+                <div style={{ padding: '6px 0', fontWeight: 500 }}>{originalNameLabel}</div>
               </div>
 
               <div className="form-group">
                 <label className="form-label">{t('itSkill.form.categoryLabel')} <span className="required">*</span></label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <select className="master-select" style={{ width: '100%' }}
-                    value={form.lv1Id ?? ''}
+                    value={formLv1Value}
                     onChange={e => {
-                      const v = e.target.value === '' ? null : Number(e.target.value);
+                      let v: number | null = null;
+                      if (e.target.value !== '') {
+                        v = Number(e.target.value);
+                      }
                       setForm(f => ({ ...f, lv1Id: v, lv2Id: null, lv3Id: null }));
                     }}>
                     <option value="">{t('itSkill.skill.form.lv1Select')}</option>
-                    {lv1Cats.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {buildCategoryOptions(lv1Cats)}
                   </select>
                   {form.lv1Id && lv2Cats(form.lv1Id).length > 0 && (
                     <select className="master-select" style={{ width: '100%' }}
-                      value={form.lv2Id ?? ''}
+                      value={formLv2Value}
                       onChange={e => {
-                        const v = e.target.value === '' ? null : Number(e.target.value);
+                        let v: number | null = null;
+                        if (e.target.value !== '') {
+                          v = Number(e.target.value);
+                        }
                         setForm(f => ({ ...f, lv2Id: v, lv3Id: null }));
                       }}>
                       <option value="">{t('itSkill.skill.form.lv2Select')}</option>
-                      {lv2Cats(form.lv1Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {buildCategoryOptions(lv2Cats(form.lv1Id))}
                     </select>
                   )}
                   {form.lv2Id && lv3Cats(form.lv2Id).length > 0 && (
                     <select className="master-select" style={{ width: '100%' }}
-                      value={form.lv3Id ?? ''}
+                      value={formLv3Value}
                       onChange={e => {
-                        const v = e.target.value === '' ? null : Number(e.target.value);
+                        let v: number | null = null;
+                        if (e.target.value !== '') {
+                          v = Number(e.target.value);
+                        }
                         setForm(f => ({ ...f, lv3Id: v }));
                       }}>
                       <option value="">{t('itSkill.skill.form.lv3Select')}</option>
-                      {lv3Cats(form.lv2Id).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      {buildCategoryOptions(lv3Cats(form.lv2Id))}
                     </select>
                   )}
                 </div>
@@ -709,12 +955,12 @@ function PromotionTab({ categories, onSkillsReload }: {
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.registeringButton') : t('common.registerButton')}
+                <IconCheck size={13} />{submitButtonLabel}
               </button>
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );
@@ -743,7 +989,7 @@ export default function ItSkillMasterPage() {
   const [importErrors, setImportErrors] = useState<MasterImportError[] | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ⑥: Promise を返してリロード完了を呼び出し元で await できるようにする
+  // リロード完了を呼び出し元で await できるように Promise を返す
   const loadAll = () => {
     setLoading(true);
     return Promise.all([getItSkillCategories(), getItSkills()])
@@ -758,7 +1004,6 @@ export default function ItSkillMasterPage() {
   // 初期表示時にITスキルカテゴリとITスキル一覧を取得する
   useEffect(() => { loadAll(); }, []);
 
-  // ⑫: エラーハンドリングを追加
   const handleDownload = async () => {
     setDownloading(true);
     try {
@@ -773,29 +1018,119 @@ export default function ItSkillMasterPage() {
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = e.target.files;
+    let file: File | null = null;
+    if (files != null && files.length > 0) {
+      file = files[0];
+    }
     if (!file) return;
     e.target.value = '';
     setImporting(true);
     try {
       const res = await uploadItSkillExcel(file);
-      await loadAll(); // ⑥: リロード完了後にモーダルを表示
+      await loadAll(); // リロード完了後にモーダルを表示
       setImportResult(res.data);
     } catch (err: unknown) {
-      // ⑤: ネットワークエラー等でエラー配列が取れない場合も適切なメッセージを表示
-      const apiErrors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
-        ?.response?.data?.errors;
+      // ネットワークエラー等でエラー配列が取れない場合も適切なメッセージを表示
+      const typedErr = err as { response?: { data?: { errors?: MasterImportError[]; message?: string } } };
+      let apiErrors: MasterImportError[] | undefined;
+      if (typedErr.response != null && typedErr.response.data != null) {
+        apiErrors = typedErr.response.data.errors;
+      }
       if (apiErrors) {
         setImportErrors(apiErrors);
       } else {
-        const message = (err as { response?: { data?: { message?: string } } })
-          ?.response?.data?.message ?? t('excel.uploadFailed');
+        let message = t('excel.uploadFailed');
+        if (typedErr.response != null && typedErr.response.data != null && typedErr.response.data.message != null) {
+          message = typedErr.response.data.message;
+        }
         setImportErrors([{ sheet: '', row: 0, column: '', message }]);
       }
     } finally { setImporting(false); }
   };
 
   if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
+
+  let categoriesTabClassName = 'tab-btn';
+  if (activeTab === 'categories') {
+    categoriesTabClassName += ' active';
+  }
+  let skillsTabClassName = 'tab-btn';
+  if (activeTab === 'skills') {
+    skillsTabClassName += ' active';
+  }
+  let promoteTabClassName = 'tab-btn';
+  if (activeTab === 'promote') {
+    promoteTabClassName += ' active';
+  }
+
+  let tabContent: React.ReactNode;
+  if (activeTab === 'categories') {
+    tabContent = <CategoryTab categories={categories} onReload={loadAll} />;
+  } else if (activeTab === 'skills') {
+    tabContent = <SkillTab skills={skills} categories={categories} onReload={loadAll} />;
+  } else {
+    tabContent = <PromotionTab categories={categories} onSkillsReload={loadAll} />;
+  }
+
+  let downloadButtonLabel = t('excel.download');
+  if (downloading) {
+    downloadButtonLabel = t('excel.downloading');
+  }
+
+  let uploadButtonLabel = t('excel.upload');
+  if (importing) {
+    uploadButtonLabel = t('excel.importing');
+  }
+
+  let importResultBody: React.ReactNode = null;
+  if (importResult !== null) {
+    const importResultRows = [
+      { label: t('excel.importResultCreated'), value: importResult.created },
+      { label: t('excel.importResultUpdated'), value: importResult.updated },
+      { label: t('excel.importResultDeleted'), value: importResult.deleted },
+    ];
+    const resultRowElements: React.ReactNode[] = [];
+    for (const row of importResultRows) {
+      resultRowElements.push(
+        <tr key={row.label} style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <td style={{ padding: '10px 8px', color: 'var(--color-text-muted)' }}>{row.label}</td>
+          <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, fontSize: 18 }}>
+            {row.value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 2 }}>{t('excel.importResultUnit')}</span>
+          </td>
+        </tr>,
+      );
+    }
+    importResultBody = (
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
+        <tbody>
+          {resultRowElements}
+        </tbody>
+      </table>
+    );
+  }
+
+  let importErrorBody: React.ReactNode = null;
+  if (importErrors !== null) {
+    if (importErrors.length === 0) {
+      importErrorBody = <p>{t('common.loadFailed')}</p>;
+    } else {
+      const errorRowElements: React.ReactNode[] = [];
+      for (let i = 0; i < importErrors.length; i++) {
+        const e = importErrors[i];
+        let errorText: React.ReactNode = e.message;
+        if (e.sheet && e.row) {
+          errorText = t('excel.importErrorDetail', { sheet: e.sheet, row: e.row, column: e.column, message: e.message });
+        }
+        errorRowElements.push(
+          <p key={i} style={{ fontSize: 13, margin: '4px 0', color: 'var(--color-danger)' }}>
+            {errorText}
+          </p>,
+        );
+      }
+      importErrorBody = errorRowElements;
+    }
+  }
 
   return (
     <div className="master-page">
@@ -805,40 +1140,38 @@ export default function ItSkillMasterPage() {
         {error && <div className="alert alert--error">{error}</div>}
 
         <div className="tab-bar">
-          <button className={`tab-btn${activeTab === 'categories' ? ' active' : ''}`}
+          <button className={categoriesTabClassName}
             onClick={() => setActiveTab('categories')}>
             {t('itSkill.tab.categories')}
           </button>
-          <button className={`tab-btn${activeTab === 'skills' ? ' active' : ''}`}
+          <button className={skillsTabClassName}
             onClick={() => setActiveTab('skills')}>
             {t('itSkill.tab.skills')}
           </button>
-          <button className={`tab-btn${activeTab === 'promote' ? ' active' : ''}`}
+          <button className={promoteTabClassName}
             onClick={() => setActiveTab('promote')}>
             {t('itSkill.tab.promote')}
           </button>
         </div>
 
         <section className="master-card">
-          {activeTab === 'categories' ? (
-            <CategoryTab categories={categories} onReload={loadAll} />
-          ) : activeTab === 'skills' ? (
-            <SkillTab skills={skills} categories={categories} onReload={loadAll} />
-          ) : (
-            <PromotionTab categories={categories} onSkillsReload={loadAll} />
-          )}
+          {tabContent}
         </section>
       </main>
 
       <div className="excel-fab">
         <button className="excel-fab__btn" onClick={handleDownload} disabled={downloading}>
-          {downloading ? t('excel.downloading') : t('excel.download')}
+          {downloadButtonLabel}
         </button>
-        <button className="excel-fab__btn" onClick={() => fileInputRef.current?.click()}
+        <button className="excel-fab__btn" onClick={() => {
+          if (fileInputRef.current != null) {
+            fileInputRef.current.click();
+          }
+        }}
           disabled={importing}>
-          {importing ? t('excel.importing') : t('excel.upload')}
+          {uploadButtonLabel}
         </button>
-        {/* ⑬: display:none の代わりに視覚的に隠すことでスクリーンリーダーからアクセス可能にする */}
+        {/* display:none の代わりに視覚的に隠すことでスクリーンリーダーからアクセス可能にする */}
         <input ref={fileInputRef} type="file" accept=".xlsx"
           aria-label={t('excel.upload')}
           style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden' }}
@@ -853,22 +1186,7 @@ export default function ItSkillMasterPage() {
               <button className="modal__close" onClick={() => setImportResult(null)}>×</button>
             </div>
             <div className="modal__body">
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
-                <tbody>
-                  {[
-                    { label: t('excel.importResultCreated'), value: importResult.created },
-                    { label: t('excel.importResultUpdated'), value: importResult.updated },
-                    { label: t('excel.importResultDeleted'), value: importResult.deleted },
-                  ].map(row => (
-                    <tr key={row.label} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '10px 8px', color: 'var(--color-text-muted)' }}>{row.label}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, fontSize: 18 }}>
-                        {row.value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 2 }}>{t('excel.importResultUnit')}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {importResultBody}
             </div>
             <div className="modal__footer">
               <button className="btn btn--primary" onClick={() => setImportResult(null)}>
@@ -877,7 +1195,7 @@ export default function ItSkillMasterPage() {
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
 
       {importErrors !== null && createPortal(
@@ -888,14 +1206,7 @@ export default function ItSkillMasterPage() {
               <button className="modal__close" onClick={() => setImportErrors(null)}>×</button>
             </div>
             <div className="modal__body" style={{ maxHeight: 400, overflowY: 'auto' }}>
-              {importErrors.length === 0
-                ? <p>{t('common.loadFailed')}</p>
-                : importErrors.map((e, i) => (
-                  <p key={i} style={{ fontSize: 13, margin: '4px 0', color: 'var(--color-danger)' }}>
-                    {e.sheet && e.row ? t('excel.importErrorDetail', { sheet: e.sheet, row: e.row, column: e.column, message: e.message })
-                      : e.message}
-                  </p>
-                ))}
+              {importErrorBody}
             </div>
             <div className="modal__footer">
               <button className="btn btn--secondary" onClick={() => setImportErrors(null)}>
@@ -904,7 +1215,7 @@ export default function ItSkillMasterPage() {
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );

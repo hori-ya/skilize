@@ -51,15 +51,17 @@ export default function AiSupportWidget() {
 
   // 新しいメッセージが追加されたときのみスクロール（モード切替によるクリア時は除く）
   useEffect(() => {
-    if (open && history.length > 0) {
+    if (open && history.length > 0 && historyEndRef.current != null) {
       // block: 'nearest' でパネル内スクロールに限定し、ページ全体がスクロールするのを防ぐ
-      historyEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      historyEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [history, open]);
 
   // パネルが開いたときにテキストエリアにフォーカスを当てる
   useEffect(() => {
-    if (open) textareaRef.current?.focus();
+    if (open && textareaRef.current != null) {
+      textareaRef.current.focus();
+    }
   }, [open]);
 
   const handleModeChange = (newMode: AiMode) => {
@@ -97,6 +99,58 @@ export default function AiSupportWidget() {
     }
   };
 
+  const modeButtons: React.ReactNode[] = [];
+  for (const m of MODES) {
+    let modeButtonClassName = 'ai-panel__mode-btn';
+    if (mode === m) {
+      modeButtonClassName += ' ai-panel__mode-btn--active';
+    }
+    modeButtons.push(
+      <button
+        type="button"
+        key={m}
+        className={modeButtonClassName}
+        onClick={() => handleModeChange(m)}
+      >
+        {t(`mode.${m.toLowerCase()}`)}
+      </button>,
+    );
+  }
+
+  const historyItems: React.ReactNode[] = [];
+  for (let i = 0; i < history.length; i++) {
+    const msg = history[i];
+    let roleLabel = t('message.ai');
+    if (msg.role === 'user') {
+      roleLabel = t('message.you');
+    }
+    let messageContent: React.ReactNode;
+    if (msg.role === 'assistant') {
+      messageContent = (
+        <div className="ai-panel__message-content ai-panel__message-content--md">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {msg.content}
+          </ReactMarkdown>
+        </div>
+      );
+    } else {
+      messageContent = <p className="ai-panel__message-content">{msg.content}</p>;
+    }
+    historyItems.push(
+      <div key={i} className={`ai-panel__message ai-panel__message--${msg.role}`}>
+        <span className="ai-panel__message-label">
+          {roleLabel}
+        </span>
+        {messageContent}
+      </div>,
+    );
+  }
+
+  let sendButtonLabel = t('input.send');
+  if (loading) {
+    sendButtonLabel = t('input.sending');
+  }
+
   return (
     <>
       <button
@@ -124,38 +178,14 @@ export default function AiSupportWidget() {
           </div>
 
           <div className="ai-panel__modes" role="group" aria-label={t('mode.label')}>
-            {MODES.map(m => (
-              <button
-                type="button"
-                key={m}
-                className={`ai-panel__mode-btn${mode === m ? ' ai-panel__mode-btn--active' : ''}`}
-                onClick={() => handleModeChange(m)}
-              >
-                {t(`mode.${m.toLowerCase()}`)}
-              </button>
-            ))}
+            {modeButtons}
           </div>
 
           <div className="ai-panel__history" aria-live="polite">
             {history.length === 0 && (
               <p className="ai-panel__empty">{t(`placeholder.${mode.toLowerCase()}`)}</p>
             )}
-            {history.map((msg, i) => (
-              <div key={i} className={`ai-panel__message ai-panel__message--${msg.role}`}>
-                <span className="ai-panel__message-label">
-                  {msg.role === 'user' ? t('message.you') : t('message.ai')}
-                </span>
-                {msg.role === 'assistant' ? (
-                  <div className="ai-panel__message-content ai-panel__message-content--md">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {msg.content}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <p className="ai-panel__message-content">{msg.content}</p>
-                )}
-              </div>
-            ))}
+            {historyItems}
             {loading && (
               <div className="ai-panel__message ai-panel__message--assistant">
                 <span className="ai-panel__message-label">{t('message.ai')}</span>
@@ -187,7 +217,7 @@ export default function AiSupportWidget() {
                 disabled={loading || !input.trim()}
                 aria-label={t('input.send')}
               >
-                {loading ? t('input.sending') : t('input.send')}
+                {sendButtonLabel}
               </button>
             </div>
           </div>

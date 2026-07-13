@@ -30,9 +30,14 @@ export default function ScrollToTopButton() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  let buttonClassName = 'scroll-top-btn';
+  if (!visible) {
+    buttonClassName += ' scroll-top-btn--hidden';
+  }
+
   return (
     <button
-      className={`scroll-top-btn${visible ? '' : ' scroll-top-btn--hidden'}`}
+      className={buttonClassName}
       onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
       aria-label="ページ先頭に戻る"
     >

@@ -58,60 +58,86 @@ export default function TeamMemberListPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  let content: React.ReactNode;
+  if (loading) {
+    content = <div className="loading">{t('loading')}</div>;
+  } else if (members.length === 0) {
+    content = <div className="info-card"><p>{t('teamMemberList.noMembers')}</p></div>;
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const member of members) {
+      let roleLabelKey = member.role;
+      if (ROLE_KEY[member.role] != null) {
+        roleLabelKey = ROLE_KEY[member.role];
+      }
+
+      let statusCell: React.ReactNode;
+      if (member.currentInventory != null) {
+        const inv = member.currentInventory;
+        let statusLabelKey = inv.status;
+        if (STATUS_KEY[inv.status] != null) {
+          statusLabelKey = STATUS_KEY[inv.status];
+        }
+        statusCell = (
+          <span className={`team-status team-status--${inv.status.toLowerCase()}`}>
+            {STATUS_ICON[inv.status]}{' '}
+            {t(statusLabelKey)}
+          </span>
+        );
+      } else {
+        statusCell = <span className="team-status team-status--none">{t('teamMemberList.noInventory')}</span>;
+      }
+
+      let fiscalYearName = '—';
+      if (member.currentInventory != null) {
+        fiscalYearName = member.currentInventory.fiscalYear.name;
+      }
+
+      rows.push(
+        <tr key={member.id}>
+          <td>{member.name}</td>
+          <td>{t(roleLabelKey)}</td>
+          <td>{statusCell}</td>
+          <td>{fiscalYearName}</td>
+          <td>
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => navigate(`/team/${member.id}`)}
+            >
+              <IconArrowRight size={12} />
+              {t('teamMemberList.table.detailButton')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    content = (
+      <StickyHorizontalScroll className="master-table-wrap">
+        <table className="master-table">
+          <thead>
+            <tr>
+              <th>{t('teamMemberList.table.name')}</th>
+              <th>{t('teamMemberList.table.role')}</th>
+              <th>{t('teamMemberList.table.currentStatus')}</th>
+              <th>{t('teamMemberList.table.fiscalYear')}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows}
+          </tbody>
+        </table>
+      </StickyHorizontalScroll>
+    );
+  }
+
   return (
     <div className="team-page">
       <NavBar />
       <main className="team-main">
         <button className="page-back-btn" onClick={() => navigate('/')}>{t('teamMemberList.backButton')}</button>
         <h1 className="page-title">{t('teamMemberList.title')}</h1>
-
-        {loading ? (
-          <div className="loading">{t('loading')}</div>
-        ) : members.length === 0 ? (
-          <div className="info-card"><p>{t('teamMemberList.noMembers')}</p></div>
-        ) : (
-          <StickyHorizontalScroll className="master-table-wrap">
-            <table className="master-table">
-              <thead>
-                <tr>
-                  <th>{t('teamMemberList.table.name')}</th>
-                  <th>{t('teamMemberList.table.role')}</th>
-                  <th>{t('teamMemberList.table.currentStatus')}</th>
-                  <th>{t('teamMemberList.table.fiscalYear')}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {members.map(member => (
-                  <tr key={member.id}>
-                    <td>{member.name}</td>
-                    <td>{t(ROLE_KEY[member.role] ?? member.role)}</td>
-                    <td>
-                      {member.currentInventory ? (
-                        <span className={`team-status team-status--${member.currentInventory.status.toLowerCase()}`}>
-                          {STATUS_ICON[member.currentInventory.status]}{' '}
-                          {t(STATUS_KEY[member.currentInventory.status] ?? member.currentInventory.status)}
-                        </span>
-                      ) : (
-                        <span className="team-status team-status--none">{t('teamMemberList.noInventory')}</span>
-                      )}
-                    </td>
-                    <td>{member.currentInventory?.fiscalYear.name ?? '—'}</td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-secondary"
-                        onClick={() => navigate(`/team/${member.id}`)}
-                      >
-                        <IconArrowRight size={12} />
-                        {t('teamMemberList.table.detailButton')}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </StickyHorizontalScroll>
-        )}
+        {content}
       </main>
     </div>
   );

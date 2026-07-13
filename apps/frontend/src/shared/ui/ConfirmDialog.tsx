@@ -40,6 +40,11 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  let confirmButtonClassName = 'btn btn--primary';
+  if (variant === 'danger') {
+    confirmButtonClassName = 'btn btn--danger';
+  }
+
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" style={{ width: 400 }} onClick={e => e.stopPropagation()}>
@@ -55,7 +60,7 @@ export default function ConfirmDialog({
             <IconX size={13} />{cancelLabel}
           </button>
           <button
-            className={variant === 'danger' ? 'btn btn--danger' : 'btn btn--primary'}
+            className={confirmButtonClassName}
             onClick={onConfirm}
           >
             <IconCheck size={13} />{confirmLabel}

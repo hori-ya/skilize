@@ -184,6 +184,7 @@ docker compose up db
 - フロントエンドコンポーネント内に日本語文字列をハードコードしない（`className` 値・コメントを除く）
 - `feature/dto/` パッケージを新規作成しない（廃止済み。`request/` / `response/` / `command/` / `query/` を使う）
 - バックエンドでラムダ式（`->`）・メソッド参照（`::`）・Stream API・Optionalのメソッドチェーン・三項演算子・拡張switch（アロー構文/`yield`）を使用しない（可読性を優先。`var`・複数catch・Text blocks・匿名クラスは対象外。詳細・代替手段は `.claude/rules/backend/code-style.md` の「短縮記法の制限」を参照）
+- フロントエンドで配列コールバックメソッド（`.map` / `.filter` / `.find` / `.some` / `.every` / `.sort` / `.forEach` / `.reduce`）・三項演算子・Optional chaining（`?.`）・Nullish coalescing（`??`）を使用しない（可読性を優先。アロー関数・分割代入・スプレッド構文・テンプレートリテラル・JSXの`&&`短絡評価・async/awaitはReactの基本文法のため対象外。詳細・代替手段は `.claude/rules/frontend/code-style.md` の「短縮記法の制限」を参照）
 - `XxxDto` という命名のクラスを新規作成しない（`XxxRequest` / `XxxResponse` / `XxxCommand` / `XxxQueryResult` で命名）
 - Service メソッドの引数に `presentation/request/` のクラスを直接渡さない（必ず Mapper で Command に変換する）
 - Service クラスが `presentation` パッケージをインポートしない（application → presentation の依存禁止）

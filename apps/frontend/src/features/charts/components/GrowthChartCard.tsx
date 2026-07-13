@@ -17,7 +17,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
 } from 'recharts';
-import type { GrowthResponse } from '../types/index';
+import type { GrowthResponse, GrowthSeries } from '../types/index';
 
 const PALETTE = [
   '#3d6db3', '#bf7a3a', '#149b78', '#c05040',
@@ -46,17 +46,51 @@ export default function GrowthChartCard({ data }: Props) {
     );
   }
 
-  const chartData = fiscalYears.map((year, i) => {
-    const point: Record<string, string | number> = { year };
-    series.forEach(s => {
-      point[s.category1Name] = s.yearlyTotalScores[i] ?? 0;
-    });
-    return point;
-  });
+  const chartData: Record<string, string | number>[] = [];
+  for (let i = 0; i < fiscalYears.length; i++) {
+    const point: Record<string, string | number> = { year: fiscalYears[i] };
+    for (const s of series) {
+      let score = 0;
+      if (s.yearlyTotalScores[i] != null) {
+        score = s.yearlyTotalScores[i];
+      }
+      point[s.category1Name] = score;
+    }
+    chartData.push(point);
+  }
 
-  const activeSeries = series.filter(s =>
-    s.yearlyTotalScores.some(v => v > 0)
-  );
+  // 全年度でスコアが0の系列は凡例・グラフから除外する
+  const activeSeries: GrowthSeries[] = [];
+  for (const s of series) {
+    let hasScore = false;
+    for (const v of s.yearlyTotalScores) {
+      if (v > 0) {
+        hasScore = true;
+        break;
+      }
+    }
+    if (hasScore) {
+      activeSeries.push(s);
+    }
+  }
+
+  const bars: React.ReactNode[] = [];
+  for (let i = 0; i < activeSeries.length; i++) {
+    const s = activeSeries[i];
+    let radius: [number, number, number, number] | undefined;
+    if (i === activeSeries.length - 1) {
+      radius = [3, 3, 0, 0];
+    }
+    bars.push(
+      <Bar
+        key={s.category1Id}
+        dataKey={s.category1Name}
+        stackId="stack"
+        fill={PALETTE[i % PALETTE.length]}
+        radius={radius}
+      />,
+    );
+  }
 
   return (
     <div className="chart-card">
@@ -70,15 +104,7 @@ export default function GrowthChartCard({ data }: Props) {
             contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--color-border)' }}
           />
           <Legend wrapperStyle={{ fontSize: 11 }} />
-          {activeSeries.map((s, i) => (
-            <Bar
-              key={s.category1Id}
-              dataKey={s.category1Name}
-              stackId="stack"
-              fill={PALETTE[i % PALETTE.length]}
-              radius={i === activeSeries.length - 1 ? [3, 3, 0, 0] : undefined}
-            />
-          ))}
+          {bars}
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -100,3 +100,45 @@ app → features → shared
 5. shared を最小化する
 
 大規模な一括変更は避け、段階的に進める。
+
+---
+
+# 短縮記法の制限
+
+誰が読んでも処理の流れを追いやすいことを優先し、以下の短縮記法を禁止する。React の Hooks・JSX の基本文法（アロー関数・分割代入・スプレッド構文・テンプレートリテラル・JSX の `&&` 短絡評価）はフレームワークの前提であるため対象外とする。
+
+## 禁止
+
+| 記法 | 禁止例 |
+|---|---|
+| 配列コールバックメソッド | `.map(`, `.filter(`, `.find(`, `.some(`, `.every(`, `.sort(`, `.forEach(`, `.reduce(` |
+| 三項演算子（`? :`） | `const label = active ? '有効' : '無効';`、JSX内の `{loading ? <A /> : <B />}` |
+| Optional chaining（`?.`） | `user?.name`, `res?.data?.list` |
+| Nullish coalescing（`??`） | `const remarks = d.remarks ?? '';` |
+
+## 代替手段
+
+| 用途 | 禁止（短縮記法） | 代替 |
+|---|---|---|
+| 配列の絞り込み・変換 | `list.filter(x => x.active).map(x => x.name)` | `for...of` で明示的にループし、結果を新しい配列に詰める |
+| 配列から1件検索 | `list.find(x => x.id === id)` | `for...of` でループし、見つかった時点で変数へ代入して `break` する |
+| 条件による値の切り替え（変数） | `const label = active ? '有効' : '無効';` | `if`/`else` で変数へ代入する |
+| 条件による JSX の出し分け | `{loading ? <Spinner /> : <Content />}` | `if`/`else` でレンダリングする JSX 要素を変数に代入してから使う、または早期 `return` でコンポーネントを分岐する |
+| Optional chaining | `user?.name` | `if (user != null) { ... user.name ... }` のように明示的に分岐する |
+| Nullish coalescing | `d.remarks ?? ''` | `let remarks = ''; if (d.remarks != null) { remarks = d.remarks; }` のように明示的に分岐する |
+
+## 例外（禁止対象外）
+
+以下は React の基本文法・慣用パターンであり、禁止すると Hooks やコンポーネント設計そのものが成り立たなくなるため許可する。
+
+- アロー関数（JSX イベントハンドラ・`useEffect`/`useState` のコールバック等）
+- 分割代入（`const [x, setX] = useState(...)`、`const { a, b } = props`）
+- スプレッド構文（`...`）
+- テンプレートリテラル（`` `${}` ``）
+- JSX の `&&` による短絡評価の条件描画（`{cond && <X />}`）
+- async/await
+
+## 理由
+
+- `.map`/`.filter` 等の配列メソッドチェーンはコールバック内の処理を1行に凝縮しやすく、ネストした条件やインデックス操作が絡むと可読性が下がる
+- 三項演算子・Optional chaining・Nullish coalescing は1行に判定と処理を凝縮するため、慣れていないと見落としやすい

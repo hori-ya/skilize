@@ -74,7 +74,60 @@ export default function NavBar() {
     navigate('/login');
   };
 
-  const isAdminActive = ADMIN_MENU.some(item => location.pathname.startsWith(item.path));
+  let isAdminActive = false;
+  for (const item of ADMIN_MENU) {
+    if (location.pathname.startsWith(item.path)) {
+      isAdminActive = true;
+      break;
+    }
+  }
+
+  let dashboardLinkClassName = 'navbar__link';
+  if (location.pathname === '/') {
+    dashboardLinkClassName += ' active';
+  }
+
+  let teamLinkClassName = 'navbar__link';
+  if (location.pathname.startsWith('/team')) {
+    teamLinkClassName += ' active';
+  }
+
+  let adminLinkClassName = 'navbar__link navbar__link--has-arrow';
+  if (isAdminActive) {
+    adminLinkClassName += ' active';
+  }
+  if (adminOpen) {
+    adminLinkClassName += ' open';
+  }
+
+  const adminMenuButtons: React.ReactNode[] = [];
+  for (const item of ADMIN_MENU) {
+    let itemClassName = 'navbar__dropdown-item';
+    if (location.pathname === item.path) {
+      itemClassName += ' active';
+    }
+    adminMenuButtons.push(
+      <button
+        key={item.path}
+        className={itemClassName}
+        onClick={() => navigate(item.path)}
+      >
+        {item.label}
+      </button>,
+    );
+  }
+
+  let userName = '';
+  let userRole = '';
+  let showChangePasswordButton = true;
+  if (user != null) {
+    userName = user.name;
+    userRole = user.role;
+    showChangePasswordButton = user.userId !== 'admin';
+  }
+
+  const showTeamLink = user != null && (user.role === 'TL' || user.role === 'ADMIN');
+  const showAdminMenu = user != null && user.role === 'ADMIN';
 
   return (
     <nav className="navbar">
@@ -85,25 +138,25 @@ export default function NavBar() {
         </span>
 
         <button
-          className={`navbar__link${location.pathname === '/' ? ' active' : ''}`}
+          className={dashboardLinkClassName}
           onClick={() => navigate('/')}
         >
           {t('menu.dashboard')}
         </button>
 
-        {(user?.role === 'TL' || user?.role === 'ADMIN') && (
+        {showTeamLink && (
           <button
-            className={`navbar__link${location.pathname.startsWith('/team') ? ' active' : ''}`}
+            className={teamLinkClassName}
             onClick={() => navigate('/team')}
           >
             {t('menu.team')}
           </button>
         )}
 
-        {user?.role === 'ADMIN' && (
+        {showAdminMenu && (
           <div className="navbar__dropdown" ref={dropdownRef}>
             <button
-              className={`navbar__link navbar__link--has-arrow${isAdminActive ? ' active' : ''}${adminOpen ? ' open' : ''}`}
+              className={adminLinkClassName}
               onClick={() => setAdminOpen(v => !v)}
             >
               {t('menu.admin')}
@@ -111,15 +164,7 @@ export default function NavBar() {
             </button>
             {adminOpen && (
               <div className="navbar__dropdown-menu">
-                {ADMIN_MENU.map(item => (
-                  <button
-                    key={item.path}
-                    className={`navbar__dropdown-item${location.pathname === item.path ? ' active' : ''}`}
-                    onClick={() => navigate(item.path)}
-                  >
-                    {item.label}
-                  </button>
-                ))}
+                {adminMenuButtons}
               </div>
             )}
           </div>
@@ -128,9 +173,9 @@ export default function NavBar() {
 
       <div className="navbar__right">
         <span className="navbar__user">
-          {user?.name}（{roleLabel(user?.role ?? '')}）
+          {userName}（{roleLabel(userRole)}）
         </span>
-        {user?.userId !== 'admin' && (
+        {showChangePasswordButton && (
           <button className="navbar__logout-btn" onClick={() => navigate('/settings/password')}>
             {t('action.changePassword')}
           </button>

@@ -20,46 +20,54 @@
 import apiClient from './client';
 import type { FiscalYear, FiscalYearSettings, FiscalYearRequest, SkillLevel, ItSkill, ItSkillCategory, Qualification, QualificationCategory, AdSeminar, AdSeminarCategory, SeminarCategory, CustomUnregisteredItem, MasterImportResult } from '../types/master';
 
+/** isActive パラメーターが指定されている場合のみ params に含める（省略時は全件取得）。 */
+function activeParam(isActive?: boolean): { isActive?: boolean } {
+  if (isActive !== undefined) {
+    return { isActive };
+  }
+  return {};
+}
+
 export const getFiscalYears = () => apiClient.get<FiscalYear[]>('/fiscal-years');
 export const getCurrentFiscalYear = () => apiClient.get<FiscalYear>('/fiscal-years/current');
 export const getSkillLevels = (isActive?: boolean) =>
-  apiClient.get<SkillLevel[]>('/skill-levels', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<SkillLevel[]>('/skill-levels', { params: activeParam(isActive) });
 export const createSkillLevel = (data: { levelValue: number; description: string; scoreWeight: number }) =>
   apiClient.post<SkillLevel>('/skill-levels', data);
 export const updateSkillLevel = (id: number, data: { levelValue: number; description: string; active: boolean; scoreWeight: number }) =>
   apiClient.put<SkillLevel>(`/skill-levels/${id}`, data);
 export const getItSkills = (isActive?: boolean) =>
-  apiClient.get<ItSkill[]>('/it-skills', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<ItSkill[]>('/it-skills', { params: activeParam(isActive) });
 export const createItSkill = (data: { categoryId: number; name: string; description: string | null; sortOrder: number }) =>
   apiClient.post<ItSkill>('/it-skills', data);
 export const updateItSkill = (id: number, data: { categoryId: number; name: string; description: string | null; sortOrder: number; active: boolean }) =>
   apiClient.put<ItSkill>(`/it-skills/${id}`, data);
 export const getItSkillCategories = (isActive?: boolean) =>
-  apiClient.get<ItSkillCategory[]>('/it-skill-categories', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<ItSkillCategory[]>('/it-skill-categories', { params: activeParam(isActive) });
 export const createItSkillCategory = (data: { parentId: number | null; name: string; sortOrder: number }) =>
   apiClient.post<ItSkillCategory>('/it-skill-categories', data);
 export const updateItSkillCategory = (id: number, data: { name: string; sortOrder: number; active: boolean }) =>
   apiClient.put<ItSkillCategory>(`/it-skill-categories/${id}`, data);
 export const getQualifications = (isActive?: boolean) =>
-  apiClient.get<Qualification[]>('/qualifications', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<Qualification[]>('/qualifications', { params: activeParam(isActive) });
 export const createQualification = (data: { categoryId: number | null; name: string; description: string | null; sortOrder: number }) =>
   apiClient.post<Qualification>('/qualifications', data);
 export const updateQualification = (id: number, data: { categoryId: number | null; name: string; description: string | null; sortOrder: number; active: boolean }) =>
   apiClient.put<Qualification>(`/qualifications/${id}`, data);
 export const getQualificationCategories = (isActive?: boolean) =>
-  apiClient.get<QualificationCategory[]>('/qualification-categories', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<QualificationCategory[]>('/qualification-categories', { params: activeParam(isActive) });
 export const createQualificationCategory = (data: { name: string; sortOrder: number }) =>
   apiClient.post<QualificationCategory>('/qualification-categories', data);
 export const updateQualificationCategory = (id: number, data: { name: string; sortOrder: number; active: boolean }) =>
   apiClient.put<QualificationCategory>(`/qualification-categories/${id}`, data);
 export const getAdSeminars = (isActive?: boolean) =>
-  apiClient.get<AdSeminar[]>('/ad-seminars', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<AdSeminar[]>('/ad-seminars', { params: activeParam(isActive) });
 export const createAdSeminar = (data: { categoryId: number | null; name: string; description: string | null; sortOrder: number }) =>
   apiClient.post<AdSeminar>('/ad-seminars', data);
 export const updateAdSeminar = (id: number, data: { categoryId: number | null; name: string; description: string | null; sortOrder: number; active: boolean }) =>
   apiClient.put<AdSeminar>(`/ad-seminars/${id}`, data);
 export const getAdSeminarCategories = (isActive?: boolean) =>
-  apiClient.get<AdSeminarCategory[]>('/ad-seminar-categories', { params: isActive !== undefined ? { isActive } : {} });
+  apiClient.get<AdSeminarCategory[]>('/ad-seminar-categories', { params: activeParam(isActive) });
 export const createAdSeminarCategory = (data: { name: string; sortOrder: number }) =>
   apiClient.post<AdSeminarCategory>('/ad-seminar-categories', data);
 export const updateAdSeminarCategory = (id: number, data: { name: string; sortOrder: number; active: boolean }) =>

@@ -78,6 +78,48 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
     } finally { setSaving(false); }
   };
 
+  let tableBody: React.ReactNode;
+  if (categories.length === 0) {
+    tableBody = <tr><td colSpan={4} className="master-table__empty">{t('common.noData')}</td></tr>;
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const c of categories) {
+      let statusClassName = 'fy-status fy-status--inactive';
+      let statusLabel = t('common.inactiveLabel');
+      if (c.isActive) {
+        statusClassName = 'fy-status fy-status--active';
+        statusLabel = t('common.activeLabel');
+      }
+      rows.push(
+        <tr key={c.id}>
+          <td>{c.name}</td>
+          <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
+          <td>
+            <span className={statusClassName}>
+              {statusLabel}
+            </span>
+          </td>
+          <td>
+            <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
+              <IconEdit size={12} />{t('common.edit')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    tableBody = rows;
+  }
+
+  let modalTitle = t('adSeminar.modalCategoryCreate');
+  if (mode === 'edit') {
+    modalTitle = t('adSeminar.modalCategoryEdit');
+  }
+
+  let saveButtonLabel = t('common.save');
+  if (saving) {
+    saveButtonLabel = t('common.saving');
+  }
+
   return (
     <>
       <div className="master-card__header" style={{ marginBottom: 16 }}>
@@ -98,26 +140,7 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
             </tr>
           </thead>
           <tbody>
-            {categories.length === 0 ? (
-              <tr><td colSpan={4} className="master-table__empty">{t('common.noData')}</td></tr>
-            ) : (
-              categories.map(c => (
-                <tr key={c.id}>
-                  <td>{c.name}</td>
-                  <td style={{ textAlign: 'center' }}>{c.sortOrder}</td>
-                  <td>
-                    <span className={c.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {c.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(c)}>
-                      <IconEdit size={12} />{t('common.edit')}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+            {tableBody}
           </tbody>
         </table>
       </StickyHorizontalScroll>
@@ -126,7 +149,7 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? t('adSeminar.modalCategoryCreate') : t('adSeminar.modalCategoryEdit')}</h3>
+              <h3>{modalTitle}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -158,12 +181,12 @@ function CategoryTab({ categories, onReload }: { categories: AdSeminarCategory[]
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
+                <IconCheck size={13} />{saveButtonLabel}
               </button>
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );
@@ -198,9 +221,15 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const filtered = filterCatId
-    ? adSeminars.filter(a => a.categoryId === filterCatId)
-    : adSeminars;
+  let filtered: AdSeminar[] = adSeminars;
+  if (filterCatId) {
+    filtered = [];
+    for (const a of adSeminars) {
+      if (a.categoryId === filterCatId) {
+        filtered.push(a);
+      }
+    }
+  }
 
   const openCreate = () => {
     setForm({ categoryId: null, name: '', description: '', sortOrder: '0', active: true });
@@ -211,10 +240,14 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
   };
 
   const openEdit = (a: AdSeminar) => {
+    let description = '';
+    if (a.description != null) {
+      description = a.description;
+    }
     setForm({
       categoryId: a.categoryId,
       name: a.name,
-      description: a.description ?? '',
+      description,
       sortOrder: String(a.sortOrder),
       active: a.isActive,
     });
@@ -246,15 +279,97 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
     } finally { setSaving(false); }
   };
 
+  let filterCatValue: number | string = '';
+  if (filterCatId != null) {
+    filterCatValue = filterCatId;
+  }
+
+  const filterCategoryOptions: React.ReactNode[] = [];
+  for (const c of categories) {
+    filterCategoryOptions.push(<option key={c.id} value={c.id}>{c.name}</option>);
+  }
+
+  let tableBody: React.ReactNode;
+  if (filtered.length === 0) {
+    tableBody = <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>;
+  } else {
+    const rows: React.ReactNode[] = [];
+    for (const a of filtered) {
+      let categoryNameLabel = '—';
+      if (a.categoryName != null) {
+        categoryNameLabel = a.categoryName;
+      }
+      let descriptionLabel = '—';
+      if (a.description != null) {
+        descriptionLabel = a.description;
+      }
+      let statusClassName = 'fy-status fy-status--inactive';
+      let statusLabel = t('common.inactiveLabel');
+      if (a.isActive) {
+        statusClassName = 'fy-status fy-status--active';
+        statusLabel = t('common.activeLabel');
+      }
+      rows.push(
+        <tr key={a.id}>
+          <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{categoryNameLabel}</td>
+          <td>{a.name}</td>
+          <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {descriptionLabel}
+          </td>
+          <td style={{ textAlign: 'center' }}>{a.sortOrder}</td>
+          <td>
+            <span className={statusClassName}>
+              {statusLabel}
+            </span>
+          </td>
+          <td>
+            <button className="btn btn--secondary btn--sm" onClick={() => openEdit(a)}>
+              <IconEdit size={12} />{t('common.edit')}
+            </button>
+          </td>
+        </tr>,
+      );
+    }
+    tableBody = rows;
+  }
+
+  let modalTitle = t('adSeminar.modalCreate');
+  if (mode === 'edit') {
+    modalTitle = t('adSeminar.modalEdit');
+  }
+
+  let formCategoryValue: number | string = '';
+  if (form.categoryId != null) {
+    formCategoryValue = form.categoryId;
+  }
+
+  const formCategoryOptions: React.ReactNode[] = [];
+  for (const c of categories) {
+    if (c.isActive) {
+      formCategoryOptions.push(<option key={c.id} value={c.id}>{c.name}</option>);
+    }
+  }
+
+  let saveButtonLabel = t('common.save');
+  if (saving) {
+    saveButtonLabel = t('common.saving');
+  }
+
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <label className="master-label" style={{ minWidth: 'auto' }}>{t('adSeminar.seminar.filterLabel')}</label>
         <select className="master-select"
-          value={filterCatId ?? ''}
-          onChange={e => setFilterCatId(e.target.value === '' ? null : Number(e.target.value))}>
+          value={filterCatValue}
+          onChange={e => {
+            if (e.target.value === '') {
+              setFilterCatId(null);
+            } else {
+              setFilterCatId(Number(e.target.value));
+            }
+          }}>
           <option value="">{t('common.allOption')}</option>
-          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          {filterCategoryOptions}
         </select>
         <button className="btn btn--primary btn--sm" onClick={openCreate} style={{ marginLeft: 'auto' }}>
           <IconPlus size={12} />{t('adSeminar.seminar.addButton')}
@@ -274,30 +389,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="master-table__empty">{t('common.noData')}</td></tr>
-            ) : (
-              filtered.map(a => (
-                <tr key={a.id}>
-                  <td style={{ fontSize: 13, color: 'var(--color-text-muted)' }}>{a.categoryName ?? '—'}</td>
-                  <td>{a.name}</td>
-                  <td style={{ fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {a.description ?? '—'}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>{a.sortOrder}</td>
-                  <td>
-                    <span className={a.isActive ? 'fy-status fy-status--active' : 'fy-status fy-status--inactive'}>
-                      {a.isActive ? t('common.activeLabel') : t('common.inactiveLabel')}
-                    </span>
-                  </td>
-                  <td>
-                    <button className="btn btn--secondary btn--sm" onClick={() => openEdit(a)}>
-                      <IconEdit size={12} />{t('common.edit')}
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+            {tableBody}
           </tbody>
         </table>
       </StickyHorizontalScroll>
@@ -306,7 +398,7 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
         <div className="modal-overlay" onClick={() => setModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal__header">
-              <h3>{mode === 'create' ? t('adSeminar.modalCreate') : t('adSeminar.modalEdit')}</h3>
+              <h3>{modalTitle}</h3>
               <button className="modal__close" onClick={() => setModalOpen(false)}>×</button>
             </div>
             <div className="modal__body">
@@ -314,12 +406,16 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
               <div className="form-group">
                 <label className="form-label">{t('adSeminar.form.categoryLabel')}</label>
                 <select className="master-select" style={{ width: '100%' }}
-                  value={form.categoryId ?? ''}
-                  onChange={e => setForm(f => ({ ...f, categoryId: e.target.value === '' ? null : Number(e.target.value) }))}>
+                  value={formCategoryValue}
+                  onChange={e => {
+                    if (e.target.value === '') {
+                      setForm(f => ({ ...f, categoryId: null }));
+                    } else {
+                      setForm(f => ({ ...f, categoryId: Number(e.target.value) }));
+                    }
+                  }}>
                   <option value="">{t('common.noCategoryOption')}</option>
-                  {categories.filter(c => c.isActive).map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  {formCategoryOptions}
                 </select>
               </div>
               <div className="form-group">
@@ -355,12 +451,12 @@ function AdSeminarTab({ adSeminars, categories, onReload }: {
                 <IconX size={13} />{t('common.cancel')}
               </button>
               <button className="btn btn--primary" onClick={handleSubmit} disabled={saving}>
-                <IconCheck size={13} />{saving ? t('common.saving') : t('common.save')}
+                <IconCheck size={13} />{saveButtonLabel}
               </button>
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );
@@ -417,7 +513,11 @@ export default function AdSeminarMasterPage() {
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const files = e.target.files;
+    let file: File | null = null;
+    if (files != null && files.length > 0) {
+      file = files[0];
+    }
     if (!file) return;
     e.target.value = '';
     setImporting(true);
@@ -426,19 +526,99 @@ export default function AdSeminarMasterPage() {
       await loadAll();
       setImportResult(res.data);
     } catch (err: unknown) {
-      const apiErrors = (err as { response?: { data?: { errors?: MasterImportError[] } } })
-        ?.response?.data?.errors;
+      const typedErr = err as { response?: { data?: { errors?: MasterImportError[]; message?: string } } };
+      let apiErrors: MasterImportError[] | undefined;
+      if (typedErr.response != null && typedErr.response.data != null) {
+        apiErrors = typedErr.response.data.errors;
+      }
       if (apiErrors) {
         setImportErrors(apiErrors);
       } else {
-        const message = (err as { response?: { data?: { message?: string } } })
-          ?.response?.data?.message ?? t('excel.uploadFailed');
+        let message = t('excel.uploadFailed');
+        if (typedErr.response != null && typedErr.response.data != null && typedErr.response.data.message != null) {
+          message = typedErr.response.data.message;
+        }
         setImportErrors([{ sheet: '', row: 0, column: '', message }]);
       }
     } finally { setImporting(false); }
   };
 
   if (loading) return <div className="loading-screen"><span>{t('loading')}</span></div>;
+
+  let categoriesTabClassName = 'tab-btn';
+  if (activeTab === 'categories') {
+    categoriesTabClassName += ' active';
+  }
+  let adSeminarsTabClassName = 'tab-btn';
+  if (activeTab === 'adSeminars') {
+    adSeminarsTabClassName += ' active';
+  }
+
+  let tabContent: React.ReactNode;
+  if (activeTab === 'categories') {
+    tabContent = <CategoryTab categories={categories} onReload={loadAll} />;
+  } else {
+    tabContent = <AdSeminarTab adSeminars={adSeminars} categories={categories} onReload={loadAll} />;
+  }
+
+  let downloadButtonLabel = t('excel.download');
+  if (downloading) {
+    downloadButtonLabel = t('excel.downloading');
+  }
+
+  let uploadButtonLabel = t('excel.upload');
+  if (importing) {
+    uploadButtonLabel = t('excel.importing');
+  }
+
+  let importResultBody: React.ReactNode = null;
+  if (importResult !== null) {
+    const importResultRows = [
+      { label: t('excel.importResultCreated'), value: importResult.created },
+      { label: t('excel.importResultUpdated'), value: importResult.updated },
+      { label: t('excel.importResultDeleted'), value: importResult.deleted },
+    ];
+    const resultRowElements: React.ReactNode[] = [];
+    for (const row of importResultRows) {
+      resultRowElements.push(
+        <tr key={row.label} style={{ borderBottom: '1px solid var(--color-border)' }}>
+          <td style={{ padding: '10px 8px', color: 'var(--color-text-muted)' }}>{row.label}</td>
+          <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, fontSize: 18 }}>
+            {row.value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 2 }}>{t('excel.importResultUnit')}</span>
+          </td>
+        </tr>,
+      );
+    }
+    importResultBody = (
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
+        <tbody>
+          {resultRowElements}
+        </tbody>
+      </table>
+    );
+  }
+
+  let importErrorBody: React.ReactNode = null;
+  if (importErrors !== null) {
+    if (importErrors.length === 0) {
+      importErrorBody = <p>{t('common.loadFailed')}</p>;
+    } else {
+      const errorRowElements: React.ReactNode[] = [];
+      for (let i = 0; i < importErrors.length; i++) {
+        const e = importErrors[i];
+        let errorText: React.ReactNode = e.message;
+        if (e.sheet && e.row) {
+          errorText = t('excel.importErrorDetail', { sheet: e.sheet, row: e.row, column: e.column, message: e.message });
+        }
+        errorRowElements.push(
+          <p key={i} style={{ fontSize: 13, margin: '4px 0', color: 'var(--color-danger)' }}>
+            {errorText}
+          </p>,
+        );
+      }
+      importErrorBody = errorRowElements;
+    }
+  }
 
   return (
     <div className="master-page">
@@ -448,32 +628,32 @@ export default function AdSeminarMasterPage() {
         {error && <div className="alert alert--error">{error}</div>}
 
         <div className="tab-bar">
-          <button className={`tab-btn${activeTab === 'categories' ? ' active' : ''}`}
+          <button className={categoriesTabClassName}
             onClick={() => setActiveTab('categories')}>
             {t('adSeminar.tab.categories')}
           </button>
-          <button className={`tab-btn${activeTab === 'adSeminars' ? ' active' : ''}`}
+          <button className={adSeminarsTabClassName}
             onClick={() => setActiveTab('adSeminars')}>
             {t('adSeminar.tab.adSeminars')}
           </button>
         </div>
 
         <section className="master-card">
-          {activeTab === 'categories' ? (
-            <CategoryTab categories={categories} onReload={loadAll} />
-          ) : (
-            <AdSeminarTab adSeminars={adSeminars} categories={categories} onReload={loadAll} />
-          )}
+          {tabContent}
         </section>
       </main>
 
       <div className="excel-fab">
         <button className="excel-fab__btn" onClick={handleDownload} disabled={downloading}>
-          {downloading ? t('excel.downloading') : t('excel.download')}
+          {downloadButtonLabel}
         </button>
-        <button className="excel-fab__btn" onClick={() => fileInputRef.current?.click()}
+        <button className="excel-fab__btn" onClick={() => {
+          if (fileInputRef.current != null) {
+            fileInputRef.current.click();
+          }
+        }}
           disabled={importing}>
-          {importing ? t('excel.importing') : t('excel.upload')}
+          {uploadButtonLabel}
         </button>
         <input ref={fileInputRef} type="file" accept=".xlsx"
           aria-label={t('excel.upload')}
@@ -489,22 +669,7 @@ export default function AdSeminarMasterPage() {
               <button className="modal__close" onClick={() => setImportResult(null)}>×</button>
             </div>
             <div className="modal__body">
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 15 }}>
-                <tbody>
-                  {[
-                    { label: t('excel.importResultCreated'), value: importResult.created },
-                    { label: t('excel.importResultUpdated'), value: importResult.updated },
-                    { label: t('excel.importResultDeleted'), value: importResult.deleted },
-                  ].map(row => (
-                    <tr key={row.label} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: '10px 8px', color: 'var(--color-text-muted)' }}>{row.label}</td>
-                      <td style={{ padding: '10px 8px', textAlign: 'right', fontWeight: 700, fontSize: 18 }}>
-                        {row.value}<span style={{ fontSize: 13, fontWeight: 400, marginLeft: 2 }}>{t('excel.importResultUnit')}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              {importResultBody}
             </div>
             <div className="modal__footer">
               <button className="btn btn--primary" onClick={() => setImportResult(null)}>
@@ -513,7 +678,7 @@ export default function AdSeminarMasterPage() {
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
 
       {importErrors !== null && createPortal(
@@ -524,14 +689,7 @@ export default function AdSeminarMasterPage() {
               <button className="modal__close" onClick={() => setImportErrors(null)}>×</button>
             </div>
             <div className="modal__body" style={{ maxHeight: 400, overflowY: 'auto' }}>
-              {importErrors.length === 0
-                ? <p>{t('common.loadFailed')}</p>
-                : importErrors.map((e, i) => (
-                  <p key={i} style={{ fontSize: 13, margin: '4px 0', color: 'var(--color-danger)' }}>
-                    {e.sheet && e.row ? t('excel.importErrorDetail', { sheet: e.sheet, row: e.row, column: e.column, message: e.message })
-                      : e.message}
-                  </p>
-                ))}
+              {importErrorBody}
             </div>
             <div className="modal__footer">
               <button className="btn btn--secondary" onClick={() => setImportErrors(null)}>
@@ -540,7 +698,7 @@ export default function AdSeminarMasterPage() {
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </div>
   );

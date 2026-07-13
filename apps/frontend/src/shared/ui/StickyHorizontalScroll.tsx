@@ -40,7 +40,11 @@ export default function StickyHorizontalScroll({ children, className }: Props) {
 
     const update = () => {
       phantom.style.width = `${inner.scrollWidth}px`;
-      bar.style.display = inner.scrollWidth > inner.clientWidth ? 'block' : 'none';
+      if (inner.scrollWidth > inner.clientWidth) {
+        bar.style.display = 'block';
+      } else {
+        bar.style.display = 'none';
+      }
     };
 
     const syncToInner = () => {
@@ -64,9 +68,14 @@ export default function StickyHorizontalScroll({ children, className }: Props) {
     };
   }, []);
 
+  let innerClassName = 'sticky-h-scroll__inner';
+  if (className) {
+    innerClassName += ` ${className}`;
+  }
+
   return (
     <div className="sticky-h-scroll">
-      <div ref={innerRef} className={`sticky-h-scroll__inner${className ? ` ${className}` : ''}`}>
+      <div ref={innerRef} className={innerClassName}>
         {children}
       </div>
       <div ref={barRef} className="sticky-h-scroll__bar">

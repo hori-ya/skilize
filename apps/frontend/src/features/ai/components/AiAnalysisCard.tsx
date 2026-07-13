@@ -76,6 +76,21 @@ export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
     );
   }
 
+  const strengthItems: React.ReactNode[] = [];
+  for (let i = 0; i < analysisResult.strengths.length; i++) {
+    strengthItems.push(<li key={i}>{analysisResult.strengths[i]}</li>);
+  }
+
+  const growthAreaItems: React.ReactNode[] = [];
+  for (let i = 0; i < analysisResult.growth_areas.length; i++) {
+    growthAreaItems.push(<li key={i}>{analysisResult.growth_areas[i]}</li>);
+  }
+
+  const recommendedActionItems: React.ReactNode[] = [];
+  for (let i = 0; i < analysisResult.recommended_actions.length; i++) {
+    recommendedActionItems.push(<li key={i}>{analysisResult.recommended_actions[i]}</li>);
+  }
+
   return (
     <div className="ai-analysis-card">
       {fiscalYearName && (
@@ -95,14 +110,14 @@ export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
       <div className="ai-analysis-section-block">
         <h4 className="ai-analysis-section-title">{t('aiAnalysisCard.section.strengths')}</h4>
         <ul className="ai-analysis-list">
-          {analysisResult.strengths.map((s, i) => <li key={i}>{s}</li>)}
+          {strengthItems}
         </ul>
       </div>
 
       <div className="ai-analysis-section-block">
         <h4 className="ai-analysis-section-title">{t('aiAnalysisCard.section.growthAreas')}</h4>
         <ul className="ai-analysis-list">
-          {analysisResult.growth_areas.map((g, i) => <li key={i}>{g}</li>)}
+          {growthAreaItems}
         </ul>
       </div>
 
@@ -114,7 +129,7 @@ export default function AiAnalysisCard({ analysis, fiscalYearName }: Props) {
       <div className="ai-analysis-section-block">
         <h4 className="ai-analysis-section-title">{t('aiAnalysisCard.section.recommendedActions')}</h4>
         <ul className="ai-analysis-list">
-          {analysisResult.recommended_actions.map((a, i) => <li key={i}>{a}</li>)}
+          {recommendedActionItems}
         </ul>
       </div>
     </div>

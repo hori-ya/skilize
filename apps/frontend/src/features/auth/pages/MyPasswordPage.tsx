@@ -64,7 +64,10 @@ export default function MyPasswordPage() {
       setConfirmPassword('');
     } catch (err) {
       if (axios.isAxiosError(err)) {
-        const code = err.response?.data?.code;
+        let code: string | undefined;
+        if (err.response != null && err.response.data != null) {
+          code = err.response.data.code;
+        }
         if (code === 'AUTH_FAILED') {
           setFormError(t('error.currentPasswordWrong'));
         } else {
@@ -75,6 +78,23 @@ export default function MyPasswordPage() {
       setIsSubmitting(false);
     }
   };
+
+  let currentPasswordInputClassName = 'form-input';
+  if (errors.currentPassword) {
+    currentPasswordInputClassName += ' form-input-error';
+  }
+  let newPasswordInputClassName = 'form-input';
+  if (errors.newPassword) {
+    newPasswordInputClassName += ' form-input-error';
+  }
+  let confirmPasswordInputClassName = 'form-input';
+  if (errors.confirmPassword) {
+    confirmPasswordInputClassName += ' form-input-error';
+  }
+  let submitButtonLabel = t('myPasswordPage.submitButton');
+  if (isSubmitting) {
+    submitButtonLabel = t('myPasswordPage.submittingButton');
+  }
 
   return (
     <div className="master-page">
@@ -100,7 +120,7 @@ export default function MyPasswordPage() {
               <input
                 id="currentPassword"
                 type="password"
-                className={`form-input${errors.currentPassword ? ' form-input-error' : ''}`}
+                className={currentPasswordInputClassName}
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 autoComplete="current-password"
@@ -114,7 +134,7 @@ export default function MyPasswordPage() {
               <input
                 id="newPassword"
                 type="password"
-                className={`form-input${errors.newPassword ? ' form-input-error' : ''}`}
+                className={newPasswordInputClassName}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 autoComplete="new-password"
@@ -127,7 +147,7 @@ export default function MyPasswordPage() {
               <input
                 id="confirmPassword"
                 type="password"
-                className={`form-input${errors.confirmPassword ? ' form-input-error' : ''}`}
+                className={confirmPasswordInputClassName}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 autoComplete="new-password"
@@ -138,7 +158,7 @@ export default function MyPasswordPage() {
             <p className="form-hint">{t('myPasswordPage.minLengthHint')}</p>
             <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               <IconLock size={15} />
-              {isSubmitting ? t('myPasswordPage.submittingButton') : t('myPasswordPage.submitButton')}
+              {submitButtonLabel}
             </button>
           </form>
         </div>

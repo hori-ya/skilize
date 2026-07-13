@@ -76,17 +76,33 @@ export default function GoalPage() {
       setItSkills(skillsRes.data);
       setQualifications(qualsRes.data);
       setAdSeminars(adsRes.data);
-      setGoalRows(goalsRes.data.items.map(g => ({
-        id: g.id,
-        goalCategory: g.goalCategory as GoalCategory,
-        itSkillId: g.itSkillId,
-        qualificationId: g.qualificationId,
-        adSeminarId: g.adSeminarId,
-        customName: g.customName ?? '',
-        targetPeriod: g.targetPeriod?.slice(0, 7) ?? '',
-        reason: g.reason ?? '',
-        isCustom: !g.itSkillId && !g.qualificationId && !g.adSeminarId,
-      })));
+      const rows: GoalRow[] = [];
+      for (const g of goalsRes.data.items) {
+        let customName = '';
+        if (g.customName != null) {
+          customName = g.customName;
+        }
+        let targetPeriod = '';
+        if (g.targetPeriod != null) {
+          targetPeriod = g.targetPeriod.slice(0, 7);
+        }
+        let reason = '';
+        if (g.reason != null) {
+          reason = g.reason;
+        }
+        rows.push({
+          id: g.id,
+          goalCategory: g.goalCategory as GoalCategory,
+          itSkillId: g.itSkillId,
+          qualificationId: g.qualificationId,
+          adSeminarId: g.adSeminarId,
+          customName,
+          targetPeriod,
+          reason,
+          isCustom: !g.itSkillId && !g.qualificationId && !g.adSeminarId,
+        });
+      }
+      setGoalRows(rows);
     });
   }, [inventoryId]);
 
@@ -95,16 +111,26 @@ export default function GoalPage() {
     setTimeout(() => setSaveMessage(''), 3000);
   };
 
-  const toApiItems = (rows: GoalRow[]) => rows.map(r => ({
-    id: r.id,
-    goalCategory: r.goalCategory,
-    itSkillId: r.itSkillId,
-    qualificationId: r.qualificationId,
-    adSeminarId: r.adSeminarId,
-    customName: r.customName || null,
-    targetPeriod: r.targetPeriod ? `${r.targetPeriod}-01` : '',
-    reason: r.reason || null,
-  }));
+  const toApiItems = (rows: GoalRow[]) => {
+    const items: { id?: number | null; goalCategory: GoalCategory; itSkillId?: number | null; qualificationId?: number | null; adSeminarId?: number | null; customName: string | null; targetPeriod: string; reason: string | null }[] = [];
+    for (const r of rows) {
+      let targetPeriod = '';
+      if (r.targetPeriod) {
+        targetPeriod = `${r.targetPeriod}-01`;
+      }
+      items.push({
+        id: r.id,
+        goalCategory: r.goalCategory,
+        itSkillId: r.itSkillId,
+        qualificationId: r.qualificationId,
+        adSeminarId: r.adSeminarId,
+        customName: r.customName || null,
+        targetPeriod,
+        reason: r.reason || null,
+      });
+    }
+    return items;
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -130,11 +156,22 @@ export default function GoalPage() {
       navigate('/');
     } catch (e: unknown) {
       const axiosErr = e as { response?: { data?: { message?: string; errors?: { message: string }[] } } };
-      const errData = axiosErr.response?.data;
-      if (errData?.errors && errData.errors.length > 0) {
-        setError(errData.errors.map((e: { message: string }) => e.message).join('\n'));
+      let errData: { message?: string; errors?: { message: string }[] } | undefined;
+      if (axiosErr.response != null) {
+        errData = axiosErr.response.data;
+      }
+      if (errData != null && errData.errors && errData.errors.length > 0) {
+        const messages: string[] = [];
+        for (const errItem of errData.errors) {
+          messages.push(errItem.message);
+        }
+        setError(messages.join('\n'));
       } else {
-        setError(errData?.message ?? t('goalPage.completeFailed'));
+        let message = t('goalPage.completeFailed');
+        if (errData != null && errData.message != null) {
+          message = errData.message;
+        }
+        setError(message);
       }
     } finally {
       setIsCompleting(false);
@@ -160,15 +197,141 @@ export default function GoalPage() {
   };
 
   const removeRow = (idx: number) => {
-    setGoalRows(prev => prev.filter((_, i) => i !== idx));
+    setGoalRows(prev => {
+      const next: GoalRow[] = [];
+      for (let i = 0; i < prev.length; i++) {
+        if (i !== idx) {
+          next.push(prev[i]);
+        }
+      }
+      return next;
+    });
   };
 
   const updateRow = (idx: number, patch: Partial<GoalRow>) => {
-    setGoalRows(prev => prev.map((r, i) => i === idx ? { ...r, ...patch } : r));
+    setGoalRows(prev => {
+      const next: GoalRow[] = [];
+      for (let i = 0; i < prev.length; i++) {
+        if (i === idx) {
+          next.push({ ...prev[i], ...patch });
+        } else {
+          next.push(prev[i]);
+        }
+      }
+      return next;
+    });
   };
 
-  const itOrQualCount = goalRows.filter(r => r.goalCategory === 'IT_SKILL' || r.goalCategory === 'QUALIFICATION').length;
-  const adCount = goalRows.filter(r => r.goalCategory === 'AD').length;
+  let itOrQualCount = 0;
+  let adCount = 0;
+  for (const r of goalRows) {
+    if (r.goalCategory === 'IT_SKILL' || r.goalCategory === 'QUALIFICATION') {
+      itOrQualCount++;
+    }
+    if (r.goalCategory === 'AD') {
+      adCount++;
+    }
+  }
+
+  let itOrQualCounterClass = 'counter-ng';
+  if (itOrQualCount >= 1) {
+    itOrQualCounterClass = 'counter-ok';
+  }
+  let itOrQualCounterMark: string = t('goalPage.counter.itQualRequired');
+  if (itOrQualCount >= 1) {
+    itOrQualCounterMark = '✓';
+  }
+  let adCounterClass = 'counter-ng';
+  if (adCount >= 2) {
+    adCounterClass = 'counter-ok';
+  }
+  let adCounterMark: string = t('goalPage.counter.adRequired');
+  if (adCount >= 2) {
+    adCounterMark = '✓';
+  }
+
+  const itSkillOptionElements: React.ReactNode[] = [];
+  for (const s of itSkills) {
+    itSkillOptionElements.push(<option key={s.id} value={s.id}>{s.name}</option>);
+  }
+  const qualificationOptionElements: React.ReactNode[] = [];
+  for (const q of qualifications) {
+    qualificationOptionElements.push(<option key={q.id} value={q.id}>{q.name}</option>);
+  }
+  const adSeminarOptionElements: React.ReactNode[] = [];
+  for (const a of adSeminars) {
+    adSeminarOptionElements.push(<option key={a.id} value={a.id}>{a.name}</option>);
+  }
+
+  const goalCardElements: React.ReactNode[] = [];
+  for (let idx = 0; idx < goalRows.length; idx++) {
+    const row = goalRows[idx];
+    let itSkillValue: number | string = '';
+    if (row.itSkillId != null) {
+      itSkillValue = row.itSkillId;
+    }
+    let qualificationValue: number | string = '';
+    if (row.qualificationId != null) {
+      qualificationValue = row.qualificationId;
+    }
+    let adSeminarValue: number | string = '';
+    if (row.adSeminarId != null) {
+      adSeminarValue = row.adSeminarId;
+    }
+    goalCardElements.push(
+      <div key={idx} className="goal-card">
+        <div className="goal-card-header">
+          <span className="goal-category-badge">{t(CATEGORY_KEY[row.goalCategory])}</span>
+          <button className="remove-btn" onClick={() => removeRow(idx)}>✕</button>
+        </div>
+        <div className="goal-card-body">
+          {row.goalCategory === 'IT_SKILL' && !row.isCustom && (
+            <select className="select" value={itSkillValue}
+              onChange={e => updateRow(idx, { itSkillId: Number(e.target.value) || null })}>
+              <option value="">{t('goalPage.form.selectSkill')}</option>
+              {itSkillOptionElements}
+            </select>
+          )}
+          {row.goalCategory === 'QUALIFICATION' && !row.isCustom && (
+            <select className="select" value={qualificationValue}
+              onChange={e => updateRow(idx, { qualificationId: Number(e.target.value) || null })}>
+              <option value="">{t('goalPage.form.selectQualification')}</option>
+              {qualificationOptionElements}
+            </select>
+          )}
+          {row.goalCategory === 'AD' && (
+            <select className="select" value={adSeminarValue}
+              onChange={e => updateRow(idx, { adSeminarId: Number(e.target.value) || null })}>
+              <option value="">{t('goalPage.form.selectAd')}</option>
+              {adSeminarOptionElements}
+            </select>
+          )}
+          {row.isCustom && (
+            <input className="input" placeholder={t('goalPage.form.customNamePlaceholder')}
+              value={row.customName}
+              onChange={e => updateRow(idx, { customName: e.target.value })} />
+          )}
+
+          <label className="form-label">{t('goalPage.form.targetPeriodLabel')}</label>
+          <input type="month" className="input" value={row.targetPeriod}
+            onChange={e => updateRow(idx, { targetPeriod: e.target.value })} />
+
+          <label className="form-label">{t('goalPage.form.reasonLabel')}</label>
+          <textarea className="textarea" placeholder={t('inventoryPage.table.optional')} value={row.reason}
+            onChange={e => updateRow(idx, { reason: e.target.value })} />
+        </div>
+      </div>,
+    );
+  }
+
+  let saveButtonLabel = t('inventoryPage.saveButton');
+  if (isSaving) {
+    saveButtonLabel = t('inventoryPage.savingButton');
+  }
+  let completeButtonLabel = t('goalPage.completeButton');
+  if (isCompleting) {
+    completeButtonLabel = t('goalPage.completingButton');
+  }
 
   return (
     <div className="goal-page">
@@ -181,11 +344,11 @@ export default function GoalPage() {
         </p>
 
         <div className="goal-counter">
-          <span className={itOrQualCount >= 1 ? 'counter-ok' : 'counter-ng'}>
-            {t('goalPage.counter.itQual', { count: itOrQualCount })} {itOrQualCount >= 1 ? '✓' : t('goalPage.counter.itQualRequired')}
+          <span className={itOrQualCounterClass}>
+            {t('goalPage.counter.itQual', { count: itOrQualCount })} {itOrQualCounterMark}
           </span>
-          <span className={adCount >= 2 ? 'counter-ok' : 'counter-ng'}>
-            {t('goalPage.counter.ad', { count: adCount })} {adCount >= 2 ? '✓' : t('goalPage.counter.adRequired')}
+          <span className={adCounterClass}>
+            {t('goalPage.counter.ad', { count: adCount })} {adCounterMark}
           </span>
         </div>
 
@@ -193,50 +356,7 @@ export default function GoalPage() {
         {error && <div className="error-message">{error}</div>}
 
         <div className="goal-list">
-          {goalRows.map((row, idx) => (
-            <div key={idx} className="goal-card">
-              <div className="goal-card-header">
-                <span className="goal-category-badge">{t(CATEGORY_KEY[row.goalCategory])}</span>
-                <button className="remove-btn" onClick={() => removeRow(idx)}>✕</button>
-              </div>
-              <div className="goal-card-body">
-                {row.goalCategory === 'IT_SKILL' && !row.isCustom && (
-                  <select className="select" value={row.itSkillId ?? ''}
-                    onChange={e => updateRow(idx, { itSkillId: Number(e.target.value) || null })}>
-                    <option value="">{t('goalPage.form.selectSkill')}</option>
-                    {itSkills.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
-                )}
-                {row.goalCategory === 'QUALIFICATION' && !row.isCustom && (
-                  <select className="select" value={row.qualificationId ?? ''}
-                    onChange={e => updateRow(idx, { qualificationId: Number(e.target.value) || null })}>
-                    <option value="">{t('goalPage.form.selectQualification')}</option>
-                    {qualifications.map(q => <option key={q.id} value={q.id}>{q.name}</option>)}
-                  </select>
-                )}
-                {row.goalCategory === 'AD' && (
-                  <select className="select" value={row.adSeminarId ?? ''}
-                    onChange={e => updateRow(idx, { adSeminarId: Number(e.target.value) || null })}>
-                    <option value="">{t('goalPage.form.selectAd')}</option>
-                    {adSeminars.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                )}
-                {row.isCustom && (
-                  <input className="input" placeholder={t('goalPage.form.customNamePlaceholder')}
-                    value={row.customName}
-                    onChange={e => updateRow(idx, { customName: e.target.value })} />
-                )}
-
-                <label className="form-label">{t('goalPage.form.targetPeriodLabel')}</label>
-                <input type="month" className="input" value={row.targetPeriod}
-                  onChange={e => updateRow(idx, { targetPeriod: e.target.value })} />
-
-                <label className="form-label">{t('goalPage.form.reasonLabel')}</label>
-                <textarea className="textarea" placeholder={t('inventoryPage.table.optional')} value={row.reason}
-                  onChange={e => updateRow(idx, { reason: e.target.value })} />
-              </div>
-            </div>
-          ))}
+          {goalCardElements}
         </div>
 
         <div className="goal-add-buttons">
@@ -250,11 +370,11 @@ export default function GoalPage() {
         <div className="action-row">
           <button className="btn btn-secondary" onClick={handleSave} disabled={isSaving}>
             <IconSave size={15} />
-            {isSaving ? t('inventoryPage.savingButton') : t('inventoryPage.saveButton')}
+            {saveButtonLabel}
           </button>
           <button className="btn btn-primary" onClick={handleCompleteClick} disabled={isCompleting}>
             <IconCheck size={15} />
-            {isCompleting ? t('goalPage.completingButton') : t('goalPage.completeButton')}
+            {completeButtonLabel}
           </button>
         </div>
       </main>
