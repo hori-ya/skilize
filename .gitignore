@@ -22,6 +22,7 @@ build/
 *.iml
 .vscode/*
 !.vscode/launch.json.example
+.VSCodeCounter/*
 
 # OS
 .DS_Store
