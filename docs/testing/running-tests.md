@@ -16,10 +16,30 @@
 | `JwtUtilTest.java` | JwtUtil（トークン生成・検証） | 単体テスト |
 | `AuthControllerTest.java` | AuthController（Web レイヤー） | Web レイヤーテスト |
 | `InventoryServiceComparisonTest.java` | InventoryService#getComparison（前年度比較） | 単体テスト |
+| `InventoryServiceTest.java` | InventoryService（getComparison 以外の全体） | 単体テスト |
+| `InventoryControllerTest.java` | InventoryController（Web レイヤー） | Web レイヤーテスト |
 | `AiChatServiceTest.java` | AiChatService（AI 無効時の制御） | 単体テスト |
 | `AiChatControllerTest.java` | AiChatController（POST /api/ai/chat） | Web レイヤーテスト |
+| `AiAnalysisServiceTest.java` | AiAnalysisService（分析結果参照・upsert トリガー） | 単体テスト |
+| `AiAnalysisControllerTest.java` | AiAnalysisController（Web レイヤー） | Web レイヤーテスト |
 | `MasterExcelControllerTest.java` | MasterExcelController（マスタ Excel 出力・取込） | Web レイヤーテスト |
 | `ItSkillExcelImporterTest.java` | ItSkillExcelImporter（ITスキル Excel 取込） | 単体テスト |
+| `MasterServiceTest.java` | MasterService（CRUD・カテゴリ階層解決・カスタム昇格） | 単体テスト |
+| `MasterControllerTest.java` | MasterController（Web レイヤー） | Web レイヤーテスト |
+| `ChartServiceTest.java` | ChartService（レーダー・成長推移・ヒートマップ・タイムライン集計） | 単体テスト |
+| `ChartControllerTest.java` | ChartController（Web レイヤー） | Web レイヤーテスト |
+| `DashboardServiceTest.java` | DashboardService（今年度棚卸サマリー） | 単体テスト |
+| `DashboardControllerTest.java` | DashboardController（Web レイヤー） | Web レイヤーテスト |
+| `ExpectationServiceTest.java` | ExpectationService（TL期待・会社期待のアクセス制御・upsert） | 単体テスト |
+| `ExpectationControllerTest.java` | ExpectationController（Web レイヤー） | Web レイヤーテスト |
+| `FiscalYearServiceTest.java` | FiscalYearService（年度・年度設定のCRUD） | 単体テスト |
+| `FiscalYearControllerTest.java` | FiscalYearController（Web レイヤー） | Web レイヤーテスト |
+| `InterviewServiceTest.java` | InterviewService（面談メモの保存・取得・前年度参照） | 単体テスト |
+| `InterviewControllerTest.java` | InterviewController（Web レイヤー） | Web レイヤーテスト |
+| `UserServiceTest.java` | UserService（作成・更新・パスワードリセット・チーム照会） | 単体テスト |
+| `UserControllerTest.java` | UserController（Web レイヤー） | Web レイヤーテスト |
+| `ReportServiceTest.java` | ReportService（棚卸PDF帳票生成・アクセス制御） | 単体テスト |
+| `ReportControllerTest.java` | ReportController（Web レイヤー） | Web レイヤーテスト |
 
 ### 実行方法
 
@@ -73,9 +93,15 @@ CI では以下の方法でも確認できる。
 ### テスト設計方針
 
 - **単体テスト** — `@ExtendWith(MockitoExtension.class)` で Spring コンテキストなし。Repository・外部サービスはすべて `@Mock` でモック化
-- **Web レイヤーテスト** — `@WebMvcTest` で Controller のみロード。フィルター（`JwtAuthenticationFilter`, `InitialPasswordFilter`）は `@MockitoBean` + `doAnswer` で素通り設定
+- **Web レイヤーテスト** — `MockMvcBuilders.standaloneSetup(controller)` で対象 Controller のみをロードする（`@WebMvcTest` は不使用。Spring コンテキスト起動なしで高速に実行するため）。`GlobalExceptionHandler` を `setControllerAdvice()` で明示登録し、`@AuthenticationPrincipal` 解決には `AuthenticationPrincipalArgumentResolver` を `setCustomArgumentResolvers()` で登録する
 - **DB 接続不要** — H2 不使用。テストプロパティは `src/test/resources/application-test.properties`
-- **認証付きリクエスト** — `SecurityMockMvcRequestPostProcessors.user(ourUser)` を使用（`@WithMockUser` は使わない。型が異なるため）
+- **認証付きリクエスト（重要な注意点）** — `standaloneSetup` には `SecurityContextPersistenceFilter` 相当のフィルターが存在しないため、`.with(SecurityMockMvcRequestPostProcessors.user(...))` を使っても `SecurityContextHolder` に反映されず `@AuthenticationPrincipal` が `null` になる（コントローラーが `User` のフィールドへ直接アクセスすると `NullPointerException` になる）。`@BeforeEach` で以下のように `SecurityContextHolder` へ直接 `Authentication` を設定し、`@AfterEach` で `SecurityContextHolder.clearContext()` する方式を使うこと。
+  ```java
+  UserPrincipal principal = new UserPrincipal(user);
+  Authentication auth = new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+  SecurityContextHolder.getContext().setAuthentication(auth);
+  ```
+  `@PreAuthorize` によるロール制御は `standaloneSetup` では評価されないため、ロール別の 403 分岐は Service 層のテストで検証する
 
 ---
 
