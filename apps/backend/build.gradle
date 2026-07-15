@@ -63,12 +63,17 @@ jacoco {
 
 tasks.named('test') {
 	useJUnitPlatform()
-	// CI（GitHub Actions ubuntu-latest）は DISPLAY 環境変数が設定されているため、
-	// java.awt.headless の自動判定が false になり、AWT の X11 ネイティブライブラリ初期化に失敗する
-	// （JasperReports の帳票生成が NoClassDefFoundError/UnsatisfiedLinkError で失敗する原因）。
-	// 明示的に headless=true を指定してネイティブ描画の初期化を回避する。
+	// サーバーサイドの帳票（PDF）生成は画面描画を必要としないため headless を明示する
 	jvmArgs = ['-Djava.awt.headless=true']
 	finalizedBy jacocoTestReport
+	// CI でのみ失敗する ReportServiceTest の原因調査用: 失敗時に原因例外（cause）まで含めた
+	// フルスタックトレースをコンソールに出力する（原因判明後に縮小してよい）
+	testLogging {
+		events "failed"
+		exceptionFormat = "full"
+		showCauses = true
+		showStackTraces = true
+	}
 }
 
 jacocoTestReport {
