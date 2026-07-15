@@ -126,7 +126,7 @@ public class ReportService {
             return baos.toByteArray();
         } catch (Exception e) {
             log.error("帳票生成エラー inventoryId={}", inventoryId, e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "REPORT_GENERATION_ERROR");
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "REPORT_GENERATION_ERROR", e);
         }
     }
 
