@@ -108,7 +108,7 @@ class InterviewServiceTest {
 
             assertThat(result.getId()).isEqualTo(100);
             verify(interviewDetailNoteRepository).deleteByInterviewId(100);
-            ArgumentCaptor<List<InterviewDetailNote>> captor = ArgumentCaptor.forClass(List.class);
+            ArgumentCaptor<List<InterviewDetailNote>> captor = ArgumentCaptor.captor();
             verify(interviewDetailNoteRepository).saveAll(captor.capture());
             assertThat(captor.getValue()).hasSize(1);
             assertThat(captor.getValue().get(0).getDetailType()).isEqualTo(DetailType.IT_SKILL);

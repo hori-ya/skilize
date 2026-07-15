@@ -4,7 +4,6 @@ import com.skilize.inventory.domain.repository.ItSkillDetailRepository;
 import com.skilize.inventory.domain.repository.QualificationDetailRepository;
 import com.skilize.master.domain.model.*;
 import com.skilize.master.domain.repository.*;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

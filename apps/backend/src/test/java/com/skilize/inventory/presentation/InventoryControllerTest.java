@@ -322,7 +322,7 @@ class InventoryControllerTest {
             when(inventoryService.completeGoal(10, generalUser)).thenThrow(new GoalIncompleteException(errors));
 
             mockMvc.perform(post("/api/inventories/10/goals/complete"))
-                    .andExpect(status().isUnprocessableEntity())
+                    .andExpect(status().isUnprocessableContent())
                     .andExpect(jsonPath("$.code").value("GOAL_INCOMPLETE"));
         }
     }

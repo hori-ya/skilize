@@ -421,10 +421,6 @@ class ChartServiceTest {
             Inventory oldInv = buildInventory(9, prevFy, InventoryStatus.COMPLETED);
             Inventory newInv = buildInventory(10, currentFy, InventoryStatus.PENDING_GOAL);
 
-            Qualification qualification = Qualification.create(null, "新資格", null, 1);
-            QualificationDetail oldQd = QualificationDetail.create(oldInv, qualification, null,
-                    LocalDate.of(2019, 1, 1), null);
-
             when(inventoryRepository.findByUserIdWithFiscalYear(1)).thenReturn(List.of(oldInv, newInv));
             when(qualificationDetailRepository.findByInventoryId(10)).thenReturn(List.of());
             when(seminarDetailRepository.findByInventoryId(10)).thenReturn(List.of());

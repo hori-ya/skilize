@@ -2,7 +2,6 @@ package com.skilize.ai.presentation;
 
 import com.skilize.ai.application.AiAnalysisService;
 import com.skilize.ai.application.query.AiAnalysisQueryResult;
-import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.shared.presentation.GlobalExceptionHandler;
 import com.skilize.user.application.UserService;
 import com.skilize.user.domain.model.Role;
