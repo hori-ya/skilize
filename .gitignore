@@ -24,6 +24,9 @@ build/
 !.vscode/launch.json.example
 .VSCodeCounter/*
 
+# Claude Code（ローカル専用の個人設定）
+.claude/settings.local.json
+
 # OS
 .DS_Store
 Thumbs.db
