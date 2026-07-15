@@ -10,6 +10,7 @@ import com.skilize.master.domain.model.*;
 import com.skilize.shared.domain.exception.AuthException;
 import com.skilize.user.domain.model.Role;
 import com.skilize.user.domain.model.User;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,11 @@ import static org.mockito.Mockito.when;
  * ReportService の単体テスト。アクセス制御分岐（本人/TL/ADMIN/他人）と
  * 棚卸不在時の404、および実テンプレートを用いたPDF生成成功パスを検証する。
  * @PostConstruct はコンテナ外で呼ばれないため initFonts() を明示的に呼び出してから検証する。
+ *
+ * 実PDF生成を伴うテストは埋め込みフォント msgothic.ttc に依存するが、当該フォントは
+ * ライセンス上の理由で .gitignore 対象（Windows の C:\Windows\Fonts からのローカルコピー前提）のため、
+ * リポジトリを新規 clone した環境（CI 含む）には存在しない。ファイルが無い場合は
+ * assumeFontAvailable() で当該テストをスキップする（フォントを配置したローカル環境でのみ実行・検証される）。
  */
 @ExtendWith(MockitoExtension.class)
 class ReportServiceTest {
@@ -66,6 +72,12 @@ class ReportServiceTest {
         ReflectionTestUtils.setField(inventory, "id", 10);
     }
 
+    /** msgothic.ttc が classpath 上に存在しない環境（CI 等）ではテストをスキップする。 */
+    private void assumeFontAvailable() {
+        boolean fontExists = getClass().getResourceAsStream("/fonts/msgothic.ttc") != null;
+        Assumptions.assumeTrue(fontExists, "msgothic.ttc が見つからないためスキップ（.gitignore 対象・ローカル配置が必要）");
+    }
+
     @Nested
     class GenerateInventoryReport {
 
@@ -95,6 +107,7 @@ class ReportServiceTest {
 
         @Test
         void 正常系_本人アクセス_PDFバイナリを返す() {
+            assumeFontAvailable();
             when(inventoryRepository.findByIdWithAssociations(10)).thenReturn(Optional.of(inventory));
             when(itSkillDetailRepository.findByInventoryIdWithCategories(10)).thenReturn(List.of());
             when(seminarDetailRepository.findByInventoryId(10)).thenReturn(List.of());
@@ -109,6 +122,7 @@ class ReportServiceTest {
 
         @Test
         void 正常系_TLアクセス_他人の棚卸でもPDFを返す() {
+            assumeFontAvailable();
             when(inventoryRepository.findByIdWithAssociations(10)).thenReturn(Optional.of(inventory));
             when(itSkillDetailRepository.findByInventoryIdWithCategories(10)).thenReturn(List.of());
             when(seminarDetailRepository.findByInventoryId(10)).thenReturn(List.of());
@@ -121,6 +135,7 @@ class ReportServiceTest {
 
         @Test
         void 正常系_明細データありでもPDF生成される() {
+            assumeFontAvailable();
             ItSkillCategory cat1 = ItSkillCategory.create(null, (short) 1, "プログラミング", 1);
             ReflectionTestUtils.setField(cat1, "id", 100);
             ItSkillCategory cat2 = ItSkillCategory.create(100, (short) 2, "言語", 1);

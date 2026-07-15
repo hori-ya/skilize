@@ -66,8 +66,7 @@ tasks.named('test') {
 	// サーバーサイドの帳票（PDF）生成は画面描画を必要としないため headless を明示する
 	jvmArgs = ['-Djava.awt.headless=true']
 	finalizedBy jacocoTestReport
-	// CI でのみ失敗する ReportServiceTest の原因調査用: 失敗時に原因例外（cause）まで含めた
-	// フルスタックトレースをコンソールに出力する（原因判明後に縮小してよい）
+	// 失敗時に原因例外（cause）まで含めたフルスタックトレースをコンソールに出力する
 	testLogging {
 		events "failed"
 		exceptionFormat = "full"

@@ -96,6 +96,19 @@ JasperReports 標準フォントは日本語非対応のため、以下のいず
 
 > フォント対応はレイアウト（`.jrxml`）作成後に実施する。
 
+### ⚠️ 既知の課題：フォント未配置による本番環境での帳票出力失敗（2026-07-15 判明・未対応）
+
+現在の実装は上記「代替」案を採用し、`apps/backend/src/main/resources/fonts/fonts.xml` で `MSGothic`（`msgothic.ttc`, Windows 同梱フォント）を参照している。しかし `msgothic.ttc` 本体は **ライセンス上の理由で `.gitignore` に登録されており、Git リポジトリに含まれていない**（`.gitignore:47`、コメントに "コピー元: C:\Windows\Fonts\msgothic.ttc" と明記）。
+
+**影響**:
+- リポジトリを新規 clone した環境（CI・本番デプロイ含む）には `msgothic.ttc` が存在しないため、PDF エクスポート時に `net.sf.jasperreports.engine.JRRuntimeException: Could not load the following font` が発生する
+- **本番環境で実際に帳票出力（GET /api/inventories/{id}/report）が異常終了することを確認済み**
+- テストコード（`ReportServiceTest`）ではフォント未配置環境で該当テストをスキップする対応のみ実施済み（`assumeFontAvailable()`）。プロダクションコードの修正は未対応
+
+**今後の対応方針（要検討）**:
+- 上記「推奨」案（IPA フォントまたは Noto Sans CJK 等、再配布可能なライセンスのフォントに切り替え、通常の依存関係として `build.gradle` に追加する）への移行を推奨
+- 移行後は `.gitignore` の除外設定・`fonts/fonts.xml` のフォントファミリー定義・`.jrxml` の `fontName` 指定を新フォントに合わせて更新する
+
 ### レイアウトファイル
 
 ```
